@@ -70,8 +70,8 @@ Created: root config (pnpm workspace, Turborepo, strict tsconfig, ESLint 10 flat
 
 | Check                | Result                                   |
 | -------------------- | ---------------------------------------- |
-| `pnpm run build`     | 5/5 tasks pass                           |
-| `pnpm run typecheck` | 7/7 tasks pass                           |
+| `pnpm run build`     | 7/7 tasks pass                           |
+| `pnpm run typecheck` | 10/10 tasks pass                          |
 | `pnpm run test`      | 177 tests pass (shared 36, core 66, database 35, graph 14, api 12, cli 8, web 6) |
 | `pnpm run lint`      | clean                                    |
 | `pnpm run format:check` | clean (Markdown excluded)             |
