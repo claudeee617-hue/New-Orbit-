@@ -1,0 +1,26 @@
+{
+  "name": "@orbit/graph",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Read-only queries over the ORBIT graph: search, neighbours, bounded deterministic traversal and shortest path.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@orbit/core": "workspace:*",
+    "@orbit/database": "workspace:*",
+    "@orbit/shared": "workspace:*"
+  }
+}

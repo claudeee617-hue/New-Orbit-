@@ -91,3 +91,12 @@ export function openDatabase(options: OpenDatabaseOptions): OrbitDatabase {
     },
   };
 }
+
+export { createGraphStore } from './store.js';
+export type {
+  EdgeQuery,
+  EvidenceQuery,
+  GraphStore,
+  GraphStoreOptions,
+  NodeQuery,
+} from './store.js';

@@ -120,3 +120,14 @@ Indexes on (repositoryId, type, key), edges (repositoryId, fromId, type), edges 
 1. Symbol identity across renames/moves (hash of FQN vs. similarity tracking).
 2. Retention and compaction policy for large telemetry and test history.
 3. Whether the ledger hash chain is per repository or global.
+
+
+## 11. Implemented in Prompt 3 (ORBIT Core)
+
+Authoritative sources: `packages/core/src` (vocabulary, rules, schemas, hashing), `packages/database/src/schema.ts` and migrations `0001`/`0002`, `packages/database/src/store.ts`, `packages/graph/src`. Rationale: ADR-0010.
+
+- **Tables:** `repositories`, `evidence`, `evidence_refs`, `nodes`, `node_versions`, `edges`, `edge_versions`, `ledger` (plus mutable `meta`). All graph tables are append-only (triggers).
+- **Views:** `node_current`, `edge_current` (latest non-deleted version).
+- **Node types (23)** and **edge types (14):** see `NODE_TYPES` / `EDGE_TYPES`; allowed endpoint pairs in `EDGE_RULES`.
+- **Evidence fields:** repository, source, source type, timestamp, commit SHA, location (path + line range), content hash, status, limitations, related entity IDs, supersedes. Each evidence record can be superseded at most once.
+- **Not yet implemented:** Finding, Change Passport and engine-specific domain tables (later prompts).

@@ -1,11 +1,11 @@
 # ORBIT — Build State
 
 Durable progress log. Update after every implementation phase.
-Last updated: 2026-11-07
+Last updated: 2026-11-08
 
 ## Current phase
 
-**Prompts 0, 1 and 2 complete.** Next: Prompt 3 (ORBIT Core: the Living Engineering Graph).
+**Prompts 0–3 complete** (Prompt 3 committed locally, not pushed). Next: Prompt 4 (ATLAS scanning).
 
 ## Phase checklist
 
@@ -14,7 +14,7 @@ Last updated: 2026-11-07
 | 0      | Master plan and planning documents             | Done (docs only)                               |
 | 1      | Technical design and architecture finalisation | Done (docs, versions verified)                 |
 | 2      | Monorepo foundation                            | Done (see results below)                       |
-| 3      | ORBIT Core graph                               | Not started                                    |
+| 3      | ORBIT Core graph                               | Done (see results below; not pushed)           |
 | 4      | ATLAS scanning                                 | Not started                                    |
 | 5      | ATLAS memory and MCP                           | Not started                                    |
 | 6      | WITNESS                                        | Not started                                    |
@@ -29,6 +29,26 @@ Last updated: 2026-11-07
 | 15     | Security review                                | Not started                                    |
 | 16     | Testing and validation                         | Not started                                    |
 | 17     | Release polish                                 | Not started                                    |
+
+## Prompt 3 summary (ORBIT Core: Living Engineering Graph)
+
+- `packages/core`: canonical JSON + SHA-256 hashing, node/edge/evidence vocabulary, edge rule table, content-derived IDs, ledger hash rules, zod input schemas that never echo submitted values.
+- `packages/shared`: safe repo-relative path normalisation (`paths.ts`).
+- `packages/database`: graph tables, migration `0001` (generated) and `0002` (hand-written triggers + views), `createGraphStore` (repositories, evidence, nodes, edges, ledger, `verifyIntegrity`).
+- `packages/graph`: `findNodes`, `neighbors`, bounded deterministic BFS `traverse`, `shortestPath`.
+- ADR-0010 and `docs/DATA_MODEL.md` §11 describe the model.
+- No AI, network or API key is involved anywhere in the core.
+
+Test results (run here, `pnpm run test --force`): shared 36, core 66, database 35, graph 14, api 12, cli 8, web 6 = **177 passing**. `pnpm run check` (format, lint, typecheck, test, build) passes.
+
+Tests cover: duplicates (idempotent writes), invalid relationships, missing evidence/repository/endpoints, versioning and tombstones, history ranges, repository isolation, literal key-prefix search, ledger chaining and determinism with a fixed clock, trigger-enforced immutability, tamper detection (altered attributes, rewritten ledger entry, deleted ledger entry, altered evidence, rows inserted behind the ledger), traversal cycles/depth/node budget/direction/determinism, shortest path.
+
+Limitations specific to Prompt 3:
+- The ledger is tamper-*evident*, not tamper-*proof*: an attacker with file access can drop triggers and rewrite all rows and hashes consistently (ADR-0010).
+- Tamper tests drop triggers via SQL to simulate this; no external anchoring of the ledger head exists yet.
+- Neighbour order is deterministic (edge type, then node ID) but not alphabetical by key.
+- Traversal reads edges per node through the store; no benchmark on large graphs has been run.
+- Nothing populates the graph yet; ATLAS (Prompt 4) is the first writer. The CLI/API do not expose the graph yet.
 
 ## Prompt 1 summary
 
@@ -52,7 +72,7 @@ Created: root config (pnpm workspace, Turborepo, strict tsconfig, ESLint 10 flat
 | -------------------- | ---------------------------------------- |
 | `pnpm run build`     | 5/5 tasks pass                           |
 | `pnpm run typecheck` | 7/7 tasks pass                           |
-| `pnpm run test`      | 44 tests pass (shared 11, database 7, cli 8, api 12, web 6) |
+| `pnpm run test`      | 177 tests pass (shared 36, core 66, database 35, graph 14, api 12, cli 8, web 6) |
 | `pnpm run lint`      | clean                                    |
 | `pnpm run format:check` | clean (Markdown excluded)             |
 
@@ -87,4 +107,4 @@ node apps/cli/dist/index.js status --json
 
 ## Next step
 
-Prompt 3: shared evidence model and graph storage (node/edge/evidence repositories, hash-chained ledger, traversal, temporal metadata, provenance), with tests for duplicates, invalid relationships, missing evidence, versioning, traversal, hashing and repository isolation.
+Prompt 4: ATLAS scanning (read-only repository scan into the graph via tree-sitter, never executing repository code).

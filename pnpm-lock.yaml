@@ -95,8 +95,20 @@ importers:
         specifier: 8.3.6
         version: 8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)
 
+  packages/core:
+    dependencies:
+      '@orbit/shared':
+        specifier: workspace:*
+        version: link:../shared
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+
   packages/database:
     dependencies:
+      '@orbit/core':
+        specifier: workspace:*
+        version: link:../core
       '@orbit/shared':
         specifier: workspace:*
         version: link:../shared
@@ -113,6 +125,18 @@ importers:
       drizzle-kit:
         specifier: 0.31.11
         version: 0.31.11
+
+  packages/graph:
+    dependencies:
+      '@orbit/core':
+        specifier: workspace:*
+        version: link:../core
+      '@orbit/database':
+        specifier: workspace:*
+        version: link:../database
+      '@orbit/shared':
+        specifier: workspace:*
+        version: link:../shared
 
   packages/shared:
     dependencies:
