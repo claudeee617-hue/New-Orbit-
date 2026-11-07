@@ -337,6 +337,22 @@ describe('edges', () => {
     expect(store.edges.list(repo)).toHaveLength(0);
   });
 
+  it('hides edges whose endpoint is retired, and shows them again when it is revived', () => {
+    const { repo, ev, a, b } = two();
+    const edge = store.edges.upsert({
+      repositoryId: repo,
+      type: 'IMPORTS',
+      fromId: a,
+      toId: b,
+      sourceEvidenceId: ev,
+    }).record;
+    store.nodes.retire({ repositoryId: repo, nodeId: b, sourceEvidenceId: ev });
+    expect(store.edges.list(repo)).toHaveLength(0);
+    expect(store.edges.get(repo, edge.id)).toBeUndefined();
+    store.nodes.upsert({ repositoryId: repo, type: 'File', key: 'src/b.ts', sourceEvidenceId: ev });
+    expect(store.edges.list(repo)).toHaveLength(1);
+  });
+
   it('hides edges whose endpoint was retired from further writes', () => {
     const { repo, ev, a, b } = two();
     store.nodes.retire({ repositoryId: repo, nodeId: b, sourceEvidenceId: ev });
