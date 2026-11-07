@@ -1,0 +1,14 @@
+packages:
+  - apps/*
+  - packages/*
+
+# pnpm 10 blocks dependency build scripts unless allowed here.
+# esbuild installs its platform binary in a postinstall step.
+# better-sqlite3 is deliberately NOT listed: version 13 ships prebuilt binaries for Linux, macOS and
+# Windows (x64/arm64), so it needs no compilation. Allowing its build would only trigger a needless
+# node-gyp rebuild, which fails in environments that cannot download Node headers (see ADR-0008).
+onlyBuiltDependencies:
+  - esbuild
+
+ignoredBuiltDependencies:
+  - better-sqlite3

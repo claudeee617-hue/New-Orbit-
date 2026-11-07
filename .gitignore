@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.turbo/
+coverage/
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+
+# ORBIT local workspace data (databases, captured sessions)
+.orbit/
+*.db
+*.db-wal
+*.db-shm

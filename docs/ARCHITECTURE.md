@@ -1,6 +1,8 @@
 # ORBIT — Architecture
 
-Version: 0.1 (planning, to be finalised in Prompt 1) · Date: 2026-11-07
+Version: 0.2 · Date: 2026-11-07
+
+> Technology versions, package rules and resolved design questions are finalised in `docs/architecture/TECHNICAL_DESIGN.md` (Prompt 1). That document wins on any conflict with §6 and §10 below.
 
 ## 1. Principles
 
@@ -116,7 +118,7 @@ Given a commit: gather graph neighbourhood (ATLAS impact, WITNESS report, FLARE 
 | GitHub | Octokit | Official client |
 | Serial | node serialport (verify) | Needs native builds; fallback to file replay |
 
-All versions are **unverified until Prompt 2** installs them.
+Versions were verified against the npm registry in Prompt 1; see `docs/architecture/TECHNICAL_DESIGN.md` §1 (note: TypeScript is pinned to 6.0.x, and the MCP SDK latest was 1.32.2, not 1.27.1).
 
 ## 7. Data flow for one PR
 
@@ -155,7 +157,7 @@ See `THREAT_MODEL.md`.
 
 New language parser, coverage format, CI/test adapter, hardware transport, MCP tool, finding rule, AI provider. Each has an interface, a contract test suite and a fixture directory.
 
-## 10. Open design questions (resolve in Prompt 1)
+## 10. Design questions (resolved in Prompt 1 — see TECHNICAL_DESIGN.md §3)
 
 1. Single SQLite file per repository vs. one per workspace.
 2. How to model symbol identity across renames.

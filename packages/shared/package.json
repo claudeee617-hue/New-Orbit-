@@ -1,0 +1,29 @@
+{
+  "name": "@orbit/shared",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Shared types, errors, logging and configuration for ORBIT packages.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./health": {
+      "types": "./dist/health.d.ts",
+      "default": "./dist/health.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "pino": "10.4.0",
+    "zod": "4.6.7"
+  }
+}

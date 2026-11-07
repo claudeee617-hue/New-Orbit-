@@ -1,0 +1,30 @@
+{
+  "name": "@orbit/cli",
+  "version": "0.0.1",
+  "private": true,
+  "description": "The `orbit` command-line interface.",
+  "type": "module",
+  "bin": {
+    "orbit": "./dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/program.d.ts",
+      "default": "./dist/program.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "orbit": "node dist/index.js"
+  },
+  "dependencies": {
+    "@orbit/database": "workspace:*",
+    "@orbit/shared": "workspace:*",
+    "commander": "15.1.0"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "@orbit/api",
+  "version": "0.0.1",
+  "private": true,
+  "description": "ORBIT local API (Fastify). Bound to loopback by default.",
+  "type": "module",
+  "main": "./dist/main.js",
+  "exports": {
+    ".": {
+      "types": "./dist/server.d.ts",
+      "default": "./dist/server.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "dev": "tsx watch src/main.ts",
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "@orbit/database": "workspace:*",
+    "@orbit/shared": "workspace:*",
+    "fastify": "5.12.8"
+  },
+  "devDependencies": {
+    "tsx": "4.23.15"
+  }
+}
