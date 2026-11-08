@@ -25,7 +25,7 @@ Last updated: 2026-11-08
 | 11     | API and CLI (full)                             | Partial: local engine CLI commands on feature branch |
 | 12     | Command Center (full)                          | Not started (shell exists)                     |
 | 13     | GitHub Action                                  | Not started                                    |
-| 14     | ORBIT AI                                       | Not started                                    |
+| 14     | ORBIT AI                                       | Partial: `@orbit/ai` provider adapters with preview-hash approval, redaction, bounds and mocked tests; API/UI integration and further security validation pending |
 | 15     | Security review                                | Not started                                    |
 | 16     | Testing and validation                         | Not started                                    |
 | 17     | Release polish                                 | Not started                                    |
@@ -275,3 +275,29 @@ Verified by GitHub Actions run `42481493312` on Ubuntu, macOS and Windows; the e
 - Added CLI `init`, `doctor`, `graph summary`, `graph nodes`, `ci ingest`, `tests ingest` and `tests history` commands.
 - Added API token lifecycle, API route/integration and CLI workspace/ingestion tests.
 - **Status:** Implementation pushed in PR #11; full format/lint/typecheck/test/build matrix passed on Ubuntu, macOS and Windows in GitHub Actions run #136. Ubuntu reported 373 passing tests across nine workspace suites; 15/15 typecheck tasks and 9/9 build tasks passed. PR #11 is ready for review and is not merged.
+
+
+## Prompt 14 — optional ORBIT AI adapter package
+
+Branch: `feat/prompt-14-opt-in-ai`.
+
+Implemented:
+- New dependency-free `@orbit/ai` workspace package.
+- OpenAI Responses, Anthropic Messages and local Ollama chat adapters.
+- AI disabled and explicit user approval required; approval is bound to the exact context SHA-256, provider, model and destination.
+- Context preview includes selected evidence IDs, source references, hashes, byte size and redaction count.
+- Best-effort secret redaction, 48 KiB context cap, 256 KiB response cap, timeout and output-length bounds.
+- Ollama defaults to loopback; remote Ollama requires explicit opt-in and HTTPS.
+- OpenAI request sets `store: false` and does not enable tools.
+- Provider outputs are advisory; citations are marked missing if selected evidence IDs are not cited. No graph writes, shell commands or patch application.
+- Mocked tests cover disabled mode, approval, context hash, redaction, remote Ollama block and provider request/response basics.
+
+Pending before this can be called complete:
+- Local API and Command Center preview/approval integration.
+- Server-side key configuration and UI privacy disclosures.
+- Additional error, timeout, malformed/oversized response, prompt-injection and changed-destination tests.
+- Real provider smoke tests using user-owned credentials (never commit credentials).
+- Provider retention and data-processing review.
+- Browser E2E proof that no request leaves the machine before approval.
+
+This package is not exposed through the product UI yet. Do not describe ORBIT AI as a released end-user feature.
