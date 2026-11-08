@@ -8,7 +8,7 @@ Its central artifact is the **Change Passport**: a content-hashed record of a ch
 
 ## Current status
 
-The public `main` branch contains engineering roadmap Prompts 0–10 and the separate App Business Module sub-prompts 0–4. Engineering Prompts 5–10 were merged through PR #5; the Business Module was merged through PR #9 on 2026-11-08. Their full CI matrices passed on Ubuntu, macOS and Windows. Prompt 11 (local API and CLI) is in [PR #11](https://github.com/claudeee617-hue/New-Orbit-/pull/11); its full Ubuntu/macOS/Windows CI passed, and it is awaiting review (not yet merged).
+The public `main` branch contains Engineering Prompts 0–11 and App Business Module sub-prompts 0–4. Engineering Prompts 5–10 were merged through PR #5, the Business Module through PR #9, and Prompt 11 (local API and CLI) through PR #11 on 2026-11-08. PR #11's Ubuntu/macOS/Windows CI passed before merge. Prompts 12–14 are being developed in draft PRs #13, #14 and #21; they are not part of `main` and must not be treated as released capabilities. Security/privacy/release groundwork (PR #15) is merged, but it is not a completed independent security audit or release approval.
 
 | Capability | Current implementation |
 | --- | --- |
@@ -22,7 +22,10 @@ The public `main` branch contains engineering roadmap Prompts 0–10 and the sep
 | FLIGHT RECORDER recorded telemetry parser, caller-defined analysis and hash-verified graph persistence | Implemented on `main` as recorded-file prototype; physical serial/USB capture unavailable |
 | Change Passport graph correlation, versioned history, comparisons and non-executing reproduction plan | Implemented on `main` as backend/CLI prototype; visual Replay Room UI not implemented |
 | App Business Module | Implemented on `main` via PR #9: strategy, market references, local actual-vs-forecast calculator and pricing simulator; no live accounting/CRM/billing data |
-| Specialist AI agents, GitHub Action and full dashboard | Not implemented (MCP stdio server is now on `main`) |
+| Command Center (Prompt 12) | Draft PR #13: initial authenticated local dashboard; full UX and engine views remain incomplete | 
+| GitHub Action (Prompt 13) | Draft PR #14: composite action prototype; end-to-end action tests and CI validation remain pending |
+| Opt-in AI (Prompt 14) | Draft PR #21 stacked on Prompt 12; preview/approval integration is experimental and not merged |
+| Security/privacy/release groundwork | Merged via PR #15; independent security review and release gates remain open |
 
 See [ORBIT_BUILD_STATE.md](ORBIT_BUILD_STATE.md) for phase-by-phase implementation details, branch status, known limitations and verified test results.
 
