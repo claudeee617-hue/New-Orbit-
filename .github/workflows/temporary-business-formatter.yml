@@ -1,0 +1,39 @@
+name: Temporary Business Module Formatter
+
+on:
+  push:
+    branches:
+      - feat/app-business-module-prompts-0-3
+    paths:
+      - apps/web/src/App.tsx
+      - apps/web/src/business/model.ts
+      - apps/web/src/BusinessModule.tsx
+
+permissions:
+  contents: write
+
+jobs:
+  format-business-module:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Format changed files
+        run: pnpm exec prettier --write apps/web/src/App.tsx apps/web/src/business/model.ts apps/web/src/BusinessModule.tsx
+      - name: Commit formatting changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet; then
+            echo "Formatting already clean."
+          else
+            git add apps/web/src/App.tsx apps/web/src/business/model.ts apps/web/src/BusinessModule.tsx
+            git commit -m "style: format Business module"
+            git push origin HEAD:feat/app-business-module-prompts-0-3
+          fi
