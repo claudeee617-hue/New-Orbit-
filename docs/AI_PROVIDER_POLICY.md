@@ -1,6 +1,6 @@
 # ORBIT AI — Provider and Privacy Policy
 
-**Implementation status:** A server-side provider adapter package now exists in `@orbit/ai`. It is not yet integrated into the Command Center or local API; no user-facing AI workflow is shipped.
+**Implementation status:** `@orbit/ai` adapters, local API preview/approval endpoints and a Command Center preview/approval panel are implemented on a draft feature branch. The integration is not yet merged or released; E2E and provider smoke tests remain pending.
 
 ## Product boundary
 
@@ -52,8 +52,24 @@ Provider model names and API versions change. Re-verify them against official do
 - Verify exact official provider schemas and version headers during release validation.
 - Document provider-side retention, regional processing and account-level data settings.
 - Add user-visible disclosure and a way to inspect/clear AI notes.
-- Add browser E2E tests proving no network call occurs before the user approves the exact preview.
+- Add browser E2E tests proving no provider network call occurs before the user approves the exact preview.
 
 ## Non-goals
 
 No autonomous coding agent, automatic patch application, automatic PR approval, hidden background AI calls, tool use, shell execution or hardware control.
+
+
+## Current local API integration
+
+The local API exposes:
+- `POST /api/v1/repositories/:key/ai/preview`: builds the exact provider-bound context from selected evidence metadata and optional user-supplied excerpts. This endpoint does not call the provider.
+- `POST /api/v1/repositories/:key/ai/analyse`: requires `confirmed: true` and the preview SHA-256, reconstructs the context and sends it only when `ORBIT_AI_ENABLED=true`.
+
+Environment configuration is process-local:
+- `ORBIT_AI_ENABLED=false` by default; set to `true` only after choosing an explicit provider.
+- `ORBIT_OPENAI_API_KEY` for OpenAI.
+- `ANTHROPIC_API_KEY` for Anthropic.
+- `ORBIT_OLLAMA_URL` defaults to loopback Ollama.
+- `ORBIT_ALLOW_REMOTE_OLLAMA=true` is required for remote Ollama and remote endpoints must use HTTPS.
+
+The current Command Center sends selected evidence metadata only. It does not read repository source files. API excerpts are supported for future use but not exposed as a browser file-reading feature.
