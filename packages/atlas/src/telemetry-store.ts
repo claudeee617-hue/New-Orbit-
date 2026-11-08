@@ -5,7 +5,8 @@ import { nodeIdFor } from '@orbit/core';
 import type { GraphStore } from '@orbit/database';
 import { normalizeRepoPath } from './verification.js';
 import type { TelemetrySession } from './flight-recorder.js';
-import type { TelemetryAnalysis } from './flight-recorder-extended.js';
+import { analyseTelemetry, type TelemetryAnalysisOptions } from './flight-recorder-extended.js';
+import { parseTelemetry } from './flight-recorder.js';
 
 const MAX_ARTIFACT_BYTES = 10 * 1024 * 1024;
 const MAX_STORED_ANOMALIES = 30;
@@ -19,7 +20,7 @@ export interface StoreTelemetrySessionInput {
   /** Existing repository-relative file containing the exact raw recording that was parsed. */
   artifactRelativePath: string;
   session: TelemetrySession;
-  analysis: TelemetryAnalysis;
+  analysisOptions?: TelemetryAnalysisOptions;
   isDemo: boolean;
   deviceLabel?: string;
   firmwareBuildId?: string;
@@ -71,16 +72,21 @@ export async function storeTelemetrySession(
   if (actualHash !== session.rawSha256.toLowerCase()) {
     throw new Error('telemetry artifact SHA-256 does not match the parsed session');
   }
+  const verifiedSession = parseTelemetry(raw.toString('utf8'), session.format);
+  if (verifiedSession.rawSha256 !== actualHash) {
+    throw new Error('telemetry artifact could not be reproduced by the recorded-file parser');
+  }
+  const analysis = analyseTelemetry(verifiedSession, input.analysisOptions);
   if (input.commitSha && !/^[0-9a-f]{7,64}$/i.test(input.commitSha))
     throw new Error('commit SHA is invalid');
   const timestamp =
     input.startedAt ??
-    session.points.find((point) => point.timestamp)?.timestamp ??
+    verifiedSession.points.find((point) => point.timestamp)?.timestamp ??
     new Date().toISOString();
   if (!Number.isFinite(Date.parse(timestamp)))
     throw new Error('telemetry session timestamp is invalid');
 
-  const sessionKey = `telemetry:${session.rawSha256.toLowerCase()}`;
+  const sessionKey = `telemetry:${verifiedSession.rawSha256}`;
   const sessionNodeId = nodeIdFor(input.repositoryId, 'TelemetrySession', sessionKey);
   const deviceKey = input.deviceLabel?.trim().slice(0, 128) || undefined;
   const deviceNodeId = deviceKey
@@ -103,10 +109,10 @@ export async function storeTelemetrySession(
       sourceType: 'telemetry',
       timestamp,
       ...(commitSha ? { commitSha } : {}),
-      contentHash: session.rawSha256.toLowerCase(),
+      contentHash: verifiedSession.rawSha256,
       status: 'PARTIAL',
       limitations: [
-        ...session.limitations,
+        ...verifiedSession.limitations,
         ...input.analysis.limitations,
         'Evidence status PARTIAL describes bounded parser output; it is not a judgement that the device passed or failed.',
         ...(input.isDemo
@@ -126,16 +132,16 @@ export async function storeTelemetrySession(
       key: sessionKey,
       attrs: {
         schemaVersion: 1,
-        rawSha256: session.rawSha256.toLowerCase(),
+        rawSha256: verifiedSession.rawSha256,
         artifactRelativePath: relativeActual.split(sep).join('/'),
         source: input.source.slice(0, 512),
-        format: session.format,
+        format: verifiedSession.format,
         startedAt: timestamp,
-        pointCount: session.points.length,
-        metricNames: session.metricNames.slice(0, MAX_STORED_METRICS),
-        eventCounts: session.eventCounts,
-        watchdogEvents: session.watchdogEvents,
-        resetEvents: session.resetEvents,
+        pointCount: verifiedSession.points.length,
+        metricNames: verifiedSession.metricNames.slice(0, MAX_STORED_METRICS),
+        eventCounts: verifiedSession.eventCounts,
+        watchdogEvents: verifiedSession.watchdogEvents,
+        resetEvents: verifiedSession.resetEvents,
         anomalies: input.analysis.anomalies.slice(0, MAX_STORED_ANOMALIES).map((item) => ({
           id: item.id,
           ruleId: item.ruleId,
@@ -226,7 +232,7 @@ export async function storeTelemetrySession(
     return {
       nodeId: storedNode.record.id,
       evidenceId: evidence.record.id,
-      rawSha256: session.rawSha256.toLowerCase(),
+      rawSha256: verifiedSession.rawSha256,
       artifactRelativePath: relativeActual.split(sep).join('/'),
       isDemo: input.isDemo,
       pointCount: session.points.length,
