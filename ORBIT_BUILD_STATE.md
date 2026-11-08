@@ -5,7 +5,7 @@ Last updated: 2026-11-08
 
 ## Current phase
 
-**Engineering Prompts 0–11 and App Business Module sub-prompts 0–4 are merged into `main` (PRs #5, #9 and #11). Prompt 11 CI passed on Ubuntu, macOS and Windows before merge. Prompt 12 is an incomplete draft in PR #13; Prompt 13 is an incomplete draft in PR #14; Prompt 14's opt-in AI integration is an experimental stacked draft in PR #21. Security/privacy/release groundwork PR #15 is merged, but independent security review and release gates remain open.**
+**Engineering Prompts 0–11 and App Business Module sub-prompts 0–4 are merged into `main` (PRs #5, #9 and #11). Prompt 11 CI passed on Ubuntu, macOS and Windows before merge. Prompt 12 is an incomplete draft in PR #13; Prompt 13 is an incomplete draft in PR #14; Prompt 14's opt-in AI integration is an experimental stacked draft in PR #21. The latest code-bearing head passed the full Ubuntu/macOS/Windows CI matrix in run #219; subsequent documentation-only updates have not yet received a fresh run. Security/privacy/release groundwork PR #15 is merged, but independent security review and release gates remain open.**
 
 ## Phase checklist
 
