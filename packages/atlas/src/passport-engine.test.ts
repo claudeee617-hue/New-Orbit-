@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { IN_MEMORY, openDatabase, createGraphStore } from '@orbit/database';
+import { createChangePassport } from './passport.js';
 import {
   compareChangePassports,
   createReproductionPlan,
@@ -92,6 +93,25 @@ function addRequiredEvidence(
 }
 
 describe('Change Passport evidence engine', () => {
+  it('does not treat caller-supplied evidence as graph-verified', () => {
+    const passport = createChangePassport({
+      repository: 'example/repo',
+      commitSha: '0123456789abcdef0123456789abcdef01234567',
+      diffSha256: 'a'.repeat(64),
+      changedFiles: ['src/a.ts'],
+      evidence: [
+        { id: 'git', kind: 'git', status: 'PASS', source: 'user-input', sha256: '1'.repeat(64) },
+        { id: 'coverage', kind: 'coverage', status: 'PASS', source: 'user-input', sha256: '2'.repeat(64) },
+        { id: 'tests', kind: 'test-report', status: 'PASS', source: 'user-input', sha256: '3'.repeat(64) },
+        { id: 'ci', kind: 'ci', status: 'PASS', source: 'user-input', sha256: '4'.repeat(64) },
+      ],
+    });
+    expect(passport.state).toBe('COMPLETE');
+    expect(passport.evidenceVerification).toBe('UNVERIFIED_INPUT');
+    expect(passport.verificationStatus).toBe('NOT_MEASURED');
+  });
+
+
   it('correlates required evidence, graph impact and related tests into a versioned passport', () => {
     const { database, store, repository, fileA } = setup();
     try {
