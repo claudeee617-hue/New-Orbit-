@@ -1,6 +1,6 @@
 # ORBIT — Roadmap and Task Breakdown
 
-Version: 0.1 · Date: 2026-11-07
+Version: 0.2 · Date: 2026-11-08
 Priority: **P0** = needed for first public vertical slice · **P1** = full v1 · **P2** = later.
 
 ## 1. Phases and milestones
@@ -188,4 +188,22 @@ Register a repository → index → generate graph → inspect a change → iden
 
 ## 6. Out of scope for v1
 
-Device commands, hosted SaaS, GitHub App, mutation testing, per-test coverage tracing, automatic code modification.
+Device commands, hosted SaaS in the Community v1 release, GitHub App in the Community v1 release, mutation testing, per-test coverage tracing, automatic code modification. The hosted Team/Enterprise track is gated separately in [COMMERCIALIZATION_STRATEGY.md](COMMERCIALIZATION_STRATEGY.md).
+
+
+## 7. Hybrid commercialization workstream
+
+The engineering prompts remain the source of truth for core implementation order. Commercial work runs in parallel and is gated by working product evidence; it must not delay Prompt 5 or introduce billing/cloud scaffolding prematurely.
+
+| Commercial phase | Dependency | Deliverable | Gate |
+|---|---|---|---|
+| C0 — Strategy and legal readiness | Now, before public release | Hybrid packaging, licence/ownership decision, name clearance | Owner approves the licence and brand direction |
+| C1 — Community vertical slice | Core Prompts 5–13 as applicable | Scan → graph → evidence → Change Passport → CLI/API/UI/CI workflow | End-to-end acceptance workflow passes |
+| C2 — Community preview | C1 | Install guide, sample repo, release automation, contribution docs | External developer can use Community without hand-holding |
+| C3 — Design-partner validation | C2 | Five pilot relationships, real workflow measurements and data-flow feedback | Target: three repeat users and two credible paid-pilot signals |
+| C4 — Team architecture and beta | C3 | Opt-in sync, organisations, workspaces, entitlements, metering, billing adapter, collaboration | Tenant isolation, export/deletion and data-flow tests pass |
+| C5 — Team launch | C4 | Paid subscriptions, onboarding, support and service operations | Paying customers onboard and manage their accounts reliably |
+| C6 — Enterprise readiness | Repeated Team usage and enterprise demand | SSO/SCIM, audit, private runners, private deployment, support commitments | Security, backup/restore and contract reviews pass |
+| C7 — Ecosystem growth | Stable paid product | Marketplace distribution and extension ecosystem | Publisher eligibility and support operations confirmed |
+
+**Current commercial status:** strategy documented; no hosted service, billing, entitlements, paid feature gates, or commercial support commitments are implemented. See [COMMERCIALIZATION_STRATEGY.md](COMMERCIALIZATION_STRATEGY.md) for product tiers, trust boundaries, licensing guardrails, data-minimisation rules, validation and metrics.
