@@ -28,7 +28,7 @@ Last updated: 2026-11-08
 | 14     | ORBIT AI                                       | Experimental preview/approval integration in stacked draft PR #21; provider smoke/E2E tests pending |
 | 15     | Security review                                | Security/privacy/release groundwork merged via PR #15; independent review pending |
 | 16     | Testing and validation                         | Partial: unit/API/CLI tests exist; browser E2E, fuzz, migration and action tests pending |
-| 17     | Release polish                                 | Partial: governance docs merged; release validation and approval remain |
+| 17     | Release polish                                 | Partial: governance docs and Apache-2.0 license text merged; legal review and release approval remain |
 
 
 ## Cross-engine implementation merged via PR #5
