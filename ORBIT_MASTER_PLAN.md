@@ -3,7 +3,7 @@
 **ORBIT — Engineering Intelligence Platform**
 Tagline: *Understand Everything. Trace Every Change. Prove What Works.*
 Philosophy: **Evidence before confidence.**
-Status: Active master plan. Prompt 0 established this plan; implementation now exists through Prompt 8 on a feature branch, with Prompts 9–10 in progress. See ORBIT_BUILD_STATE.md for verified branch and CI status.
+Status: Active master plan. Engineering roadmap Prompts 0–10 are implemented on `main` as of 2026-11-08; the separate App Business Module sub-prompts 0–4 are in draft PR #9. See ORBIT_BUILD_STATE.md for verified branch and CI status.
 Date: 2026-11-07
 
 > "ORBIT" is a working codename, not a cleared brand. Before any public release, check GitHub, npm, domains and trademarks (task REL-01).
@@ -68,6 +68,7 @@ Rule: do not start a milestone while the previous one has unresolved critical fa
 | `docs/ARCHITECTURE.md` | Modules, interfaces, technology choices, diagrams |
 | `docs/DATA_MODEL.md` | Graph schema, evidence record, passport schema |
 | `docs/ROADMAP.md` | 50–80 task breakdown, phases, demo storyline |
+| `docs/APP_BUSINESS_MODULE.md` | Business strategy, packaging, market research and local financial simulator |
 | `docs/BUSINESS_MODEL.md` | Hybrid monetisation, product tiers, customer segments and pricing hypotheses |
 | `docs/COMMERCIAL_ROADMAP.md` | Commercial release gates, design-partner pilots and go-to-market sequence |
 | `docs/COMPETITIVE_ANALYSIS.md` | Researched competitors and honest differentiation |
