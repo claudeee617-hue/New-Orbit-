@@ -8,7 +8,7 @@ Its central artifact is the **Change Passport**: a content-hashed record of a ch
 
 ## Current status
 
-The public `main` branch contains the monorepo foundation, immutable evidence graph and ATLAS repository scanner. Prompt 5 (ATLAS memory and read-only MCP) plus the WITNESS, FLARE and CAPSULE Prompt 6–8 extensions are pushed on `feat/prompts-6-8-completion` and consolidated in draft PR #5. Its full CI matrix has passed on Ubuntu, macOS and Windows; the branch is not yet merged or release-complete.
+The public `main` branch contains the monorepo foundation, immutable evidence graph and ATLAS repository scanner. Prompts 5–10 are being consolidated on `feat/prompts-6-8-completion` in draft PR #5. Prompt 5–8 previously passed the full CI matrix; the new Prompt 9–10 telemetry and Passport code is awaiting its fresh full CI run. The branch is not yet merged or release-complete.
 
 | Capability | Current implementation |
 | --- | --- |
@@ -19,8 +19,8 @@ The public `main` branch contains the monorepo foundation, immutable evidence gr
 | WITNESS changed-line coverage, baseline comparison, filename findings, Markdown/SARIF | Extended prototype on `feat/prompts-6-8-completion`; CI passed, PR #5 draft |
 | FLARE JUnit, pytest, Jest and Go JSON reports; failure clusters and duration summaries | Extended prototype on `feat/prompts-6-8-completion`; no durable history store yet |
 | CAPSULE polyglot toolchain, dependency, container and workspace manifest inspection | Extended prototype on `feat/prompts-6-8-completion`; no build replay yet |
-| FLIGHT RECORDER recorded telemetry parser/replay | Prototype; no physical serial connection yet |
-| Change Passport assembly | Prototype; no graph correlation or Replay Room UI yet |
+| FLIGHT RECORDER recorded telemetry parser, caller-defined analysis and hash-verified graph persistence | Prompt 9 prototype; serial/USB capture unavailable |
+| Change Passport graph correlation, versioned history, comparisons and non-executing reproduction plan | Prompt 10 backend/CLI prototype; visual Replay Room UI not implemented |
 | Specialist AI agents, GitHub Action and full dashboard | Not implemented (MCP stdio server is on the feature branch) |
 
 See [ORBIT_BUILD_STATE.md](ORBIT_BUILD_STATE.md) for phase-by-phase implementation details, branch status, known limitations and verified test results.
@@ -78,9 +78,19 @@ node apps/cli/dist/index.js capsule inspect . --out capsule.json
 node apps/cli/dist/index.js capsule compare before.json after.json
 
 # Parse/replay a recorded telemetry file; no device is connected
-node apps/cli/dist/index.js device replay serial.ndjson
+node apps/cli/dist/index.js device replay serial.ndjson --units '{"voltage":"V"}' --demo
+node apps/cli/dist/index.js device serial-status
 
-# Create a passport from an explicit JSON evidence bundle
+# Store a verified repo-local recording in an indexed workspace
+node apps/cli/dist/index.js device replay fixtures/hardware-telemetry/esp32-demo.ndjson --db .orbit/orbit.db --repo local/my-repository --repo-root . --artifact-path fixtures/hardware-telemetry/esp32-demo.ndjson --demo
+
+# Create a graph-backed Passport; inspect history, compare and generate a non-executing plan
+node apps/cli/dist/index.js passport create passport-input.json --db .orbit/orbit.db --repo local/my-repository
+node apps/cli/dist/index.js passport history <passport-node-id> --db .orbit/orbit.db --repo local/my-repository
+node apps/cli/dist/index.js passport compare <before-node-id> <after-node-id> --db .orbit/orbit.db --repo local/my-repository
+node apps/cli/dist/index.js passport plan <passport-node-id> --db .orbit/orbit.db --repo local/my-repository
+
+# Create a standalone passport from an explicit JSON evidence bundle
 node apps/cli/dist/index.js passport create passport-input.json
 ```
 
