@@ -57,12 +57,7 @@ export function getOrCreateApiToken(
 }
 
 export function readTokenFile(filePath: string): string {
-  let stat;
-  try {
-    stat = lstatSync(filePath);
-  } catch (error) {
-    throw error;
-  }
+  const stat = lstatSync(filePath);
   if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 256) {
     throw new OrbitError('CONFIG_INVALID', 'The local API token path is not a valid regular file');
   }
