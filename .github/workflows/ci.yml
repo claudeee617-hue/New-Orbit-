@@ -35,10 +35,6 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      - name: Print canonical Business Intelligence formatting (temporary)
-        if: matrix.os == 'ubuntu-latest'
-        run: pnpm exec prettier apps/web/src/BusinessIntelligence.tsx
-
       # format:check, lint, typecheck, test, build
       - name: Check
         run: pnpm run check
