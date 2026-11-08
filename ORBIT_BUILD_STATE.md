@@ -5,7 +5,7 @@ Last updated: 2026-11-08
 
 ## Current phase
 
-**Prompts 0–3 complete** (Prompt 3 committed locally, not pushed). Next: Prompt 4 (ATLAS scanning).
+**Prompts 0–4 complete.** Next: Prompt 5 (ATLAS memory and MCP).
 
 ## Phase checklist
 
@@ -15,7 +15,7 @@ Last updated: 2026-11-08
 | 1      | Technical design and architecture finalisation | Done (docs, versions verified)                 |
 | 2      | Monorepo foundation                            | Done (see results below)                       |
 | 3      | ORBIT Core graph                               | Done (see results below; not pushed)           |
-| 4      | ATLAS scanning                                 | Not started                                    |
+| 4      | ATLAS scanning                                 | Done (see results below)                       |
 | 5      | ATLAS memory and MCP                           | Not started                                    |
 | 6      | WITNESS                                        | Not started                                    |
 | 7      | FLARE                                          | Not started                                    |
@@ -50,6 +50,32 @@ Limitations specific to Prompt 3:
 - Traversal reads edges per node through the store; no benchmark on large graphs has been run.
 - Nothing populates the graph yet; ATLAS (Prompt 4) is the first writer. The CLI/API do not expose the graph yet.
 
+## Prompt 4 summary (ATLAS: repository and architecture intelligence)
+
+- `packages/atlas`: repository discovery (excludes, include globs, size/file limits, symlinks never followed), directory/file classification, language detection, tree-sitter extraction for TypeScript, JavaScript, Python, Java, C and C++ (symbols, imports, calls, cyclomatic complexity, entry points, unsupported-construct reporting), import resolution, manifest and framework detection, test-file mapping, circular-dependency detection (runtime vs type-only), hotspots, git history/churn/ownership, incremental scanning with a content-hash cache, atomic idempotent graph writes with retirement of vanished facts, architecture map, module summaries, symbol index, impact map and deterministic JSON export.
+- CLI: `orbit scan <path>`, `orbit atlas export`, `orbit atlas impact <file>`.
+- `packages/database`: `transaction()`, `offset` paging; migration 0003 (edges hide when an endpoint is retired).
+- ADR-0004 accepted (WASM tree-sitter), ADR-0011 added.
+
+Test results (`pnpm run check`, Node 22.23.4, Linux): shared 36, core 66, database 39, graph 14, atlas 89, api 12, cli 14, web 6 = **276 passing**; format, lint, typecheck and build clean.
+
+Real-world checks run here (not unit tests):
+- Scanning this repository (59 files): 370 symbols, 85 file imports, 38 package imports, 82 external imports, 675 resolved calls of 4683 call sites, 9 entry points. It reported one import cycle (database index and store) which is `import type` only; after a fix it is classified as type-only rather than runtime. A second scan reused all 59 cached files and wrote nothing.
+- Synthetic repository, 3000 TypeScript files: first scan about 16 s, unchanged re-scan about 8 s (profiling found and fixed a 12 s view query in migration 0003).
+
+Bugs found by tests/real scans and fixed in Prompt 4: `requirements.txt` was classified as docs; `export * from` lost its `*`; Java `default:` was counted as a decision; deprecated `setTimeoutMicros` threw; read-only `atlas` commands created an empty database when the path was missing; a slow `edge_current` view; imports of non-code files (CSS/JSON) were counted as unresolved.
+
+Limitations specific to Prompt 4:
+- **Call graph is partial and heuristic.** 4008 of 4683 call sites in this repository did not become edges (unresolved, external, or top-level calls, which the rule table cannot represent). Name-only matches carry confidence 0.3-0.4 and `heuristic: true`.
+- Not resolved: tsconfig `paths` aliases, build-system include paths for C/C++, Python stdlib vs third-party (reported as external at 0.6), Java classpaths, dynamic imports with non-literal arguments, macros.
+- `.h` files are C unless a C parse fails and a C++ parse is cleaner.
+- Manifests other than `package.json` are read with text patterns.
+- Hotspots and ownership use only the last 500 non-merge commits by default, do not follow renames, and ownership is commit share, not surviving lines. Author names are stored; emails are not.
+- Graph writes dominate scan time (seconds at 3000 files); not tested above 3000 files here.
+- Windows and macOS were not tested (paths are normalised to POSIX; git and symlink behaviour unconfirmed until CI runs).
+- Vendor and generated files are classified but not parsed.
+- Impact analysis follows file-level imports; imports of a whole workspace package are reported separately as coarser package-level importers.
+
 ## Prompt 1 summary
 
 - `docs/architecture/TECHNICAL_DESIGN.md`: verified toolchain, package boundaries and dependency rules, resolved design questions, draft contracts, Mermaid diagrams.
@@ -70,9 +96,9 @@ Created: root config (pnpm workspace, Turborepo, strict tsconfig, ESLint 10 flat
 
 | Check                | Result                                   |
 | -------------------- | ---------------------------------------- |
-| `pnpm run build`     | 7/7 tasks pass                           |
-| `pnpm run typecheck` | 10/10 tasks pass                          |
-| `pnpm run test`      | 177 tests pass (shared 36, core 66, database 35, graph 14, api 12, cli 8, web 6) |
+| `pnpm run build`     | 8/8 tasks pass                           |
+| `pnpm run typecheck` | 13/13 tasks pass                         |
+| `pnpm run test`      | 276 tests pass (shared 36, core 66, database 39, graph 14, atlas 89, api 12, cli 14, web 6) |
 | `pnpm run lint`      | clean                                    |
 | `pnpm run format:check` | clean (Markdown excluded)             |
 
@@ -103,8 +129,11 @@ pnpm install
 pnpm dev          # API :4317 and dashboard :5173
 pnpm check        # format:check, lint, typecheck, test, build
 node apps/cli/dist/index.js status --json
+node apps/cli/dist/index.js scan . --db .orbit/orbit.db   # ATLAS scan of this repo
+node apps/cli/dist/index.js atlas export --db .orbit/orbit.db --out atlas.json
+node apps/cli/dist/index.js atlas impact packages/core/src/index.ts --db .orbit/orbit.db
 ```
 
 ## Next step
 
-Prompt 4: ATLAS scanning (read-only repository scan into the graph via tree-sitter, never executing repository code).
+Prompt 5: ATLAS memory and MCP (persistent architectural memory; MCP server exposing the graph read-only).

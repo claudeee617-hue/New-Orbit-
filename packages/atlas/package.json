@@ -1,0 +1,29 @@
+{
+  "name": "@orbit/atlas",
+  "version": "0.0.1",
+  "private": true,
+  "description": "ATLAS: read-only repository and architecture intelligence. Parses source with tree-sitter and writes evidence-backed facts to the ORBIT graph.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@orbit/core": "workspace:*",
+    "@orbit/database": "workspace:*",
+    "@orbit/graph": "workspace:*",
+    "@orbit/shared": "workspace:*",
+    "tree-sitter-wasms": "0.1.13",
+    "web-tree-sitter": "0.25.10"
+  }
+}

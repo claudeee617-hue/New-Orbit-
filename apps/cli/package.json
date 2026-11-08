@@ -23,6 +23,8 @@
     "orbit": "node dist/index.js"
   },
   "dependencies": {
+    "@orbit/atlas": "workspace:*",
+    "@orbit/core": "workspace:*",
     "@orbit/database": "workspace:*",
     "@orbit/shared": "workspace:*",
     "commander": "15.1.0"

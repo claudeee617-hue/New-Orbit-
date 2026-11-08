@@ -131,3 +131,20 @@ Authoritative sources: `packages/core/src` (vocabulary, rules, schemas, hashing)
 - **Node types (23)** and **edge types (14):** see `NODE_TYPES` / `EDGE_TYPES`; allowed endpoint pairs in `EDGE_RULES`.
 - **Evidence fields:** repository, source, source type, timestamp, commit SHA, location (path + line range), content hash, status, limitations, related entity IDs, supersedes. Each evidence record can be superseded at most once.
 - **Not yet implemented:** Finding, Change Passport and engine-specific domain tables (later prompts).
+
+
+## 12. ATLAS facts (Prompt 4)
+
+See ADR-0011 for the full mapping, confidence model and analysis definitions.
+
+| Node | Key | Notable attrs |
+| ---- | --- | ------------- |
+| Repository | repository key | languages, categories, frameworks, buildSystems, fileCycles, typeOnlyCycles, moduleCycles, entryPoints, hotspots |
+| Module | directory (`.` for root) | category, files, lines, languages |
+| File | repo-relative path | language, category, lines, contentHash, complexity, entryPoint, churn, owners |
+| Function / Class / Symbol | `path#qualifiedName` (`~N` for duplicates) | kind, exported, complexity, location |
+| Test | test file path | file, language |
+| Dependency | `ecosystem:name` | declared (manifest, version, scope), usedInSource |
+| Commit | commit SHA | author name, date, subject |
+
+Edges carry `confidence`, `locations`, `resolution` (how it was resolved) and `occurrences`.

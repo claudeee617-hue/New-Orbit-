@@ -543,3 +543,61 @@ describe('immutability and integrity', () => {
     expect(codes).toContain('MISSING_LEDGER_ENTRY');
   });
 });
+
+describe('paging and transactions', () => {
+  it('pages through nodes and edges with offset', () => {
+    const { repo, ev } = setup();
+    const ids = ['a', 'b', 'c', 'd'].map(
+      (k) =>
+        store.nodes.upsert({
+          repositoryId: repo,
+          type: 'File',
+          key: `${k}.ts`,
+          sourceEvidenceId: ev,
+        }).record.id,
+    );
+    store.edges.upsert({
+      repositoryId: repo,
+      type: 'IMPORTS',
+      fromId: ids[0]!,
+      toId: ids[1]!,
+      sourceEvidenceId: ev,
+    });
+    store.edges.upsert({
+      repositoryId: repo,
+      type: 'IMPORTS',
+      fromId: ids[0]!,
+      toId: ids[2]!,
+      sourceEvidenceId: ev,
+    });
+    const page1 = store.nodes.find(repo, { limit: 3 });
+    const page2 = store.nodes.find(repo, { limit: 3, offset: 3 });
+    expect([...page1, ...page2].map((n) => n.key)).toEqual(['a.ts', 'b.ts', 'c.ts', 'd.ts']);
+    expect(store.edges.list(repo, { limit: 1, offset: 1 })).toHaveLength(1);
+    expect(() => store.nodes.find(repo, { offset: -1 })).toThrowError(/offset/);
+  });
+
+  it('rolls back every write, including ledger entries, when the callback throws', () => {
+    const { repo, ev } = setup();
+    const before = store.ledger.head(repo)?.seq;
+    expect(() =>
+      store.transaction(() => {
+        store.nodes.upsert({ repositoryId: repo, type: 'File', key: 'a.ts', sourceEvidenceId: ev });
+        throw new Error('boom');
+      }),
+    ).toThrowError('boom');
+    expect(store.nodes.find(repo)).toHaveLength(0);
+    expect(store.ledger.head(repo)?.seq).toBe(before);
+    expect(store.verifyIntegrity(repo).ok).toBe(true);
+  });
+
+  it('commits nested writes together', () => {
+    const { repo, ev } = setup();
+    store.transaction(() => {
+      store.nodes.upsert({ repositoryId: repo, type: 'File', key: 'a.ts', sourceEvidenceId: ev });
+      store.nodes.upsert({ repositoryId: repo, type: 'File', key: 'b.ts', sourceEvidenceId: ev });
+    });
+    expect(store.nodes.find(repo)).toHaveLength(2);
+    expect(store.verifyIntegrity(repo).ok).toBe(true);
+  });
+});

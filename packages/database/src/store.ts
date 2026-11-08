@@ -57,6 +57,8 @@ export interface NodeQuery {
   /** Exact (not wildcard) key prefix. */
   keyPrefix?: string;
   limit?: number;
+  /** Rows to skip, for paging through large result sets (stable order: key, id). */
+  offset?: number;
 }
 
 export interface EdgeQuery {
@@ -64,6 +66,8 @@ export interface EdgeQuery {
   toId?: string;
   types?: readonly EdgeType[];
   limit?: number;
+  /** Rows to skip, for paging through large result sets (stable order: type, id). */
+  offset?: number;
 }
 
 export interface EvidenceQuery {
@@ -73,6 +77,11 @@ export interface EvidenceQuery {
 }
 
 export interface GraphStore {
+  /**
+   * Run several writes atomically. If `fn` throws, every write made inside is rolled back
+   * (including ledger entries). Calls may be nested.
+   */
+  transaction<T>(fn: () => T): T;
   repositories: {
     register(input: unknown): WriteResult<RepositoryRecord>;
     get(repositoryId: string): RepositoryRecord | undefined;
@@ -155,6 +164,14 @@ function clampLimit(limit: number | undefined): number {
     throw new OrbitError('INVALID_INPUT', 'limit must be a positive integer');
   }
   return Math.min(value, MAX_LIST_LIMIT);
+}
+
+function clampOffset(offset: number | undefined): number {
+  const value = offset ?? 0;
+  if (!Number.isInteger(value) || value < 0) {
+    throw new OrbitError('INVALID_INPUT', 'offset must be a non-negative integer');
+  }
+  return value;
 }
 
 function notFound(what: string, id: string, repositoryId: string): OrbitError {
@@ -711,7 +728,7 @@ export function createGraphStore(
         conditions.push(sql`substr(key, 1, ${query.keyPrefix.length}) = ${query.keyPrefix}`);
       }
       const rows = db.all<NodeCurrentRow>(
-        sql`select * from node_current where ${sql.join(conditions, sql` and `)} order by key asc, id asc limit ${clampLimit(query.limit)}`,
+        sql`select * from node_current where ${sql.join(conditions, sql` and `)} order by key asc, id asc limit ${clampLimit(query.limit)} offset ${clampOffset(query.offset)}`,
       );
       return rows.map(nodeFromCurrent);
     },
@@ -830,7 +847,7 @@ export function createGraphStore(
         );
       }
       const rows = db.all<EdgeCurrentRow>(
-        sql`select * from edge_current where ${sql.join(conditions, sql` and `)} order by type asc, id asc limit ${clampLimit(query.limit)}`,
+        sql`select * from edge_current where ${sql.join(conditions, sql` and `)} order by type asc, id asc limit ${clampLimit(query.limit)} offset ${clampOffset(query.offset)}`,
       );
       return rows.map(edgeFromCurrent);
     },
@@ -1090,5 +1107,9 @@ export function createGraphStore(
     };
   }
 
-  return { repositories, evidence, nodes, edges, ledger, verifyIntegrity };
+  function transaction<T>(fn: () => T): T {
+    return db.transaction(() => fn());
+  }
+
+  return { transaction, repositories, evidence, nodes, edges, ledger, verifyIntegrity };
 }
