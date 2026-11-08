@@ -106,14 +106,20 @@ export function calculatePricing(input: {
   const totalCosts = variableCosts + fixedMonthlyCost;
   const monthlyProfit = monthlyRevenue - totalCosts;
 
+  const breakEvenCandidate =
+    contributionPerSeat > 0 ? Math.ceil(fixedMonthlyCost / contributionPerSeat) : null;
+  const breakEvenSeats =
+    breakEvenCandidate !== null && Number.isSafeInteger(breakEvenCandidate)
+      ? breakEvenCandidate
+      : null;
+
   return {
     monthlyRevenue,
     variableCosts,
     totalCosts,
     monthlyProfit,
     marginPercent: safePercent(monthlyProfit, monthlyRevenue),
-    breakEvenSeats:
-      contributionPerSeat > 0 ? Math.ceil(fixedMonthlyCost / contributionPerSeat) : null,
+    breakEvenSeats,
     contributionPerSeat,
   };
 }
@@ -129,5 +135,5 @@ export function formatBusinessCurrency(value: number, currency: BusinessCurrency
 
 export function formatBusinessPercent(value: number | null): string {
   if (value === null || !Number.isFinite(value)) return '—';
-  return `${value.toFixed(1)}%`;
+  return `${new Intl.NumberFormat('en', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(value)}%`;
 }
