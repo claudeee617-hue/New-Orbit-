@@ -268,16 +268,43 @@ export function recordChangePassport(
   input: PassportRecordInput,
   options: { now?: () => string } = {},
 ): PersistedPassport {
-  if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('Passport record input must be an object');
-  if (typeof input.repositoryId !== 'string' || !input.repositoryId.trim()) throw new Error('repositoryId is required');
-  if (typeof input.repository !== 'string' || !input.repository.trim()) throw new Error('repository is required');
-  if (typeof input.commitSha !== 'string' || !/^[0-9a-f]{7,64}$/i.test(input.commitSha)) throw new Error('commit SHA is invalid');
-  if (typeof input.diffSha256 !== 'string' || !/^[0-9a-f]{64}$/i.test(input.diffSha256)) throw new Error('diff SHA-256 is invalid');
-  if (!Array.isArray(input.changedFiles) || input.changedFiles.length > 1000 || input.changedFiles.some((path) => typeof path !== 'string')) throw new Error('changedFiles must be an array of at most 1000 paths');
+  if (!input || typeof input !== 'object' || Array.isArray(input))
+    throw new Error('Passport record input must be an object');
+  if (typeof input.repositoryId !== 'string' || !input.repositoryId.trim())
+    throw new Error('repositoryId is required');
+  if (typeof input.repository !== 'string' || !input.repository.trim())
+    throw new Error('repository is required');
+  if (typeof input.commitSha !== 'string' || !/^[0-9a-f]{7,64}$/i.test(input.commitSha))
+    throw new Error('commit SHA is invalid');
+  if (typeof input.diffSha256 !== 'string' || !/^[0-9a-f]{64}$/i.test(input.diffSha256))
+    throw new Error('diff SHA-256 is invalid');
+  if (
+    !Array.isArray(input.changedFiles) ||
+    input.changedFiles.length > 1000 ||
+    input.changedFiles.some((path) => typeof path !== 'string')
+  )
+    throw new Error('changedFiles must be an array of at most 1000 paths');
   if (!Array.isArray(input.evidence)) throw new Error('evidence must be an array');
   if (input.evidence.length > 500) throw new Error('at most 500 evidence records can be supplied');
-  if (input.evidenceIds !== undefined && (!Array.isArray(input.evidenceIds) || input.evidenceIds.length > 500 || input.evidenceIds.some((id) => typeof id !== 'string' || !id.trim()))) throw new Error('evidenceIds must contain at most 500 non-empty strings');
-  if (input.evidence.some((item) => !item || typeof item !== 'object' || typeof item.id !== 'string' || typeof item.sha256 !== 'string' || typeof item.source !== 'string' || typeof item.status !== 'string')) throw new Error('supplied evidence references must include ID, SHA-256, source and status');
+  if (
+    input.evidenceIds !== undefined &&
+    (!Array.isArray(input.evidenceIds) ||
+      input.evidenceIds.length > 500 ||
+      input.evidenceIds.some((id) => typeof id !== 'string' || !id.trim()))
+  )
+    throw new Error('evidenceIds must contain at most 500 non-empty strings');
+  if (
+    input.evidence.some(
+      (item) =>
+        !item ||
+        typeof item !== 'object' ||
+        typeof item.id !== 'string' ||
+        typeof item.sha256 !== 'string' ||
+        typeof item.source !== 'string' ||
+        typeof item.status !== 'string',
+    )
+  )
+    throw new Error('supplied evidence references must include ID, SHA-256, source and status');
   const repository = store.repositories.get(input.repositoryId);
   if (!repository) throw new Error('repository is not registered');
   if (input.repository !== repository.key && input.repository !== repository.id) {

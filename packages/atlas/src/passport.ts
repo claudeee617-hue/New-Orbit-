@@ -110,7 +110,11 @@ function assembleChangePassport(
   if (!input || typeof input !== 'object' || Array.isArray(input)) {
     throw new Error('Change Passport input must be an object');
   }
-  if (typeof input.repository !== 'string' || !input.repository.trim() || input.repository.length > 256) {
+  if (
+    typeof input.repository !== 'string' ||
+    !input.repository.trim() ||
+    input.repository.length > 256
+  ) {
     throw new Error('repository must be a non-empty string up to 256 characters');
   }
   if (typeof input.commitSha !== 'string' || typeof input.diffSha256 !== 'string') {
@@ -124,31 +128,55 @@ function assembleChangePassport(
   if (input.completeness !== undefined && !Array.isArray(input.completeness)) {
     throw new Error('completeness must be an array');
   }
-  if (input.baseSha !== undefined && typeof input.baseSha !== 'string') throw new Error('baseSha must be a string');
-  if (input.environmentFingerprint !== undefined && typeof input.environmentFingerprint !== 'string') {
+  if (input.baseSha !== undefined && typeof input.baseSha !== 'string')
+    throw new Error('baseSha must be a string');
+  if (
+    input.environmentFingerprint !== undefined &&
+    typeof input.environmentFingerprint !== 'string'
+  ) {
     throw new Error('environmentFingerprint must be a string');
   }
-  if (input.firmwareBuildId !== undefined && (typeof input.firmwareBuildId !== 'string' || input.firmwareBuildId.length > 128)) {
+  if (
+    input.firmwareBuildId !== undefined &&
+    (typeof input.firmwareBuildId !== 'string' || input.firmwareBuildId.length > 128)
+  ) {
     throw new Error('firmwareBuildId must be a string up to 128 characters');
   }
-  if (input.telemetrySessionSha256 !== undefined && typeof input.telemetrySessionSha256 !== 'string') {
+  if (
+    input.telemetrySessionSha256 !== undefined &&
+    typeof input.telemetrySessionSha256 !== 'string'
+  ) {
     throw new Error('telemetrySessionSha256 must be a string');
   }
   for (const item of input.evidence) {
     if (!item || typeof item !== 'object' || Array.isArray(item)) {
       throw new Error('each evidence record must be an object');
     }
-    if (typeof item.id !== 'string' || !item.id.trim() || item.id.length > 256 || typeof item.source !== 'string' || !item.source.trim() || item.source.length > 2048) {
+    if (
+      typeof item.id !== 'string' ||
+      !item.id.trim() ||
+      item.id.length > 256 ||
+      typeof item.source !== 'string' ||
+      !item.source.trim() ||
+      item.source.length > 2048
+    ) {
       throw new Error('evidence ID and source must be non-empty bounded strings');
     }
-    if (item.sha256 !== undefined && typeof item.sha256 !== 'string') throw new Error('evidence SHA-256 must be a string');
-    if (item.limitations !== undefined && (!Array.isArray(item.limitations) || item.limitations.length > 100 || item.limitations.some((value) => typeof value !== 'string' || value.length > 5000))) {
+    if (item.sha256 !== undefined && typeof item.sha256 !== 'string')
+      throw new Error('evidence SHA-256 must be a string');
+    if (
+      item.limitations !== undefined &&
+      (!Array.isArray(item.limitations) ||
+        item.limitations.length > 100 ||
+        item.limitations.some((value) => typeof value !== 'string' || value.length > 5000))
+    ) {
       throw new Error('evidence limitations must be an array of strings');
     }
   }
   if (input.impact !== undefined) {
     const impact = input.impact;
-    if (!impact || typeof impact !== 'object' || Array.isArray(impact)) throw new Error('impact must be an object');
+    if (!impact || typeof impact !== 'object' || Array.isArray(impact))
+      throw new Error('impact must be an object');
     const lists: Array<[string, unknown, number]> = [
       ['changedFiles', impact.changedFiles, 1000],
       ['affectedFiles', impact.affectedFiles, 5000],
@@ -158,23 +186,37 @@ function assembleChangePassport(
       ['edgeIds', impact.edgeIds, 10000],
     ];
     for (const [name, value, max] of lists) {
-      if (!Array.isArray(value) || value.length > max || value.some((entry) => typeof entry !== 'string' || entry.length > 1024)) {
+      if (
+        !Array.isArray(value) ||
+        value.length > max ||
+        value.some((entry) => typeof entry !== 'string' || entry.length > 1024)
+      ) {
         throw new Error('impact ' + name + ' must be an array of bounded strings');
       }
     }
-    if (typeof impact.truncated !== 'boolean') throw new Error('impact truncated flag must be boolean');
+    if (typeof impact.truncated !== 'boolean')
+      throw new Error('impact truncated flag must be boolean');
   }
   for (const path of input.changedFiles) {
     if (typeof path !== 'string') throw new Error('changed file paths must be strings');
   }
   if ((input.findings?.length ?? 0) > 200) throw new Error('at most 200 findings can be included');
   for (const item of input.findings ?? []) {
-    if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error('each finding must be an object');
-    if (typeof item.id !== 'string' || !item.id.trim() || item.id.length > 128) throw new Error('finding ID is invalid');
-    if (typeof item.severity !== 'string' || !item.severity.trim() || item.severity.length > 32) throw new Error('finding severity is invalid');
+    if (!item || typeof item !== 'object' || Array.isArray(item))
+      throw new Error('each finding must be an object');
+    if (typeof item.id !== 'string' || !item.id.trim() || item.id.length > 128)
+      throw new Error('finding ID is invalid');
+    if (typeof item.severity !== 'string' || !item.severity.trim() || item.severity.length > 32)
+      throw new Error('finding severity is invalid');
     if (typeof item.message !== 'string') throw new Error('finding message must be a string');
-    if (item.path !== undefined && typeof item.path !== 'string') throw new Error('finding path must be a string');
-    if (item.lines !== undefined && (!Array.isArray(item.lines) || item.lines.length > 1000 || item.lines.some((line) => !Number.isInteger(line) || line < 1))) {
+    if (item.path !== undefined && typeof item.path !== 'string')
+      throw new Error('finding path must be a string');
+    if (
+      item.lines !== undefined &&
+      (!Array.isArray(item.lines) ||
+        item.lines.length > 1000 ||
+        item.lines.some((line) => !Number.isInteger(line) || line < 1))
+    ) {
       throw new Error('finding lines must be positive integer line numbers');
     }
   }
@@ -269,16 +311,27 @@ function assembleChangePassport(
   if (completeness.length > 7) throw new Error('at most seven completeness dimensions are allowed');
   const seenDimensions = new Set<string>();
   for (const item of completeness) {
-    if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error('each completeness dimension must be an object');
-    if (!['diff', 'coverage', 'tests', 'ci', 'environment', 'build', 'hardware'].includes(item.dimension)) throw new Error('completeness dimension name is invalid');
+    if (!item || typeof item !== 'object' || Array.isArray(item))
+      throw new Error('each completeness dimension must be an object');
+    if (
+      !['diff', 'coverage', 'tests', 'ci', 'environment', 'build', 'hardware'].includes(
+        item.dimension,
+      )
+    )
+      throw new Error('completeness dimension name is invalid');
     if (seenDimensions.has(item.dimension))
       throw new Error(`duplicate completeness dimension: ${item.dimension}`);
     seenDimensions.add(item.dimension);
     if (!['PRESENT', 'PARTIAL', 'MISSING', 'NOT_APPLICABLE'].includes(item.status))
       throw new Error(`completeness dimension ${item.dimension} has an invalid status`);
     if (typeof item.rule !== 'string' || !item.rule.trim() || item.rule.length > 500)
-      throw new Error(`completeness dimension ${item.dimension} requires a rule up to 500 characters`);
-    if (!Array.isArray(item.evidenceIds) || item.evidenceIds.some((id) => typeof id !== 'string' || !id.trim()))
+      throw new Error(
+        `completeness dimension ${item.dimension} requires a rule up to 500 characters`,
+      );
+    if (
+      !Array.isArray(item.evidenceIds) ||
+      item.evidenceIds.some((id) => typeof id !== 'string' || !id.trim())
+    )
       throw new Error(`completeness dimension ${item.dimension} evidence IDs are invalid`);
     if (item.evidenceIds.length > 500)
       throw new Error(
@@ -308,7 +361,8 @@ function assembleChangePassport(
         : ('PASS' as const);
   const createdAtValue = (options.now ?? (() => new Date().toISOString()))();
   const createdAtDate = new Date(createdAtValue);
-  if (!Number.isFinite(createdAtDate.getTime())) throw new Error('createdAt must be a valid timestamp');
+  if (!Number.isFinite(createdAtDate.getTime()))
+    throw new Error('createdAt must be a valid timestamp');
   const createdAt = createdAtDate.toISOString();
   const unsigned = {
     schemaVersion: 1 as const,

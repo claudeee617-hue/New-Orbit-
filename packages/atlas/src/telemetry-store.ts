@@ -68,10 +68,16 @@ export async function storeTelemetrySession(
     throw new Error('telemetry artifact path must be a string');
   }
   if (typeof input.isDemo !== 'boolean') throw new Error('isDemo must be boolean');
-  if (input.deviceLabel !== undefined && (typeof input.deviceLabel !== 'string' || input.deviceLabel.length > 512)) {
+  if (
+    input.deviceLabel !== undefined &&
+    (typeof input.deviceLabel !== 'string' || input.deviceLabel.length > 512)
+  ) {
     throw new Error('device label must be a string up to 512 characters');
   }
-  if (input.firmwareBuildId !== undefined && (typeof input.firmwareBuildId !== 'string' || input.firmwareBuildId.length > 512)) {
+  if (
+    input.firmwareBuildId !== undefined &&
+    (typeof input.firmwareBuildId !== 'string' || input.firmwareBuildId.length > 512)
+  ) {
     throw new Error('firmware build ID must be a string up to 512 characters');
   }
   if (input.commitSha !== undefined && typeof input.commitSha !== 'string') {
@@ -114,7 +120,8 @@ export async function storeTelemetrySession(
     verifiedSession.points.find((point) => point.timestamp)?.timestamp ??
     new Date().toISOString();
   const timestampDate = new Date(timestamp);
-  if (!Number.isFinite(timestampDate.getTime())) throw new Error('telemetry session timestamp is invalid');
+  if (!Number.isFinite(timestampDate.getTime()))
+    throw new Error('telemetry session timestamp is invalid');
   const canonicalTimestamp = timestampDate.toISOString();
 
   const sessionKey = `telemetry:${verifiedSession.rawSha256}`;
