@@ -5,32 +5,28 @@ import Fastify from 'fastify';
 import {
   hashArtifact,
   nodeIdFor,
-  parseInput,
-  repositoryInputSchema,
   type EvidenceStatus,
   type NodeType,
+  canonicalJson,
 } from '@orbit/core';
 import {
   analyseTelemetry,
-  buildArchitectureMap,
-  compareChangePassports,
   exportAtlas,
   getPassportHistory,
   impactMap,
-  inspectExtendedEnvironment,
   parseGoTestJson,
   parseJestJsonReport,
   parseJunitXml,
   parsePytestJsonReport,
   recordChangePassport,
   scanRepository,
+  parseTelemetry,
   type PassportRecordInput,
 } from '@orbit/atlas';
 import { createGraphStore, openDatabase, type GraphStore, type OrbitDatabase } from '@orbit/database';
 import {
   ORBIT_VERSION,
   OrbitError,
-  canonicalJson,
   type HealthResponse,
   type Logger,
 } from '@orbit/shared';
@@ -447,7 +443,11 @@ export function buildServer(options: BuildServerOptions) {
     const repository = repositoryByKey(store, request.params.key);
     const body = record(request.body, 'body');
     const content = text(body.content, 'content', MAX_INGEST_BYTES);
-    const session = (await import('@orbit/atlas')).parseTelemetry(content, body.format as 'json' | 'ndjson' | 'csv' | 'key-value' | undefined);
+    const format = body.format as 'json' | 'ndjson' | 'csv' | 'key-value' | undefined;
+    if (format !== undefined && !['json', 'ndjson', 'csv', 'key-value'].includes(format)) {
+      throw new OrbitError('INVALID_INPUT', 'format must be json, ndjson, csv or key-value');
+    }
+    const session = parseTelemetry(content, format);
     const analysis = analyseTelemetry(session, { units: (body.units ?? {}) as Record<string, string> });
     const contentHash = hashArtifact(content);
     const key = `telemetry:${contentHash}`;
