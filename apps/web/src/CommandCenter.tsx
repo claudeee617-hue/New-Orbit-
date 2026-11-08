@@ -27,7 +27,15 @@ function display(value: unknown): string {
   return '—';
 }
 
-function Metric({ label, value, detail }: { label: string; value: string | number; detail: string }) {
+function Metric({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: string | number;
+  detail: string;
+}) {
   return (
     <article className="rounded-lg border border-edge bg-panel p-4">
       <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-mute">{label}</p>
@@ -54,53 +62,59 @@ export function CommandCenter() {
   const [graph, setGraph] = useState<ApiGraphPage | null>(null);
   const [evidence, setEvidence] = useState<ApiEvidencePage | null>(null);
   const [passports, setPassports] = useState<unknown[]>([]);
-  const [integrity, setIntegrity] = useState<{ ok: boolean; ledgerEntriesChecked: number; problems: unknown[] } | null>(null);
+  const [integrity, setIntegrity] = useState<{
+    ok: boolean;
+    ledgerEntriesChecked: number;
+    problems: unknown[];
+  } | null>(null);
   const [panel, setPanel] = useState<Panel>('overview');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
-  const client = useMemo(
-    () => (token ? createOrbitApiClient({ token }) : null),
-    [token],
-  );
+  const client = useMemo(() => (token ? createOrbitApiClient({ token }) : null), [token]);
 
-  const loadWorkspace = useCallback(async (signal?: AbortSignal) => {
-    if (!client) return;
-    setLoading(true);
-    setError('');
-    try {
-      const result = await client.listRepositories(signal);
-      setRepositories(result.repositories);
-      const selected = result.repositories.find((item) => item.key === repositoryKey)
-        ?? result.repositories[0];
-      if (!selected) {
-        setRepositoryKey('');
-        setGraph(null);
-        setEvidence(null);
-        setPassports([]);
-        setIntegrity(null);
-        setNotice('No repository is registered yet. Scan a local repository with the ORBIT CLI or API.');
-        return;
+  const loadWorkspace = useCallback(
+    async (signal?: AbortSignal) => {
+      if (!client) return;
+      setLoading(true);
+      setError('');
+      try {
+        const result = await client.listRepositories(signal);
+        setRepositories(result.repositories);
+        const selected =
+          result.repositories.find((item) => item.key === repositoryKey) ?? result.repositories[0];
+        if (!selected) {
+          setRepositoryKey('');
+          setGraph(null);
+          setEvidence(null);
+          setPassports([]);
+          setIntegrity(null);
+          setNotice(
+            'No repository is registered yet. Scan a local repository with the ORBIT CLI or API.',
+          );
+          return;
+        }
+        setRepositoryKey(selected.key);
+        const [graphResult, evidenceResult, passportResult, integrityResult] = await Promise.all([
+          client.getGraph(selected.key, { limit: 100, signal }),
+          client.getEvidence(selected.key, { limit: 100, signal }),
+          client.getPassports(selected.key, { limit: 100, signal }),
+          client.getIntegrity(selected.key, signal),
+        ]);
+        setGraph(graphResult);
+        setEvidence(evidenceResult);
+        setPassports(passportResult.passports);
+        setIntegrity(integrityResult.integrity);
+        setNotice('');
+      } catch (cause) {
+        if (!signal?.aborted) setError(messageOf(cause));
+      } finally {
+        if (!signal?.aborted) setLoading(false);
       }
-      setRepositoryKey(selected.key);
-      const [graphResult, evidenceResult, passportResult, integrityResult] = await Promise.all([
-        client.getGraph(selected.key, { limit: 100, signal }),
-        client.getEvidence(selected.key, { limit: 100, signal }),
-        client.getPassports(selected.key, { limit: 100, signal }),
-        client.getIntegrity(selected.key, signal),
-      ]);
-      setGraph(graphResult);
-      setEvidence(evidenceResult);
-      setPassports(passportResult.passports);
-      setIntegrity(integrityResult.integrity);
-      setNotice('');
-    } catch (cause) {
-      if (!signal?.aborted) setError(messageOf(cause));
-    } finally {
-      if (!signal?.aborted) setLoading(false);
-    }
-  }, [client, repositoryKey]);
+    },
+    [client, repositoryKey],
+  );
 
   useEffect(() => {
     if (!client) return;
@@ -163,13 +177,16 @@ export function CommandCenter() {
         <p className="font-mono text-xs uppercase tracking-[0.2em] text-cyan">Local connection</p>
         <h2 className="mt-2 text-xl font-semibold text-ink">Connect your ORBIT workspace</h2>
         <p className="mt-3 text-sm leading-6 text-mute">
-          Enter the local API token from the private <code className="font-mono text-cyan">api.token</code>
-          {' '}file in your ORBIT workspace. The token stays in this page's memory and is sent only
-          in the Authorization header to the same-origin local API proxy. It is not saved to
-          browser storage.
+          Enter the local API token from the private{' '}
+          <code className="font-mono text-cyan">api.token</code> file in your ORBIT workspace. The
+          token stays in this page's memory and is sent only in the Authorization header to the
+          same-origin local API proxy. It is not saved to browser storage.
         </p>
         <form onSubmit={connect} className="mt-6 space-y-3">
-          <label htmlFor="orbit-api-token" className="block text-xs font-medium uppercase tracking-wider text-mute">
+          <label
+            htmlFor="orbit-api-token"
+            className="block text-xs font-medium uppercase tracking-wider text-mute"
+          >
             Local API token
           </label>
           <input
@@ -190,11 +207,20 @@ export function CommandCenter() {
             Connect locally
           </button>
         </form>
-        {error && <p role="alert" className="mt-4 text-sm text-bad">{error}</p>}
-        {notice && <p role="status" className="mt-4 text-sm text-mute">{notice}</p>}
+        {error && (
+          <p role="alert" className="mt-4 text-sm text-bad">
+            {error}
+          </p>
+        )}
+        {notice && (
+          <p role="status" className="mt-4 text-sm text-mute">
+            {notice}
+          </p>
+        )}
         <p className="mt-6 border-t border-edge pt-4 text-xs leading-5 text-mute">
-          Start the local services from the repository root with <code className="font-mono text-cyan">pnpm dev</code>.
-          Keep the token private; never paste it into an issue or commit it to Git.
+          Start the local services from the repository root with{' '}
+          <code className="font-mono text-cyan">pnpm dev</code>. Keep the token private; never paste
+          it into an issue or commit it to Git.
         </p>
       </section>
     );
@@ -206,9 +232,13 @@ export function CommandCenter() {
     <div className="space-y-6">
       <section className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-edge bg-panel p-4">
         <div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-ok">Authenticated · local only</p>
+          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-ok">
+            Authenticated · local only
+          </p>
           <h2 className="mt-1 text-lg font-semibold text-ink">Engineering Command Center</h2>
-          <p className="mt-1 text-xs text-mute">Repository graph, evidence and Change Passport data from your local database.</p>
+          <p className="mt-1 text-xs text-mute">
+            Repository graph, evidence and Change Passport data from your local database.
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -234,7 +264,11 @@ export function CommandCenter() {
           {error}
         </div>
       )}
-      {notice && <div role="status" className="rounded-lg border border-edge bg-panel p-4 text-sm text-mute">{notice}</div>}
+      {notice && (
+        <div role="status" className="rounded-lg border border-edge bg-panel p-4 text-sm text-mute">
+          {notice}
+        </div>
+      )}
 
       <section className="flex flex-wrap items-center justify-between gap-3">
         <label className="flex items-center gap-3 text-sm text-mute">
@@ -245,11 +279,15 @@ export function CommandCenter() {
             className="max-w-full rounded-md border border-edge bg-panel px-3 py-2 font-mono text-sm text-ink"
           >
             {repositories.map((repository) => (
-              <option key={repository.id} value={repository.key}>{repository.displayName} · {repository.key}</option>
+              <option key={repository.id} value={repository.key}>
+                {repository.displayName} · {repository.key}
+              </option>
             ))}
           </select>
         </label>
-        <span className="font-mono text-xs text-mute">{selectedRepository?.key ?? 'No repository selected'}</span>
+        <span className="font-mono text-xs text-mute">
+          {selectedRepository?.key ?? 'No repository selected'}
+        </span>
       </section>
 
       <nav aria-label="Engineering dashboard views" className="flex flex-wrap gap-2">
@@ -267,36 +305,80 @@ export function CommandCenter() {
       </nav>
 
       {!selectedRepository && !loading ? (
-        <Empty title="No repository data yet" detail="Register or scan a local repository with orbit init / orbit scan, then refresh this view. The dashboard never inserts demo metrics into a real workspace." />
+        <Empty
+          title="No repository data yet"
+          detail="Register or scan a local repository with orbit init / orbit scan, then refresh this view. The dashboard never inserts demo metrics into a real workspace."
+        />
       ) : panel === 'overview' ? (
         <>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <Metric label="Graph nodes" value={nodes.length} detail="Returned in the first 100-node page" />
-            <Metric label="Graph edges" value={edges.length} detail="Returned in the first 100-edge page" />
-            <Metric label="Evidence records" value={evidenceItems.length} detail="Latest bounded evidence page" />
-            <Metric label="Change Passports" value={passports.length} detail="Recorded passport nodes" />
+            <Metric
+              label="Graph nodes"
+              value={nodes.length}
+              detail="Returned in the first 100-node page"
+            />
+            <Metric
+              label="Graph edges"
+              value={edges.length}
+              detail="Returned in the first 100-edge page"
+            />
+            <Metric
+              label="Evidence records"
+              value={evidenceItems.length}
+              detail="Latest bounded evidence page"
+            />
+            <Metric
+              label="Change Passports"
+              value={passports.length}
+              detail="Recorded passport nodes"
+            />
           </div>
-          <section className="rounded-lg border border-edge bg-panel p-5" aria-label="Evidence ledger integrity">
+          <section
+            className="rounded-lg border border-edge bg-panel p-5"
+            aria-label="Evidence ledger integrity"
+          >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h3 className="font-mono text-xs uppercase tracking-wider text-mute">Ledger integrity</h3>
-                <p className="mt-2 text-sm text-ink">{integrity ? (integrity.ok ? 'Hash-chain verification passed' : 'Integrity issues detected') : 'Integrity not measured'}</p>
-                <p className="mt-1 text-xs text-mute">{integrity ? `${integrity.ledgerEntriesChecked} ledger entries checked · ${integrity.problems.length} findings` : 'Waiting for repository integrity report'}</p>
+                <h3 className="font-mono text-xs uppercase tracking-wider text-mute">
+                  Ledger integrity
+                </h3>
+                <p className="mt-2 text-sm text-ink">
+                  {integrity
+                    ? integrity.ok
+                      ? 'Hash-chain verification passed'
+                      : 'Integrity issues detected'
+                    : 'Integrity not measured'}
+                </p>
+                <p className="mt-1 text-xs text-mute">
+                  {integrity
+                    ? `${integrity.ledgerEntriesChecked} ledger entries checked · ${integrity.problems.length} findings`
+                    : 'Waiting for repository integrity report'}
+                </p>
               </div>
-              <span className={`rounded-full border px-3 py-1 font-mono text-[10px] ${integrity?.ok ? 'border-ok/40 text-ok' : integrity ? 'border-bad/40 text-bad' : 'border-edge text-mute'}`}>{integrity?.ok ? 'VERIFIED' : integrity ? 'ISSUES' : 'UNKNOWN'}</span>
+              <span
+                className={`rounded-full border px-3 py-1 font-mono text-[10px] ${integrity?.ok ? 'border-ok/40 text-ok' : integrity ? 'border-bad/40 text-bad' : 'border-edge text-mute'}`}
+              >
+                {integrity?.ok ? 'VERIFIED' : integrity ? 'ISSUES' : 'UNKNOWN'}
+              </span>
             </div>
             {integrity && integrity.problems.length > 0 && (
               <ul className="mt-4 space-y-2 border-t border-edge pt-3">
                 {integrity.problems.slice(0, 5).map((problem, index) => {
                   const item = objectValue(problem);
-                  return <li key={index} className="text-xs text-bad">{display(item.code)} · {display(item.message)}</li>;
+                  return (
+                    <li key={index} className="text-xs text-bad">
+                      {display(item.code)} · {display(item.message)}
+                    </li>
+                  );
                 })}
               </ul>
             )}
           </section>
           <div className="grid gap-4 lg:grid-cols-2">
             <section className="rounded-lg border border-edge bg-panel p-5">
-              <h3 className="font-mono text-xs uppercase tracking-wider text-mute">Graph composition</h3>
+              <h3 className="font-mono text-xs uppercase tracking-wider text-mute">
+                Graph composition
+              </h3>
               {nodeTypes.length ? (
                 <ul className="mt-4 space-y-3">
                   {nodeTypes.slice(0, 8).map(([type, count]) => (
@@ -306,14 +388,28 @@ export function CommandCenter() {
                     </li>
                   ))}
                 </ul>
-              ) : <p className="mt-4 text-sm text-mute">No graph nodes returned for this repository.</p>}
+              ) : (
+                <p className="mt-4 text-sm text-mute">
+                  No graph nodes returned for this repository.
+                </p>
+              )}
             </section>
             <section className="rounded-lg border border-edge bg-panel p-5">
-              <h3 className="font-mono text-xs uppercase tracking-wider text-mute">Evidence ledger</h3>
-              <p className="mt-3 text-3xl font-semibold tabular-nums text-ink">{graph?.ledger.entries ?? 0}</p>
-              <p className="mt-1 text-xs text-mute">Ledger entries reported by the local graph store</p>
-              <p className="mt-4 break-all font-mono text-[11px] text-mute">Head hash: {graph?.ledger.headHash ?? 'Not available'}</p>
-              <p className="mt-3 text-xs text-mute">Metrics are bounded API results, not extrapolated totals.</p>
+              <h3 className="font-mono text-xs uppercase tracking-wider text-mute">
+                Evidence ledger
+              </h3>
+              <p className="mt-3 text-3xl font-semibold tabular-nums text-ink">
+                {graph?.ledger.entries ?? 0}
+              </p>
+              <p className="mt-1 text-xs text-mute">
+                Ledger entries reported by the local graph store
+              </p>
+              <p className="mt-4 break-all font-mono text-[11px] text-mute">
+                Head hash: {graph?.ledger.headHash ?? 'Not available'}
+              </p>
+              <p className="mt-3 text-xs text-mute">
+                Metrics are bounded API results, not extrapolated totals.
+              </p>
             </section>
           </div>
         </>
@@ -325,54 +421,127 @@ export function CommandCenter() {
           {nodes.length ? (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
-                <thead className="bg-void text-[10px] uppercase tracking-wider text-mute"><tr><th className="px-4 py-3">Type</th><th className="px-4 py-3">Key / ID</th><th className="px-4 py-3">Commit</th></tr></thead>
-                <tbody>{nodes.map((item, index) => {
-                  const node = objectValue(item);
-                  return <tr key={display(node.id) === '—' ? index : display(node.id)} className="border-t border-edge">
-                    <td className="px-4 py-3 font-mono text-cyan">{display(node.type)}</td>
-                    <td className="max-w-[360px] break-all px-4 py-3 text-ink">{display(node.key ?? node.id)}</td>
-                    <td className="px-4 py-3 font-mono text-xs text-mute">{display(node.validFromCommit)}</td>
-                  </tr>;
-                })}</tbody>
+                <thead className="bg-void text-[10px] uppercase tracking-wider text-mute">
+                  <tr>
+                    <th className="px-4 py-3">Type</th>
+                    <th className="px-4 py-3">Key / ID</th>
+                    <th className="px-4 py-3">Commit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {nodes.map((item, index) => {
+                    const node = objectValue(item);
+                    return (
+                      <tr
+                        key={display(node.id) === '—' ? index : display(node.id)}
+                        className="border-t border-edge"
+                      >
+                        <td className="px-4 py-3 font-mono text-cyan">{display(node.type)}</td>
+                        <td className="max-w-[360px] break-all px-4 py-3 text-ink">
+                          {display(node.key ?? node.id)}
+                        </td>
+                        <td className="px-4 py-3 font-mono text-xs text-mute">
+                          {display(node.validFromCommit)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
               </table>
             </div>
-          ) : <div className="p-5"><Empty title="Graph is empty" detail="Scan a repository to populate architecture nodes and edges." /></div>}
+          ) : (
+            <div className="p-5">
+              <Empty
+                title="Graph is empty"
+                detail="Scan a repository to populate architecture nodes and edges."
+              />
+            </div>
+          )}
         </section>
       ) : panel === 'evidence' ? (
         <section className="overflow-hidden rounded-lg border border-edge bg-panel">
-          <div className="border-b border-edge p-4"><h3 className="font-mono text-xs uppercase tracking-wider text-mute">Evidence records</h3></div>
+          <div className="border-b border-edge p-4">
+            <h3 className="font-mono text-xs uppercase tracking-wider text-mute">
+              Evidence records
+            </h3>
+          </div>
           {evidenceItems.length ? (
-            <div className="divide-y divide-edge">{evidenceItems.map((item, index) => {
-              const entry = objectValue(item);
-              return <article key={display(entry.id) === '—' ? index : display(entry.id)} className="p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-mono text-sm text-ink">{display(entry.source)}</p>
-                  <span className="rounded-full border border-edge px-2 py-1 font-mono text-[10px] text-cyan">{display(entry.status)}</span>
-                </div>
-                <p className="mt-2 text-xs text-mute">{display(entry.sourceType)} · {display(entry.commitSha)}</p>
-                <p className="mt-2 break-all font-mono text-[10px] text-mute">{display(entry.contentHash)}</p>
-              </article>;
-            })}</div>
-          ) : <div className="p-5"><Empty title="No evidence found" detail="Ingest CI, test, environment or recorded telemetry evidence through the local API or CLI." /></div>}
+            <div className="divide-y divide-edge">
+              {evidenceItems.map((item, index) => {
+                const entry = objectValue(item);
+                return (
+                  <article
+                    key={display(entry.id) === '—' ? index : display(entry.id)}
+                    className="p-4"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="font-mono text-sm text-ink">{display(entry.source)}</p>
+                      <span className="rounded-full border border-edge px-2 py-1 font-mono text-[10px] text-cyan">
+                        {display(entry.status)}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs text-mute">
+                      {display(entry.sourceType)} · {display(entry.commitSha)}
+                    </p>
+                    <p className="mt-2 break-all font-mono text-[10px] text-mute">
+                      {display(entry.contentHash)}
+                    </p>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="p-5">
+              <Empty
+                title="No evidence found"
+                detail="Ingest CI, test, environment or recorded telemetry evidence through the local API or CLI."
+              />
+            </div>
+          )}
         </section>
       ) : (
         <section className="rounded-lg border border-edge bg-panel p-5">
           <h3 className="font-mono text-xs uppercase tracking-wider text-mute">Change Passports</h3>
           {passports.length ? (
-            <ul className="mt-4 divide-y divide-edge">{passports.map((item, index) => {
-              const passport = objectValue(item);
-              return <li key={display(passport.id) === '—' ? index : display(passport.id)} className="py-3">
-                <p className="break-all font-mono text-sm text-ink">{display(passport.key ?? passport.id)}</p>
-                <p className="mt-1 text-xs text-mute">Version {display(passport.version)} · {display(passport.validFromCommit)}</p>
-              </li>;
-            })}</ul>
-          ) : <div className="mt-4"><Empty title="No Change Passports yet" detail="Create a passport from commit-scoped evidence with the ORBIT CLI or authenticated local API. Missing verification should remain visible, not guessed." /></div>}
+            <ul className="mt-4 divide-y divide-edge">
+              {passports.map((item, index) => {
+                const passport = objectValue(item);
+                return (
+                  <li
+                    key={display(passport.id) === '—' ? index : display(passport.id)}
+                    className="py-3"
+                  >
+                    <p className="break-all font-mono text-sm text-ink">
+                      {display(passport.key ?? passport.id)}
+                    </p>
+                    <p className="mt-1 text-xs text-mute">
+                      Version {display(passport.version)} · {display(passport.validFromCommit)}
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <div className="mt-4">
+              <Empty
+                title="No Change Passports yet"
+                detail="Create a passport from commit-scoped evidence with the ORBIT CLI or authenticated local API. Missing verification should remain visible, not guessed."
+              />
+            </div>
+          )}
         </section>
       )}
 
       <p className="text-[11px] leading-5 text-mute">
-        Privacy: the browser client reads only through the authenticated loopback API. The token is not persisted. This dashboard does not upload source code, run builds, connect to hardware, or claim unmeasured test/coverage results.
+        Privacy: the browser client reads only through the authenticated loopback API. The token is
+        not persisted. This dashboard does not upload source code, run builds, connect to hardware,
+        or claim unmeasured test/coverage results.
       </p>
     </div>
   );
 }
+##[group]Run pnpm run check
+pnpm run check
+shell: /usr/bin/bash -e {0}
+env:
+  PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
