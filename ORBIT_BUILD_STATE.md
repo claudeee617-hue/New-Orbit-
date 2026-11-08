@@ -5,7 +5,7 @@ Last updated: 2026-11-08
 
 ## Current phase
 
-**Prompts 0–4 are on `main`. Prompts 5–10 are being consolidated on `feat/prompts-6-8-completion` in draft PR #5. Prompt 5–8 previously passed CI on Ubuntu, macOS and Windows; Prompt 9–10 additions are pushed and require a fresh full check before their status can be called verified. These changes are not merged.
+**Engineering Prompts 0–4 are on `main`; engineering Prompts 5–10 are consolidated on `feat/prompts-6-8-completion` in draft PR #5 and remain unmerged pending a fresh full CI pass. The separate App Business Module Prompts 0–3 are in draft PR #6 and Prompt 4 is in draft PR #7 (stacked on #6); neither business PR is merged.
 
 ## Phase checklist
 
