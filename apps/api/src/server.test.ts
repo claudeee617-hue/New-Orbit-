@@ -1,26 +1,47 @@
 import { connect } from 'node:net';
 import { Writable } from 'node:stream';
 import { afterEach, describe, expect, it } from 'vitest';
-import { IN_MEMORY, openDatabase, type OrbitDatabase } from '@orbit/database';
+import { createGraphStore, IN_MEMORY, openDatabase, type OrbitDatabase } from '@orbit/database';
 import { ORBIT_VERSION, createLogger, type HealthResponse } from '@orbit/shared';
 import { buildServer } from './server.js';
 
 const databases: OrbitDatabase[] = [];
+const servers: Array<ReturnType<typeof buildServer>> = [];
+const API_TOKEN = 'orbit-test-token-'.padEnd(48, 'x');
 
-function setup(): { database: OrbitDatabase; server: ReturnType<typeof buildServer> } {
+function setup(): {
+  database: OrbitDatabase;
+  server: ReturnType<typeof buildServer>;
+  repositoryId: string;
+} {
   const database = openDatabase({ path: IN_MEMORY });
   databases.push(database);
+  const store = createGraphStore(database);
+  const repository = store.repositories.register({ key: 'example', displayName: 'Example' }).record;
   const sink = new Writable({ write: (_chunk, _enc, cb) => cb() });
   const logger = createLogger({ name: 'test', level: 'silent', destination: sink });
-  return { database, server: buildServer({ database, logger }) };
+  const server = buildServer({ database, logger, apiToken: API_TOKEN });
+  servers.push(server);
+  return { database, server, repositoryId: repository.id };
 }
 
-afterEach(() => {
-  for (const database of databases.splice(0)) database.close();
+const auth = { authorization: 'Bearer ' + API_TOKEN };
+
+afterEach(async () => {
+  for (const server of servers.splice(0)) {
+    try {
+      await server.close();
+    } catch {
+      // Some inject-only tests never start a listening socket.
+    }
+  }
+  for (const database of databases.splice(0)) {
+    if (database.isHealthy()) database.close();
+  }
 });
 
 describe('GET /health', () => {
-  it('reports ok with the version and a migrated database', async () => {
+  it('reports ok with the version and a migrated database without requiring a token', async () => {
     const { server } = setup();
     const response = await server.inject({
       method: 'GET',
@@ -48,6 +69,181 @@ describe('GET /health', () => {
     const body = response.json<HealthResponse>();
     expect(body.status).toBe('degraded');
     expect(body.database).toEqual({ connected: false, schemaVersion: null });
+  });
+});
+
+describe('authenticated local API', () => {
+  it('rejects missing or incorrect ***', async () => {
+    const { server } = setup();
+    const missing = await server.inject({
+      method: 'GET',
+      url: '/api/v1/repositories',
+      headers: { host: 'localhost' },
+    });
+    const incorrect = await server.inject({
+      method: 'GET',
+      url: '/api/v1/repositories',
+      headers: { host: 'localhost', authorization: '***' },
+    });
+    expect(missing.statusCode).toBe(401);
+    expect(incorrect.statusCode).toBe(401);
+    expect(missing.json()).toMatchObject({ error: 'UNAUTHENTICATED' });
+  });
+
+  it('lists registered repositories and never returns the token value', async () => {
+    const { server } = setup();
+    const response = await server.inject({
+      method: 'GET',
+      url: '/api/v1/repositories',
+      headers: { host: 'localhost', ...auth },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      repositories: [{ key: 'example', displayName: 'Example' }],
+    });
+    const session = await server.inject({
+      method: 'GET',
+      url: '/api/v1/session',
+      headers: { host: 'localhost', ...auth },
+    });
+    expect(session.statusCode).toBe(200);
+    expect(session.body).not.toContain(API_TOKEN);
+    expect(session.json()).toMatchObject({ authenticated: true, tokenSource: 'environment' });
+  });
+
+  it('stores CI evidence and returns the same evidence through the repository endpoint', async () => {
+    const { server } = setup();
+    const commitSha = 'a'.repeat(40);
+    const ingested = await server.inject({
+      method: 'POST',
+      url: '/api/v1/repositories/example/ingest/ci',
+      headers: { host: 'localhost', ...auth },
+      payload: {
+        status: 'failure',
+        source: 'github-actions:build',
+        commitSha,
+        runId: 'run-123',
+        workflow: 'CI',
+      },
+    });
+    expect(ingested.statusCode).toBe(200);
+    const payload = ingested.json<{
+      evidence: { id: string; status: string };
+      node: { type: string };
+    }>();
+    expect(payload.evidence.status).toBe('FAIL');
+    expect(payload.node.type).toBe('CIWorkflow');
+
+    const evidence = await server.inject({
+      method: 'GET',
+      url: '/api/v1/repositories/example/evidence?commitSha=' + commitSha,
+      headers: { host: 'localhost', ...auth },
+    });
+    expect(evidence.statusCode).toBe(200);
+    expect(evidence.json<{ evidence: Array<{ id: string }> }>().evidence).toHaveLength(1);
+    expect(evidence.json<{ evidence: Array<{ id: string }> }>().evidence[0]?.id).toBe(
+      payload.evidence.id,
+    );
+  });
+
+  it('parses and records JUnit test reports without storing the raw report as graph attributes', async () => {
+    const { server } = setup();
+    const report =
+      '<testsuite name="unit"><testcase classname="api" name="ok"/><testcase classname="api" name="bad"><failure message="boom"/></testcase></testsuite>';
+    const response = await server.inject({
+      method: 'POST',
+      url: '/api/v1/repositories/example/ingest/test-report',
+      headers: { host: 'localhost', ...auth },
+      payload: { format: 'junit', content: report, source: 'ci:junit' },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      summary: { total: 2, passed: 1, failed: 1, skipped: 0 },
+      evidence: { status: 'FAIL', sourceType: 'test-report' },
+      node: { type: 'TestRun' },
+    });
+    expect(JSON.stringify(response.json())).not.toContain('boom');
+  });
+
+  it('records environment declarations as partial evidence, not proof of the runner image', async () => {
+    const { server } = setup();
+    const response = await server.inject({
+      method: 'POST',
+      url: '/api/v1/repositories/example/ingest/environment',
+      headers: { host: 'localhost', ...auth },
+      payload: { snapshot: { runtimes: { node: '>=22' }, packageManager: 'pnpm' } },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      evidence: { status: 'PARTIAL', sourceType: 'environment' },
+      node: { type: 'Environment' },
+    });
+  });
+
+  it('rejects arbitrary environment fields that could carry secrets', async () => {
+    const { server } = setup();
+    const response = await server.inject({
+      method: 'POST',
+      url: '/api/v1/repositories/example/ingest/environment',
+      headers: { host: 'localhost', ...auth },
+      payload: { snapshot: { runtimes: { node: '>=22' }, apiToken: 'must-not-be-stored' } },
+    });
+    expect(response.statusCode).toBe(400);
+    expect(response.body).not.toContain('must-not-be-stored');
+  });
+
+  it('stores only explicitly allowed CI summary fields', async () => {
+    const { server, repositoryId } = setup();
+    const response = await server.inject({
+      method: 'POST',
+      url: '/api/v1/repositories/example/ingest/ci',
+      headers: { host: 'localhost', ...auth },
+      payload: {
+        status: 'success',
+        summary: { passed: 10, failed: 0, apiToken: 'must-not-be-stored' },
+      },
+    });
+    expect(response.statusCode).toBe(400);
+    const store = createGraphStore(databases[databases.length - 1]!);
+    const ciNodes = store.nodes.find(repositoryId, { type: 'CIWorkflow', limit: 10 });
+    expect(ciNodes).toHaveLength(0);
+  });
+
+  it('parses recorded telemetry and marks its evidence as observational', async () => {
+    const { server } = setup();
+    const response = await server.inject({
+      method: 'POST',
+      url: '/api/v1/repositories/example/ingest/telemetry',
+      headers: { host: 'localhost', ...auth },
+      payload: {
+        format: 'ndjson',
+        content: '{"timestamp":"2026-11-08T10:00:00Z","voltage":3.3,"event":"boot"}',
+        demo: true,
+      },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      evidence: { status: 'PARTIAL', sourceType: 'telemetry' },
+      node: { type: 'TelemetrySession' },
+      summary: { demo: true, metricNames: ['voltage'] },
+    });
+  });
+
+  it('rejects malformed CI status and invalid pagination rather than accepting arbitrary input', async () => {
+    const { server } = setup();
+    const badCi = await server.inject({
+      method: 'POST',
+      url: '/api/v1/repositories/example/ingest/ci',
+      headers: { host: 'localhost', ...auth },
+      payload: { status: { nested: 'invalid' } },
+    });
+    const badGraph = await server.inject({
+      method: 'GET',
+      url: '/api/v1/repositories/example/graph?limit=1000000',
+      headers: { host: 'localhost', ...auth },
+    });
+    expect(badCi.statusCode).toBe(400);
+    expect(badGraph.statusCode).toBe(400);
   });
 });
 
@@ -99,7 +295,13 @@ describe('host protection', () => {
     databases.push(database);
     const sink = new Writable({ write: (_chunk, _enc, cb) => cb() });
     const logger = createLogger({ name: 'test', level: 'silent', destination: sink });
-    const server = buildServer({ database, logger, allowedHosts: ['orbit.internal'] });
+    const server = buildServer({
+      database,
+      logger,
+      allowedHosts: ['orbit.internal'],
+      apiToken: API_TOKEN,
+    });
+    servers.push(server);
     const ok = await server.inject({
       method: 'GET',
       url: '/health',

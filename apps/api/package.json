@@ -24,7 +24,9 @@
   "dependencies": {
     "@orbit/database": "workspace:*",
     "@orbit/shared": "workspace:*",
-    "fastify": "5.12.8"
+    "fastify": "5.12.8",
+    "@orbit/atlas": "workspace:*",
+    "@orbit/core": "workspace:*"
   },
   "devDependencies": {
     "tsx": "4.23.15"
