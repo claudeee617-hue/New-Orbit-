@@ -5,7 +5,7 @@ Last updated: 2026-11-08
 
 ## Current phase
 
-**Engineering roadmap Prompts 0–10 and App Business Module sub-prompts 0–4 are both merged into `main` (engineering PR #5; Business Module PR #9). Both PRs passed full Ubuntu, macOS and Windows CI before merge.**
+**Engineering roadmap Prompts 0–10 and App Business Module sub-prompts 0–4 are merged into `main` (PRs #5 and #9). Prompt 11 API/CLI implementation is in `feat/prompt-11-api-cli`; CI and review are pending, so it is not merged.**
 
 ## Phase checklist
 
@@ -265,3 +265,13 @@ Verified by GitHub Actions run `42481493312` on Ubuntu, macOS and Windows; the e
 - **Business Prompt 3 — Command Center:** accessible Overview / Business navigation and Business strategy / market-research view.
 - **Business Prompt 4 — Business Intelligence:** local-only actual-vs-forecast inputs, profit/margin calculations, customer counts, INR/USD display formatting, pricing / unit-economics simulator and break-even seats.
 - No live accounting, billing, checkout, CRM, customer database, hosted sync or payment integration. Financial inputs remain in local React state and are discarded after refresh. No demo revenue/customer data is seeded.
+
+
+## Prompt 11 — Local API and CLI (in progress on feat/prompt-11-api-cli)
+
+- Added persistent local API Bearer session-token support. The token is random, stored beside the workspace database in a private `api.token` file, and never returned in API responses or logs. `ORBIT_API_TOKEN` can override the file token.
+- Added authenticated repository, scan, graph, evidence, Change Passport, impact/ATLAS report and CI/test/environment/recorded-telemetry ingestion routes under `/api/v1`. Public `/health` and Host-header/DNS-rebinding protection remain.
+- API ingestion uses bounded inputs and allowlisted CI summary/environment metadata; it does not persist arbitrary credential fields or raw test/telemetry report bodies as graph attributes.
+- Added CLI `init`, `doctor`, `graph summary`, `graph nodes`, `ci ingest`, `tests ingest` and `tests history` commands.
+- Added API token lifecycle, API route/integration and CLI workspace/ingestion tests.
+- **Status:** Implementation pushed to feature branch; full format/lint/typecheck/test/build matrix and fixes are still pending. No Prompt 11 PR has been merged.
