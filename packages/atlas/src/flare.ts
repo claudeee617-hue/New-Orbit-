@@ -56,8 +56,43 @@ export function summarizeTestHistory(
   history: readonly TestCaseResult[],
   options: { minSamples?: number; minFlips?: number } = {},
 ): TestHistorySummary[] {
+  if (!Array.isArray(history) || history.length > MAX_TEST_CASES) {
+    throw new Error('FLARE history must contain at most 100000 executions');
+  }
+  if (!options || typeof options !== 'object' || Array.isArray(options)) {
+    throw new Error('FLARE summary options must be an object');
+  }
   const minSamples = options.minSamples ?? 8;
   const minFlips = options.minFlips ?? 3;
+  if (!Number.isInteger(minSamples) || minSamples < 2 || minSamples > MAX_TEST_CASES) {
+    throw new Error('minSamples must be an integer between 2 and 100000');
+  }
+  if (!Number.isInteger(minFlips) || minFlips < 1 || minFlips > MAX_TEST_CASES) {
+    throw new Error('minFlips must be an integer between 1 and 100000');
+  }
+  for (const item of history) {
+    if (
+      !item ||
+      typeof item !== 'object' ||
+      typeof item.id !== 'string' ||
+      !item.id ||
+      item.id.length > 1000 ||
+      typeof item.name !== 'string' ||
+      item.name.length > 500 ||
+      typeof item.suite !== 'string' ||
+      item.suite.length > 500 ||
+      !['passed', 'failed', 'skipped'].includes(item.outcome) ||
+      (item.durationSeconds !== null &&
+        (typeof item.durationSeconds !== 'number' ||
+          !Number.isFinite(item.durationSeconds) ||
+          item.durationSeconds < 0 ||
+          item.durationSeconds > 1_000_000_000)) ||
+      (item.message !== undefined &&
+        (typeof item.message !== 'string' || item.message.length > 10_000))
+    ) {
+      throw new Error('FLARE history entry fields are invalid or exceed their limits');
+    }
+  }
   const groups = new Map<string, TestCaseResult[]>();
   for (const result of history) {
     const list = groups.get(result.id) ?? [];
@@ -100,6 +135,7 @@ export function summarizeTestHistory(
 
 /** Safe subset parser for JUnit XML. DTD and entity declarations are rejected. */
 export function parseJunitXml(xml: string): TestCaseResult[] {
+  if (typeof xml !== 'string') throw new Error('JUnit input must be text');
   if (Buffer.byteLength(xml, 'utf8') > MAX_XML_BYTES)
     throw new Error('JUnit XML exceeds the 10 MiB parser limit');
   if (/<!DOCTYPE|<!ENTITY/i.test(xml))
