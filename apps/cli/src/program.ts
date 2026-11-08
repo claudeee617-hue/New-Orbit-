@@ -1,6 +1,7 @@
 import { Command, InvalidArgumentError } from 'commander';
 import { ORBIT_TAGLINE, ORBIT_VERSION, loadConfig } from '@orbit/shared';
 import { attachEngineCommands } from './engines.js';
+import { attachAdvancedEngineCommands } from './advanced-engines.js';
 import { renderScan, runExport, runImpact, runScan } from './atlas.js';
 import { collectStatus, renderStatus } from './status.js';
 import { startOrbitMcpServer } from '@orbit/mcp';
@@ -148,5 +149,6 @@ export function buildProgram(io: CliIo = defaultIo): Command {
     });
 
   attachEngineCommands(program, io);
+  attachAdvancedEngineCommands(program, io);
   return program;
 }
