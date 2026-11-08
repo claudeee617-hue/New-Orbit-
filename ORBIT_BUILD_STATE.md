@@ -5,7 +5,7 @@ Last updated: 2026-11-08
 
 ## Current phase
 
-**Engineering roadmap Prompts 0–10 are merged into `main` via PR #5 (merge commit `d88d31d`). App Business Module sub-prompts 0–4 are on `feat/business-module-prompts-0-4-main` in draft PR #9 and are pending the combined cross-platform CI; they are not merged yet.**
+**Engineering roadmap Prompts 0–10 and App Business Module sub-prompts 0–4 are both merged into `main` (engineering PR #5; Business Module PR #9). Both PRs passed full Ubuntu, macOS and Windows CI before merge.**
 
 ## Phase checklist
 
@@ -18,8 +18,8 @@ Last updated: 2026-11-08
 | 4      | ATLAS scanning                                 | Done (see results below)                       |
 | 5      | ATLAS memory and MCP                           | Implemented on `main` via PR #5; CI run #109 passed on Ubuntu, macOS and Windows |
 | 6      | WITNESS                                        | Base prototype plus extended verification helpers and CLI on `main` via PR #5; CI run #109 passed on three OSs |
-| 7      | FLARE                                          | Base prototype plus pytest/Jest/Go adapters and reliability analytics/CLI on `feat/prompts-6-8-completion`; CI passed on three OSs; durable history remains outstanding |
-| 8      | CAPSULE                                        | Base prototype plus polyglot manifest inspection and CLI on `feat/prompts-6-8-completion`; CI passed on three OSs; build replay remains out of scope |
+| 7      | FLARE                                          | Merged to `main` via PR #5: pytest/Jest/Go adapters and reliability analytics/CLI; durable history remains outstanding |
+| 8      | CAPSULE                                        | Merged to `main` via PR #5: polyglot manifest inspection and CLI; build replay remains out of scope |
 | 9      | FLIGHT RECORDER                                | Merged to `main` via PR #5: recorded-log analysis + hash-verified graph persistence; no physical serial connection |
 | 10     | Change Passport and Replay Room                | Merged to `main` via PR #5: commit-scoped evidence correlation, immutable history, comparison and non-executing reproduction plan; no visual Replay Room UI |
 | 11     | API and CLI (full)                             | Partial: local engine CLI commands on feature branch |
@@ -31,12 +31,12 @@ Last updated: 2026-11-08
 | 17     | Release polish                                 | Not started                                    |
 
 
-## Cross-engine prototype on feat/orbit-evidence-engines (not yet merged)
+## Cross-engine implementation merged via PR #5
 
-The latest pushed main inspected on 2026-11-08 still records Prompt 5 as not started. The feature branch contains the cross-engine prototypes below plus the Prompt 5 implementation described next; neither is merged into main.
+Engineering Prompts 5–10 were consolidated and merged into main through PR #5 on 2026-11-08. The sections below describe that merged implementation and preserve its remaining limitations.
 
 - WITNESS: unified-diff added-line parsing, LCOV and Cobertura line-coverage adapters, changed-line coverage summaries, deterministic finding IDs and explicit status semantics.
-- FLARE: bounded JUnit XML parser and supplied-history test summaries using outcome flips and Wilson 95% intervals. Persistent history and Jest/pytest/Go adapters are not implemented.
+- FLARE: bounded JUnit XML parser and supplied-history test summaries using outcome flips and Wilson 95% intervals. Jest/pytest/Go adapters were added in the Prompt 7 extension below; a durable history store across separate invocations remains outstanding.
 - CAPSULE: inspect supplied manifest files for declared runtimes, package managers, scripts, dependencies, environment variable names, container manifests and lockfile hashes. No build replay.
 - FLIGHT RECORDER: parse recorded JSON, NDJSON, CSV and key-value telemetry files; hash raw input and identify keyword-based watchdog/reset events. No serial-port connection or device commands.
 - Change Passport: deterministic, content-hashed assembly from explicitly supplied evidence, with missing evidence listed. No graph persistence or Replay Room.
@@ -153,13 +153,13 @@ Manual end-to-end checks that passed: API `/health` returned `ok` with schema ve
 ## Not verified / known limitations
 
 1. **The React UI has not been viewed in a real browser.** Verified: it type-checks, builds, the served HTML and the API proxy work, and the health-state logic is unit-tested. Component rendering itself has no automated test yet (Playwright planned in Prompt 16).
-2. **Consolidated branch CI has passed.** GitHub Actions run `42477639701` passed the repository's full check workflow on Ubuntu, macOS and Windows. This validates the feature branch's format, lint, typecheck, tests and builds; it does not mean the branch is merged or release-ready.
+2. **Merged engineering CI has passed.** GitHub Actions run #109 passed the full repository check on Ubuntu, macOS and Windows before PR #5 was merged. The merge does not mean the prototype is release-ready.
 3. A fresh-clone install was tested locally only (see below).
 4. Competitor claims for CodeGraph, CodeCortex, Chisel and PatchProof remain unverified (`docs/COMPETITIVE_ANALYSIS.md`).
 5. Project name availability (GitHub, npm, domains, trademarks) not checked.
 6. No `LICENSE` file yet (Apache-2.0 targeted).
 7. Repository moved/renamed: GitHub reports the canonical URL as `claudeee617-hue/New-Orbit-`; the session's remote uses the lowercase form, which redirects.
-8. MCP SDK 1.32.2 is now installed and used by the Prompt 5 stdio server on the feature branch; this is not yet merged into main.
+8. MCP SDK 1.32.2 is installed and used by the Prompt 5 stdio server on main; only local stdio transport is implemented.
 
 ## Commands
 
@@ -175,12 +175,12 @@ node apps/cli/dist/index.js atlas impact packages/core/src/index.ts --db .orbit/
 
 ## Next step
 
-Prompt 9: define the next FLIGHT RECORDER integration slice, keeping recorded-file parsing distinct from any future physical serial/device connection.
+Next engineering work: complete the remaining Prompt 11–17 roadmap gates, especially API/CLI depth, full Command Center UX, security review, broader validation and release polish. Physical serial capture remains a separately scoped future capability.
 
 
-## Prompt 6–8 extension work on feat/prompts-6-8-completion (CI passed; review pending)
+## Prompt 6–8 extension work merged via PR #5 (CI passed)
 
-This branch is based on `feat/orbit-evidence-engines` at `bbb6626`, which contains the Prompt 5 implementation and the initial cross-engine prototypes. It does not change `main` directly.
+This implementation was consolidated from the `feat/orbit-evidence-engines` base and `feat/prompts-6-8-completion`, then merged to `main` in PR #5.
 
 ### Prompt 6 — WITNESS extensions
 
@@ -245,12 +245,12 @@ This branch is based on `feat/orbit-evidence-engines` at `bbb6626`, which contai
 
 ## Prompt 9–10 CI status
 
-Verified by GitHub Actions run `42481493312` (2026-11-08): Ubuntu, macOS and Windows all passed the repository `pnpm run check` workflow. Ubuntu recorded 331 passing tests across 9 workspace test suites; formatting, lint, typecheck and build also passed. This validates the current feature branch, not the merged `main` branch.
+Verified by GitHub Actions run #109 (2026-11-08): Ubuntu, macOS and Windows all passed the repository `pnpm run check` workflow. The change was then merged into `main` through PR #5.
 
 
 ## App Business Module sub-prompts 0–4 (separate from engineering roadmap)
 
-**Status:** Implemented on `feat/business-module-prompts-0-4-main`; draft PR #9. Pending final combined CI on Ubuntu, macOS and Windows; not merged.
+**Status:** Merged into `main` through PR #9 on 2026-11-08; GitHub Actions run #113 passed on Ubuntu, macOS and Windows.
 
 - **Business Prompt 0 — Research:** source-linked vendor pricing references, customer segments, beachhead and evidence-led assumptions.
 - **Business Prompt 1 — Business model:** hybrid Community / Team / Enterprise / Embedded packaging with proposed paid prices labelled as hypotheses or future offers.
