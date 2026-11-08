@@ -133,11 +133,19 @@ function SectionTitle({
 export function BusinessIntelligence() {
   const [values, setValues] = useState<InputState>(INITIAL_INPUTS);
   const [currency, setCurrency] = useState<BusinessCurrency>('INR');
-  const numericInputs = useMemo(
-    () =>
-      Object.fromEntries(
-        Object.entries(values).map(([key, value]) => [key, toNumber(value)]),
-      ) as FinancialInputs,
+  const numericInputs = useMemo<FinancialInputs>(
+    () => ({
+      actualRevenue: toNumber(values.actualRevenue),
+      actualExpenses: toNumber(values.actualExpenses),
+      actualCustomers: toNumber(values.actualCustomers),
+      forecastRevenue: toNumber(values.forecastRevenue),
+      forecastExpenses: toNumber(values.forecastExpenses),
+      forecastCustomers: toNumber(values.forecastCustomers),
+      pricePerSeat: toNumber(values.pricePerSeat),
+      variableCostPerSeat: toNumber(values.variableCostPerSeat),
+      fixedMonthlyCost: toNumber(values.fixedMonthlyCost),
+      targetSeats: toNumber(values.targetSeats),
+    }),
     [values],
   );
   const metrics = useMemo(() => calculateBusinessIntelligence(numericInputs), [numericInputs]);
