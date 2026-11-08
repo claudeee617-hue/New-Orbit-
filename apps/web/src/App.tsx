@@ -22,7 +22,9 @@ function StatusBadge({ state }: { state: HealthState }) {
   };
   const style = styles[state.kind];
   return (
-    <span className={`inline-flex items-center gap-2 font-mono text-xs tracking-widest ${style.text}`}>
+    <span
+      className={`inline-flex items-center gap-2 font-mono text-xs tracking-widest ${style.text}`}
+    >
       <span aria-hidden="true" className={`h-2 w-2 rounded-full ${style.dot}`} />
       {style.label}
     </span>
@@ -38,7 +40,8 @@ function ApiDetails({ state }: { state: HealthState }) {
       <div className="space-y-2 text-sm">
         <p className="text-ink">{state.reason}</p>
         <p className="text-mute">
-          Start it from the repository root with <code className="font-mono text-cyan">pnpm dev</code>.
+          Start it from the repository root with{' '}
+          <code className="font-mono text-cyan">pnpm dev</code>.
         </p>
       </div>
     );
@@ -106,9 +109,15 @@ export function App() {
         </main>
       ) : (
         <main className="flex flex-col gap-8">
-          <section aria-labelledby="api-heading" className="rounded-lg border border-edge bg-panel p-5">
+          <section
+            aria-labelledby="api-heading"
+            className="rounded-lg border border-edge bg-panel p-5"
+          >
             <div className="mb-4 flex items-center justify-between gap-4">
-              <h2 id="api-heading" className="text-sm font-medium uppercase tracking-wider text-mute">
+              <h2
+                id="api-heading"
+                className="text-sm font-medium uppercase tracking-wider text-mute"
+              >
                 Local API
               </h2>
               <StatusBadge state={state} />
@@ -124,8 +133,14 @@ export function App() {
             </button>
           </section>
 
-          <section aria-labelledby="engines-heading" className="rounded-lg border border-edge bg-panel p-5">
-            <h2 id="engines-heading" className="mb-1 text-sm font-medium uppercase tracking-wider text-mute">
+          <section
+            aria-labelledby="engines-heading"
+            className="rounded-lg border border-edge bg-panel p-5"
+          >
+            <h2
+              id="engines-heading"
+              className="mb-1 text-sm font-medium uppercase tracking-wider text-mute"
+            >
               Engines
             </h2>
             <p className="mb-4 text-sm text-mute">

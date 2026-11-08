@@ -20,7 +20,8 @@ export const BUSINESS_OFFERS: BusinessOffer[] = [
     price: '$0',
     billing: 'Free · local-first',
     status: 'Core promise',
-    value: 'A useful engineering-evidence workflow without an ORBIT account, hosted service or AI API key.',
+    value:
+      'A useful engineering-evidence workflow without an ORBIT account, hosted service or AI API key.',
     capabilities: [
       'Local repository indexing and evidence storage',
       'Local analysis and Change Passport export as implemented',
@@ -35,7 +36,8 @@ export const BUSINESS_OFFERS: BusinessOffer[] = [
     price: '$8–$12 pilot · $12–$18 standard',
     billing: 'Per active contributor / month · pricing hypothesis',
     status: 'Pricing hypothesis',
-    value: 'Shared evidence, collaboration and continuity across repositories—not access to basic local verification.',
+    value:
+      'Shared evidence, collaboration and continuity across repositories—not access to basic local verification.',
     capabilities: [
       'Shared workspaces and project membership',
       'Opt-in evidence metadata synchronisation',
@@ -50,7 +52,8 @@ export const BUSINESS_OFFERS: BusinessOffer[] = [
     price: 'Custom',
     billing: 'Annual contract · scope to be validated',
     status: 'Future offer',
-    value: 'Customer-controlled deployment choices, identity controls, auditability and operational support.',
+    value:
+      'Customer-controlled deployment choices, identity controls, auditability and operational support.',
     capabilities: [
       'Private or customer-controlled deployment options',
       'SSO / SAML, SCIM and role-based access',
@@ -65,7 +68,8 @@ export const BUSINESS_OFFERS: BusinessOffer[] = [
     price: '$49–$199',
     billing: 'Per engineering workspace / month · pricing hypothesis',
     status: 'Pricing hypothesis',
-    value: 'Connect firmware changes and builds to recorded device sessions and telemetry evidence.',
+    value:
+      'Connect firmware changes and builds to recorded device sessions and telemetry evidence.',
     capabilities: [
       'Firmware build and commit linkage',
       'Recorded device-session metadata and replay',
@@ -149,7 +153,8 @@ export const MARKET_REFERENCES: MarketReference[] = [
     offer: 'Code quality and CI analysis',
     price: 'Quote / plan-dependent',
     billing: 'Per active contributor; 90-day activity window; minimum 3 contributors',
-    relevance: 'Useful code-analysis comparator. The official page directs buyers to plan selection; no universal fixed public fee is stated here.',
+    relevance:
+      'Useful code-analysis comparator. The official page directs buyers to plan selection; no universal fixed public fee is stated here.',
     sourceUrl: 'https://www.jetbrains.com/qodana/buy/',
   },
   {
@@ -176,7 +181,8 @@ export const MARKET_REFERENCES: MarketReference[] = [
     offer: 'AI code review',
     price: '$24',
     billing: 'Per developer / month · billed annually',
-    relevance: 'AI-review benchmark; not equivalent to evidence provenance and local-first workflows.',
+    relevance:
+      'AI-review benchmark; not equivalent to evidence provenance and local-first workflows.',
     sourceUrl: 'https://www.coderabbit.ai/pricing',
   },
   {
@@ -210,48 +216,82 @@ export const COMMERCIAL_STAGES: BusinessStage[] = [
   {
     id: 's0',
     name: 'S0 · Release readiness',
-    productGoal: 'Stabilise the local-first workflow, documentation, licence and security baseline.',
-    exitGate: 'Fresh-clone workflow is reproducible; critical security, privacy and licence blockers are resolved.',
+    productGoal:
+      'Stabilise the local-first workflow, documentation, licence and security baseline.',
+    exitGate:
+      'Fresh-clone workflow is reproducible; critical security, privacy and licence blockers are resolved.',
   },
   {
     id: 's1',
     name: 'S1 · Community preview',
-    productGoal: 'Ship one coherent local workflow from repository scan to evidence-backed Change Passport.',
-    exitGate: 'External developers can complete the documented workflow without private assistance.',
+    productGoal:
+      'Ship one coherent local workflow from repository scan to evidence-backed Change Passport.',
+    exitGate:
+      'External developers can complete the documented workflow without private assistance.',
   },
   {
     id: 's2',
     name: 'S2 · Design-partner pilot',
     productGoal: 'Validate real review and investigation workflows with 5–10 pilot teams.',
-    exitGate: 'At least 5 teams complete workflows, 3 budget owners discuss paid pilots and 2 make a meaningful commitment.',
+    exitGate:
+      'At least 5 teams complete workflows, 3 budget owners discuss paid pilots and 2 make a meaningful commitment.',
   },
   {
     id: 's3',
     name: 'S3 · Team paid beta',
-    productGoal: 'Build optional shared workspaces and metadata sync only after pilot evidence confirms the need.',
-    exitGate: 'Paid pilots use the product repeatedly; workspace costs, export, deletion and support are measured.',
+    productGoal:
+      'Build optional shared workspaces and metadata sync only after pilot evidence confirms the need.',
+    exitGate:
+      'Paid pilots use the product repeatedly; workspace costs, export, deletion and support are measured.',
   },
   {
     id: 's4',
     name: 'S4 · Enterprise readiness',
-    productGoal: 'Add private deployment, identity, governance and operational controls for qualified buyers.',
+    productGoal:
+      'Add private deployment, identity, governance and operational controls for qualified buyers.',
     exitGate: 'Controls are implemented and tested; support obligations can be met.',
   },
   {
     id: 's5',
     name: 'S5 · Embedded expansion',
-    productGoal: 'Complete firmware/build/device-session evidence linkage for embedded engineering teams.',
-    exitGate: 'Multiple embedded teams use the workflow repeatedly and demonstrate investigation value.',
+    productGoal:
+      'Complete firmware/build/device-session evidence linkage for embedded engineering teams.',
+    exitGate:
+      'Multiple embedded teams use the workflow repeatedly and demonstrate investigation value.',
   },
 ];
 
 export const BUSINESS_KPIS = [
-  { id: 'mrr', name: 'Monthly recurring revenue', definition: 'Recognised subscription run-rate from paying workspaces.' },
-  { id: 'paid-workspaces', name: 'Paid workspaces', definition: 'Distinct workspaces with an active paid subscription.' },
-  { id: 'pilot-conversion', name: 'Pilot-to-paid conversion', definition: 'Pilot teams that become paying customers.' },
-  { id: 'weekly-active', name: 'Weekly active workspaces', definition: 'Workspaces completing a real evidence workflow in a week.' },
-  { id: 'workspace-cost', name: 'Cost per active workspace', definition: 'Measured hosting, storage and support cost per active workspace.' },
-  { id: 'time-to-value', name: 'Time to first useful Passport', definition: 'Elapsed time from setup to a valid, evidence-backed output.' },
+  {
+    id: 'mrr',
+    name: 'Monthly recurring revenue',
+    definition: 'Recognised subscription run-rate from paying workspaces.',
+  },
+  {
+    id: 'paid-workspaces',
+    name: 'Paid workspaces',
+    definition: 'Distinct workspaces with an active paid subscription.',
+  },
+  {
+    id: 'pilot-conversion',
+    name: 'Pilot-to-paid conversion',
+    definition: 'Pilot teams that become paying customers.',
+  },
+  {
+    id: 'weekly-active',
+    name: 'Weekly active workspaces',
+    definition: 'Workspaces completing a real evidence workflow in a week.',
+  },
+  {
+    id: 'workspace-cost',
+    name: 'Cost per active workspace',
+    definition: 'Measured hosting, storage and support cost per active workspace.',
+  },
+  {
+    id: 'time-to-value',
+    name: 'Time to first useful Passport',
+    definition: 'Elapsed time from setup to a valid, evidence-backed output.',
+  },
 ] as const;
 
 export const TRUST_GUARDRAILS = [

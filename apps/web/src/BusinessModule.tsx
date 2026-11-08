@@ -8,7 +8,11 @@ import {
   TRUST_GUARDRAILS,
 } from './business/model.js';
 
-function SectionHeading({ eyebrow, title, description }: {
+function SectionHeading({
+  eyebrow,
+  title,
+  description,
+}: {
   eyebrow: string;
   title: string;
   description: string;
@@ -31,7 +35,9 @@ function StatusLabel({ value }: { value: string }) {
         : 'border-edge bg-void text-mute';
 
   return (
-    <span className={`inline-flex rounded-full border px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider ${className}`}>
+    <span
+      className={`inline-flex rounded-full border px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider ${className}`}
+    >
       {value}
     </span>
   );
@@ -56,14 +62,18 @@ export function BusinessModule() {
             </p>
           </div>
           <div className="rounded-lg border border-edge bg-void p-4">
-            <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-mute">Recommended model</p>
+            <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-mute">
+              Recommended model
+            </p>
             <p className="mt-2 text-xl font-semibold text-ink">Hybrid open-core</p>
             <p className="mt-2 text-sm leading-6 text-mute">
               Free local Community · paid hosted Team · custom Enterprise · Embedded add-on after
               validation.
             </p>
             <div className="mt-4 border-t border-edge pt-3">
-              <p className="font-mono text-[10px] uppercase tracking-wider text-mute">Commercial status</p>
+              <p className="font-mono text-[10px] uppercase tracking-wider text-mute">
+                Commercial status
+              </p>
               <p className="mt-1 text-sm text-warn">Strategy proposed · not yet a sales offer</p>
             </div>
           </div>
@@ -94,7 +104,9 @@ export function BusinessModule() {
               <ul className="mt-4 space-y-2">
                 {offer.capabilities.map((capability) => (
                   <li key={capability} className="flex gap-2 text-sm leading-5 text-ink">
-                    <span aria-hidden="true" className="mt-0.5 text-cyan">›</span>
+                    <span aria-hidden="true" className="mt-0.5 text-cyan">
+                      ›
+                    </span>
                     <span>{capability}</span>
                   </li>
                 ))}
@@ -115,7 +127,9 @@ export function BusinessModule() {
             <article key={segment.id} className="rounded-lg border border-edge bg-panel p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h3 className="font-medium text-ink">{segment.name}</h3>
-                <span className="font-mono text-[10px] uppercase tracking-wider text-cyan">{segment.motion}</span>
+                <span className="font-mono text-[10px] uppercase tracking-wider text-cyan">
+                  {segment.motion}
+                </span>
               </div>
               <p className="mt-3 text-sm leading-6 text-mute">{segment.pain}</p>
               <p className="mt-3 border-t border-edge pt-3 text-xs text-mute">
@@ -175,8 +189,8 @@ export function BusinessModule() {
         </div>
         <p className="mt-3 text-xs leading-5 text-mute">
           Prices can change and may exclude tax. Annual billing and minimum-contributor rules are
-          called out where relevant. These products solve overlapping but different jobs; ORBIT
-          must validate its own value with real buyers.
+          called out where relevant. These products solve overlapping but different jobs; ORBIT must
+          validate its own value with real buyers.
         </p>
       </section>
 
@@ -216,14 +230,19 @@ export function BusinessModule() {
           {BUSINESS_KPIS.map((kpi) => (
             <article key={kpi.id} className="rounded-lg border border-edge bg-panel p-4">
               <p className="text-sm font-medium text-ink">{kpi.name}</p>
-              <p className="mt-2 font-mono text-xs uppercase tracking-wider text-warn">Not measured</p>
+              <p className="mt-2 font-mono text-xs uppercase tracking-wider text-warn">
+                Not measured
+              </p>
               <p className="mt-2 text-xs leading-5 text-mute">{kpi.definition}</p>
             </article>
           ))}
         </div>
       </section>
 
-      <section aria-labelledby="trust-heading" className="rounded-xl border border-edge bg-panel p-5">
+      <section
+        aria-labelledby="trust-heading"
+        className="rounded-xl border border-edge bg-panel p-5"
+      >
         <SectionHeading
           eyebrow="06 · Non-negotiables"
           title="Trust and privacy guardrails"
@@ -232,7 +251,9 @@ export function BusinessModule() {
         <ul className="grid gap-3 md:grid-cols-2">
           {TRUST_GUARDRAILS.map((guardrail) => (
             <li key={guardrail} className="flex gap-3 text-sm leading-6 text-ink">
-              <span aria-hidden="true" className="text-ok">✓</span>
+              <span aria-hidden="true" className="text-ok">
+                ✓
+              </span>
               <span>{guardrail}</span>
             </li>
           ))}
