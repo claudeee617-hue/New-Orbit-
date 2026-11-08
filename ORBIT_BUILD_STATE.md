@@ -24,7 +24,7 @@ Last updated: 2026-11-08
 | 10     | Change Passport and Replay Room                | Merged to `main` via PR #5: commit-scoped evidence correlation, immutable history, comparison and non-executing reproduction plan; no visual Replay Room UI |
 | 11     | API and CLI (full)                             | Partial: local engine CLI commands on feature branch |
 | 12     | Command Center (full)                          | Not started (shell exists)                     |
-| 13     | GitHub Action                                  | Not started                                    |
+| 13     | GitHub Action                                  | Partial implementation on `feat/prompt-13-github-action`: composite action for WITNESS changed-line coverage and sensitive-path checks; CI/action runtime validation and Marketplace release pending |
 | 14     | ORBIT AI                                       | Not started                                    |
 | 15     | Security review                                | Not started                                    |
 | 16     | Testing and validation                         | Not started                                    |
@@ -275,3 +275,27 @@ Verified by GitHub Actions run `42481493312` on Ubuntu, macOS and Windows; the e
 - Added CLI `init`, `doctor`, `graph summary`, `graph nodes`, `ci ingest`, `tests ingest` and `tests history` commands.
 - Added API token lifecycle, API route/integration and CLI workspace/ingestion tests.
 - **Status:** Implementation pushed in PR #11; full format/lint/typecheck/test/build matrix passed on Ubuntu, macOS and Windows in GitHub Actions run #136. Ubuntu reported 373 passing tests across nine workspace suites; 15/15 typecheck tasks and 9/9 build tasks passed. PR #11 is ready for review and is not merged.
+
+
+## Prompt 13 — GitHub Action (initial implementation)
+
+Branch: `feat/prompt-13-github-action`.
+
+Implemented:
+- Composite action metadata under `.github/actions/orbit/action.yml`.
+- Trusted runtime strategy: checkout the PR base commit into a separate work directory with persisted credentials disabled, then install/build the base revision's ORBIT CLI. The PR head is consumed as diff data and is not built or executed.
+- Changed-line coverage check using existing WITNESS CLI (LCOV or Cobertura).
+- Sensitive-path filename check; explicitly does not inspect file contents.
+- Optional single upserted PR comment, with permission failures (including fork PR read-only tokens) handled as warnings.
+- Optional SARIF upload, disabled by default and requiring `security-events: write`.
+- Opt-in fail-on-uncovered behavior; default remains advisory.
+- Usage, least-privilege permissions, fork limitations and current gaps documented in `docs/GITHUB_ACTION.md`.
+
+Pending:
+- Run the action end-to-end in a sample repository on Ubuntu, macOS and Windows.
+- Verify fork PR behavior and confirm no PR-head code execution.
+- Add action-level tests for event parsing, diff acquisition, comment idempotency and missing coverage.
+- Add annotations and ingestion of test reports / FLARE history.
+- Decide release/tagging and Marketplace publication only after validation.
+
+Do not mark Prompt 13 complete until the action runs successfully in real GitHub Actions events and the security review confirms the trusted-base runtime boundary.
