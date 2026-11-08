@@ -444,6 +444,14 @@ export function buildServer(options: BuildServerOptions) {
     };
   });
 
+  server.get<{ Params: { key: string } }>(
+    '/api/v1/repositories/:key/integrity',
+    async (request) => {
+      const repository = repositoryByKey(store, request.params.key);
+      return { repository, integrity: store.verifyIntegrity(repository.id) };
+    },
+  );
+
   server.get<{
     Params: { key: string };
     Querystring: { limit?: string; commitSha?: string; sourceType?: string };
