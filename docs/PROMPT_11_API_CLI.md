@@ -1,6 +1,6 @@
 # ORBIT Prompt 11 — Local API and CLI
 
-**Status:** Implemented on `feat/prompt-11-api-cli`; awaiting full cross-platform CI and review. Not merged.
+**Status:** Implemented on `feat/prompt-11-api-cli`; full format/lint/typecheck/test/build CI passed on Ubuntu, macOS and Windows (run #136). Ready for review; not merged.
 
 Prompt 11 connects the existing ORBIT graph and evidence engines to a safe local HTTP API and practical workspace CLI commands. The API remains local-first, loopback-bound by default and bearer-token authenticated outside the public health endpoint.
 
