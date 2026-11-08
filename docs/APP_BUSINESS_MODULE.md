@@ -72,3 +72,34 @@ No purchase, billing, CRM, workspace sync, subscription validation, revenue repo
 - The existing Overview and API health interaction remains functional.
 - Keyboard-operable navigation exposes the active view with accessible state.
 - The web package typecheck, lint, test and build checks pass.
+
+
+## Prompt 4 — Business intelligence and unit economics
+
+**Status:** Interactive, local-only business intelligence inputs and simulator. This is not a connected accounting, billing or CRM system.
+
+### Delivered capabilities
+
+- Actual-versus-forecast input cards for revenue, operating expenses and paying-customer counts.
+- Derived period profit, profit margin, forecast revenue change and revenue per paying customer. Percentages with missing or invalid denominators display as unavailable.
+- Relative revenue comparison bars, scaled consistently to the larger of actual and forecast revenue.
+- INR / USD display selection; it changes formatting only and does not perform currency conversion.
+- Pricing and profitability simulator for monthly price per seat, variable cost per seat, fixed monthly cost and target paid seats.
+- Derived monthly revenue, variable and total costs, profit/loss, margin, contribution per seat and break-even seats. Break-even is unavailable when contribution per seat is zero or negative.
+- Customer panel distinguishes user-entered counts from connected customer records. Cohort, churn, CAC, retention and segment analytics remain unavailable until a consented and reviewed source exists.
+
+### Data and privacy boundary
+
+- Inputs are held in React page state only. They are not sent to the local API, persisted to disk, or retained after refresh.
+- Empty inputs calculate as zero; count fields accept whole numbers only. Negative, non-finite and out-of-range values are normalised by the calculation layer.
+- All values are marked user-entered / not connected. No demo revenue or fabricated customer records are seeded.
+- Currency selection is display-only. No exchange rates, tax treatment, accounting recognition or invoice reconciliation is inferred.
+- Do not enter payment-card data, personal customer details, secrets or other sensitive records.
+
+### Acceptance criteria
+
+- Calculations are deterministic and independently unit-tested, including zero denominators, losses, invalid values and break-even edge cases.
+- User edits recalculate dependent metrics immediately without a backend request.
+- Revenue bars share a common maximum scale; neither side is incorrectly fixed at 100%.
+- The financial surface remains explicitly disconnected from live accounting, payments, CRM and analytics.
+- The web package passes formatting, lint, typecheck, test and production build checks.
