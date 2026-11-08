@@ -5,7 +5,7 @@ Last updated: 2026-11-08
 
 ## Current phase
 
-**Engineering Prompts 0–11 and App Business Module sub-prompts 0–4 are merged into `main` (PRs #5, #9 and #11). Prompt 11 CI passed on Ubuntu, macOS and Windows before merge. Prompt 12 is a partial Command Center implementation in draft PR #13; Prompt 13 is a partial GitHub Action in draft PR #14; Prompt 14 is an experimental provider/API/UI integration in stacked draft PR #21. The optional-signal typecheck fix passed the full Ubuntu/macOS/Windows CI matrix in run #218. Subsequent hardening commits add bounded provider-response streaming and remove a duplicate API test; these latest commits still need a fresh CI run. Security/privacy/release groundwork PR #15 is merged, but independent security review and release gates remain open.**
+**Engineering Prompts 0–11 and App Business Module sub-prompts 0–4 are merged into `main` (PRs #5, #9 and #11). Prompt 11 CI passed on Ubuntu, macOS and Windows before merge. Prompt 12 is an incomplete draft in PR #13; Prompt 13 is an incomplete draft in PR #14; Prompt 14's opt-in AI integration is an experimental stacked draft in PR #21. Security/privacy/release groundwork PR #15 is merged, but independent security review and release gates remain open.**
 
 ## Phase checklist
 
@@ -22,13 +22,13 @@ Last updated: 2026-11-08
 | 8      | CAPSULE                                        | Merged to `main` via PR #5: polyglot manifest inspection and CLI; build replay remains out of scope |
 | 9      | FLIGHT RECORDER                                | Merged to `main` via PR #5: recorded-log analysis + hash-verified graph persistence; no physical serial connection |
 | 10     | Change Passport and Replay Room                | Merged to `main` via PR #5: commit-scoped evidence correlation, immutable history, comparison and non-executing reproduction plan; no visual Replay Room UI |
-| 11     | API and CLI (full)                             | Merged to `main` via PR #11; CI run #136 passed Ubuntu, macOS and Windows |
-| 12     | Command Center (full)                          | Partial: authenticated local dashboard, repository selector, graph/evidence/passport views, integrity report; remaining engine screens and UX pending (PR #13) |
-| 13     | GitHub Action                                  | Prototype in draft PR #14; action-level tests and cross-platform CI pending |
-| 14     | ORBIT AI                                       | Experimental preview/approval integration in stacked draft PR #21; CI re-run pending |
+| 11     | API and CLI (full)                             | Merged to `main` via PR #11; CI passed Ubuntu, macOS and Windows |
+| 12     | Command Center (full)                          | Partial: authenticated dashboard and integrity view in draft PR #13; engine screens and UX pending |
+| 13     | GitHub Action                                  | Prototype in draft PR #14; action harness added, CI validation pending |
+| 14     | ORBIT AI                                       | Experimental preview/approval integration in stacked draft PR #21; provider smoke/E2E tests pending |
 | 15     | Security review                                | Security/privacy/release groundwork merged via PR #15; independent review pending |
-| 16     | Testing and validation                         | Partial: unit/API/CLI checks exist; browser E2E, fuzz, migration and action tests pending |
-| 17     | Release polish                                 | Partial: governance docs and release checklist merged; license and release approval gates remain |
+| 16     | Testing and validation                         | Partial: unit/API/CLI tests exist; browser E2E, fuzz, migration and action tests pending |
+| 17     | Release polish                                 | Partial: governance docs merged; release validation and approval remain |
 
 
 ## Cross-engine implementation merged via PR #5
@@ -267,19 +267,19 @@ Verified by GitHub Actions run `42481493312` on Ubuntu, macOS and Windows; the e
 - No live accounting, billing, checkout, CRM, customer database, hosted sync or payment integration. Financial inputs remain in local React state and are discarded after refresh. No demo revenue/customer data is seeded.
 
 
-## Prompt 11 — Local API and CLI (in progress on feat/prompt-11-api-cli)
+## Prompt 11 — Local API and CLI (merged via PR #11)
 
 - Added persistent local API Bearer session-token support. The token is random, stored beside the workspace database in a private `api.token` file, and never returned in API responses or logs. `ORBIT_API_TOKEN` can override the file token.
 - Added authenticated repository, scan, graph, evidence, Change Passport, impact/ATLAS report and CI/test/environment/recorded-telemetry ingestion routes under `/api/v1`. Public `/health` and Host-header/DNS-rebinding protection remain.
 - API ingestion uses bounded inputs and allowlisted CI summary/environment metadata; it does not persist arbitrary credential fields or raw test/telemetry report bodies as graph attributes.
 - Added CLI `init`, `doctor`, `graph summary`, `graph nodes`, `ci ingest`, `tests ingest` and `tests history` commands.
 - Added API token lifecycle, API route/integration and CLI workspace/ingestion tests.
-- **Status:** Implementation pushed in PR #11; full format/lint/typecheck/test/build matrix passed on Ubuntu, macOS and Windows in GitHub Actions run #136. Ubuntu reported 373 passing tests across nine workspace suites; 15/15 typecheck tasks and 9/9 build tasks passed. PR #11 is ready for review and is not merged.
+- **Status:** Merged into `main` via PR #11 on 2026-11-08 after full format/lint/typecheck/test/build CI passed on Ubuntu, macOS and Windows. Merge commit: `96a44e56a9d5400c989a1ad4c190d6b58b1dff79`.
 
 
-## Prompt 11 — merged
+## Prompts 14–17 documentation and security groundwork
 
-PR #11 was merged to main on 2026-11-08 after CI run #136 passed on Ubuntu, macOS and Windows. The PR implementation includes authenticated local API endpoints, local API token lifecycle, bounded input validation and the CLI workflows listed in the README. Merge commit: `96a44e56a9d5400c989a1ad4c190d6b58b1dff79`.
+PR #15 merged this groundwork into `main` on 2026-11-08. It adds `SECURITY.md`, privacy/data-handling policy, CodeQL workflow, Dependabot configuration, validation-gap checklist, contributor/release documentation, Apache-2.0 license text, citation metadata and issue templates. This is not an independent security audit or a release approval. Parser/path/XXE/secret-redaction tests, host/CSRF review, dependency findings review, E2E/fuzz/migration/action tests and owner/legal release approval remain open. The separate Prompt 14 AI adapter and Command Center integration is experimental in draft PR #21 and is not merged.
 
 ## Prompt 12 — active implementation (PR #13)
 
