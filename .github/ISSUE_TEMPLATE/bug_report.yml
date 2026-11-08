@@ -1,11 +1,11 @@
 name: Bug report
 description: Report a reproducible problem in ORBIT.
-title: "[Bug]: "
-labels: ["bug"]
+title: '[Bug]: '
+labels: ['bug']
 body:
   - type: markdown
     attributes:
-      value: "Do not include credentials, private source code, personal data or exploitable vulnerability details. Use SECURITY.md for security reports."
+      value: 'Do not include credentials, private source code, personal data or exploitable vulnerability details. Use SECURITY.md for security reports.'
   - type: textarea
     id: summary
     attributes:
