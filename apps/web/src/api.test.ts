@@ -12,9 +12,9 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 describe('local ORBIT API client', () => {
   it('sends the bearer token in a header and never in the URL', async () => {
-    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
-      jsonResponse({ repositories: [] }),
-    );
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(jsonResponse({ repositories: [] }));
     const client = createOrbitApiClient({ token: TOKEN, fetchImpl });
 
     await client.listRepositories();
@@ -60,7 +60,9 @@ describe('local ORBIT API client', () => {
   });
 
   it('passes abort signals through to fetch', async () => {
-    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ repositories: [] }));
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(jsonResponse({ repositories: [] }));
     const controller = new AbortController();
     const client = createOrbitApiClient({ token: TOKEN, fetchImpl });
 
