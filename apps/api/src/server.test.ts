@@ -243,14 +243,14 @@ describe('host protection', () => {
       if (address === null || typeof address === 'string') throw new Error('expected a TCP address');
       const raw = await new Promise<string>((resolve, reject) => {
         const socket = connect({ host: '127.0.0.1', port: address.port }, () => {
-          socket.write('GET /health HTTP/1.0\\r\\n\\r\\n');
+          socket.write('GET /health HTTP/1.0\r\n\r\n');
         });
         let received = '';
         socket.on('data', (chunk: Buffer) => (received += chunk.toString()));
         socket.on('end', () => resolve(received));
         socket.on('error', reject);
       });
-      expect(raw.split('\\r\\n')[0]).toContain('403');
+      expect(raw.split('\r\n')[0]).toContain('403');
     } finally {
       await server.close();
     }
