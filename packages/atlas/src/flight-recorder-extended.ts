@@ -147,7 +147,7 @@ export function analyseTelemetry(
     }
     if (event.includes('reset') || event.includes('reboot')) {
       const ruleId = 'event.reset';
-      anomalies.push({
+      addAnomaly({
         id: stableId([session.rawSha256, ruleId, pointIndex, point.event]),
         ruleId,
         kind: 'reset',
@@ -197,7 +197,7 @@ export function analyseTelemetry(
           ...(limit !== undefined ? { limit } : {}),
           message:
             rule.label?.slice(0, 200) ??
-            `${name}=${value}${options.units?.[name] ? ` ${units[name]}` : ''} is ${comparator} configured limit ${limit}`,
+            `${name}=${value}${units[name] ? ` ${units[name]}` : ''} is ${comparator} configured limit ${limit}`,
         });
       }
     }
