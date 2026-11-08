@@ -5,7 +5,7 @@ Last updated: 2026-11-08
 
 ## Current phase
 
-**Engineering Prompts 0–4 are on `main`; engineering Prompts 5–10 are consolidated on `feat/prompts-6-8-completion` in draft PR #5 and remain unmerged pending a fresh full CI pass. The separate App Business Module Prompts 0–3 are in draft PR #6 and Prompt 4 is in draft PR #7 (stacked on #6); neither business PR is merged.
+**Engineering roadmap Prompts 0–10 are merged into `main` via PR #5 (merge commit `d88d31d`). App Business Module sub-prompts 0–4 are on `feat/business-module-prompts-0-4-main` in draft PR #9 and are pending the combined cross-platform CI; they are not merged yet.**
 
 ## Phase checklist
 
@@ -16,12 +16,12 @@ Last updated: 2026-11-08
 | 2      | Monorepo foundation                            | Done (see results below)                       |
 | 3      | ORBIT Core graph                               | Done on `main` (see results below)           |
 | 4      | ATLAS scanning                                 | Done (see results below)                       |
-| 5      | ATLAS memory and MCP                           | Implemented on `feat/prompts-6-8-completion`; PR #5 draft, CI passed on three OSs; not merged |
-| 6      | WITNESS                                        | Base prototype plus extended verification helpers and CLI on `feat/prompts-6-8-completion`; CI passed on three OSs; review pending |
+| 5      | ATLAS memory and MCP                           | Implemented on `main` via PR #5; CI run #109 passed on Ubuntu, macOS and Windows |
+| 6      | WITNESS                                        | Base prototype plus extended verification helpers and CLI on `main` via PR #5; CI run #109 passed on three OSs |
 | 7      | FLARE                                          | Base prototype plus pytest/Jest/Go adapters and reliability analytics/CLI on `feat/prompts-6-8-completion`; CI passed on three OSs; durable history remains outstanding |
 | 8      | CAPSULE                                        | Base prototype plus polyglot manifest inspection and CLI on `feat/prompts-6-8-completion`; CI passed on three OSs; build replay remains out of scope |
-| 9      | FLIGHT RECORDER                                | Recorded-log analysis + hash-verified graph persistence; no physical serial connection |
-| 10     | Change Passport and Replay Room                | Commit-scoped evidence correlation, immutable history, comparison and non-executing reproduction plan; no visual Replay Room UI |
+| 9      | FLIGHT RECORDER                                | Merged to `main` via PR #5: recorded-log analysis + hash-verified graph persistence; no physical serial connection |
+| 10     | Change Passport and Replay Room                | Merged to `main` via PR #5: commit-scoped evidence correlation, immutable history, comparison and non-executing reproduction plan; no visual Replay Room UI |
 | 11     | API and CLI (full)                             | Partial: local engine CLI commands on feature branch |
 | 12     | Command Center (full)                          | Not started (shell exists)                     |
 | 13     | GitHub Action                                  | Not started                                    |
@@ -246,3 +246,15 @@ This branch is based on `feat/orbit-evidence-engines` at `bbb6626`, which contai
 ## Prompt 9–10 CI status
 
 Verified by GitHub Actions run `42481493312` (2026-11-08): Ubuntu, macOS and Windows all passed the repository `pnpm run check` workflow. Ubuntu recorded 331 passing tests across 9 workspace test suites; formatting, lint, typecheck and build also passed. This validates the current feature branch, not the merged `main` branch.
+
+
+## App Business Module sub-prompts 0–4 (separate from engineering roadmap)
+
+**Status:** Implemented on `feat/business-module-prompts-0-4-main`; draft PR #9. Pending final combined CI on Ubuntu, macOS and Windows; not merged.
+
+- **Business Prompt 0 — Research:** source-linked vendor pricing references, customer segments, beachhead and evidence-led assumptions.
+- **Business Prompt 1 — Business model:** hybrid Community / Team / Enterprise / Embedded packaging with proposed paid prices labelled as hypotheses or future offers.
+- **Business Prompt 2 — Data contract:** typed strategy model, offer maturity, customer segments, research references, gated roadmap, unmeasured KPIs and privacy guardrails.
+- **Business Prompt 3 — Command Center:** accessible Overview / Business navigation and Business strategy / market-research view.
+- **Business Prompt 4 — Business Intelligence:** local-only actual-vs-forecast inputs, profit/margin calculations, customer counts, INR/USD display formatting, pricing / unit-economics simulator and break-even seats.
+- No live accounting, billing, checkout, CRM, customer database, hosted sync or payment integration. Financial inputs remain in local React state and are discarded after refresh. No demo revenue/customer data is seeded.
