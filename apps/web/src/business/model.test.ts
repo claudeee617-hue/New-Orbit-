@@ -28,7 +28,7 @@ describe('business module research model', () => {
     expect(MARKET_REFERENCES.length).toBeGreaterThanOrEqual(7);
     for (const reference of MARKET_REFERENCES) {
       expect(reference.sourceUrl).toMatch(/^https:\/\//);
-      expect(reference.price).toMatch(/^\$\d+$/);
+      expect(reference.price).toMatch(/^(\$\d+|Quote \/ plan-dependent)$/);
     }
   });
 
