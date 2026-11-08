@@ -35,6 +35,17 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      - name: Temporary action formatter preview
+        if: matrix.os == 'ubuntu-latest' && github.event.pull_request.head.ref == 'feat/prompt-13-github-action'
+        run: |
+          pnpm exec prettier --write .github/actions/orbit/action.yml .github/scripts/orbit-action.mjs docs/GITHUB_ACTION.md
+          echo '--- ACTION MANIFEST ---'
+          cat .github/actions/orbit/action.yml
+          echo '--- ACTION SCRIPT ---'
+          cat .github/scripts/orbit-action.mjs
+          echo '--- ACTION DOC ---'
+          cat docs/GITHUB_ACTION.md
+
       # format:check, lint, typecheck, test, build
       - name: Check
         run: pnpm run check
