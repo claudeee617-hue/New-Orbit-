@@ -1,6 +1,6 @@
 # ORBIT Prompt 12 — Command Center
 
-**Status:** Initial vertical slice on `feat/prompt-12-command-center`; draft PR #12 is based on the Prompt 11 API/CLI feature branch. Cross-platform CI and full UX validation are pending.
+**Status:** Incomplete implementation on `feat/prompt-12-command-center-final` in draft PR #13, based on updated `main` after Prompt 11 was merged. This is a functional initial vertical slice, not a complete Command Center. Do not merge until fresh Ubuntu/macOS/Windows CI, local API integration tests and browser-level UX validation pass.
 
 ## Implemented
 
@@ -35,7 +35,7 @@ Keep `api.token` private. Do not commit it, paste it into an issue, or expose it
 - WITNESS coverage/finding screens and FLARE reliability history.
 - CAPSULE environment comparison and FLIGHT RECORDER recorded-session playback.
 - Change Passport detail, evidence verification and Replay Room compare/timeline.
-- MCP & AI, Integrations and Settings screens with explicit privacy controls.
 - Browser-level component tests, keyboard/accessibility pass and full Ubuntu/macOS/Windows CI.
+- The separate Prompt 14 experiment in draft PR #21 adds an AI evidence preview/approval panel on a stacked branch; it is not part of PR #13 or `main`.
 
 Prompt 12 is not complete until the remaining screens are implemented, the API/UI behavior is verified against real local data, and the cross-platform CI matrix passes.
