@@ -105,13 +105,13 @@ describe('extended CAPSULE CLI', () => {
       toolchains: Record<string, string>;
       declaredDependencies: Record<string, string>;
       containerImages: Array<{ image: string }>;
-      environmentVariableNames: string[];
+      base: { environmentVariableNames: string[] };
       mode: string;
     };
     expect(report.toolchains).toMatchObject({ node: '22.12.0', python: '3.12.0' });
     expect(report.declaredDependencies.fastapi).toBe('0.115.0');
     expect(report.containerImages.map((item) => item.image)).toContain('node:22-alpine');
-    expect(report.environmentVariableNames).toEqual(['PUBLIC_URL']);
+    expect(report.base.environmentVariableNames).toEqual(['PUBLIC_URL']);
     expect(report.mode).toBe('manifest-only-no-execution');
     expect(JSON.stringify(report)).not.toContain('DO_NOT_EXPOSE');
   });
