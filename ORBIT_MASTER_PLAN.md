@@ -3,7 +3,7 @@
 **ORBIT — Engineering Intelligence Platform**
 Tagline: *Understand Everything. Trace Every Change. Prove What Works.*
 Philosophy: **Evidence before confidence.**
-Status: Planning (Prompt 0). No application code exists yet.
+Status: Active development. Prompts 0–4 complete; Prompt 5 is next (see `ORBIT_BUILD_STATE.md`).
 Date: 2026-11-07
 
 > "ORBIT" is a working codename, not a cleared brand. Before any public release, check GitHub, npm, domains and trademarks (task REL-01).
@@ -74,7 +74,19 @@ Rule: do not start a milestone while the previous one has unresolved critical fa
 | `docs/TEST_STRATEGY.md` | Test layers, fixtures, scenarios, benchmarks |
 | `docs/DECISIONS/` | Architecture decision records |
 
-## 6. Top risks
+## 6. Hybrid business strategy
+
+ORBIT follows a local-first open-source core with paid Team and Enterprise services. Community must remain useful offline: local scanning, graph/evidence inspection, deterministic Change Passport exports and local developer interfaces must not require an account or cloud entitlement. Team monetizes shared workspaces, collaboration, policy, managed integrations and optional coordination. Enterprise adds identity, governance, private deployment, audit and support commitments.
+
+The first market to validate is embedded/IoT engineering teams, because their change-verification workflow can link source, build/environment evidence and real device telemetry. This is a hypothesis to test with design partners, not a proven market position.
+
+The hosted control plane is optional. Source code and raw evidence remain local by default; any metadata synchronisation must be explicitly configured, minimised, documented and customer-controlled. Billing and entitlements belong at the service boundary, never inside analysis engines. Do not build cloud/billing infrastructure until a working Community vertical slice and customer validation justify it.
+
+The planned Apache-2.0 licence is not yet final or granted because the repository has no LICENSE file. If Apache-2.0 is selected, the commercial moat must be service quality, collaboration, enterprise operations, integrations, brand and support—not exclusive rights over the Community code. Obtain legal review before publishing licensing, contribution, privacy or commercial terms.
+
+The detailed packaging, three-plane architecture, licensing guardrails, go-to-market gates and success metrics are in [docs/COMMERCIALIZATION_STRATEGY.md](docs/COMMERCIALIZATION_STRATEGY.md).
+
+## 7. Top risks
 
 | Risk | Why it matters | Mitigation |
 |---|---|---|
@@ -87,6 +99,6 @@ Rule: do not start a milestone while the previous one has unresolved critical fa
 | Name conflicts | "ORBIT" is a common word | Availability check before release |
 | Dependency drift | MCP SDK, Node, libraries move fast | Verify versions at install time; pin; record in ADRs |
 
-## 7. Definition of done for the release candidate
+## 8. Definition of done for the release candidate
 
 The workflow in `docs/ROADMAP.md` §Acceptance must run end to end on a fixture repository containing TypeScript, Python and C/C++ firmware, with real parsed test and coverage reports and a clearly labelled synthetic ESP32 telemetry session. Optional integrations that are unavailable are reported as unavailable.
