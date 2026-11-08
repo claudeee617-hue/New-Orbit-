@@ -5,7 +5,7 @@ Last updated: 2026-11-08
 
 ## Current phase
 
-**Engineering roadmap Prompts 0–10 and App Business Module sub-prompts 0–4 are merged into `main` (PRs #5 and #9). Prompt 11 API/CLI implementation is in `feat/prompt-11-api-cli`; full CI run #136 passed on Ubuntu, macOS and Windows (373 Ubuntu tests), and PR #11 is ready for review but not merged.**
+**Engineering Prompts 0–10 and Business Module Prompts 0–4 are merged into `main` (PRs #5 and #9). Prompt 11 API/CLI is implemented on `feat/prompt-11-api-cli` and awaiting review in PR #11 after full cross-platform CI. Prompt 12 Command Center has an initial authenticated dashboard vertical slice on `feat/prompt-12-command-center` (draft PR #12); its CI and remaining UX work are pending.**
 
 ## Phase checklist
 
@@ -23,7 +23,7 @@ Last updated: 2026-11-08
 | 9      | FLIGHT RECORDER                                | Merged to `main` via PR #5: recorded-log analysis + hash-verified graph persistence; no physical serial connection |
 | 10     | Change Passport and Replay Room                | Merged to `main` via PR #5: commit-scoped evidence correlation, immutable history, comparison and non-executing reproduction plan; no visual Replay Room UI |
 | 11     | API and CLI (full)                             | Partial: local engine CLI commands on feature branch |
-| 12     | Command Center (full)                          | Not started (shell exists)                     |
+| 12     | Command Center (full)                          | Partial: authenticated local dashboard, repository selector, graph/evidence/passport views; full UX remains pending (draft PR #12) |
 | 13     | GitHub Action                                  | Not started                                    |
 | 14     | ORBIT AI                                       | Not started                                    |
 | 15     | Security review                                | Not started                                    |
@@ -275,3 +275,24 @@ Verified by GitHub Actions run `42481493312` on Ubuntu, macOS and Windows; the e
 - Added CLI `init`, `doctor`, `graph summary`, `graph nodes`, `ci ingest`, `tests ingest` and `tests history` commands.
 - Added API token lifecycle, API route/integration and CLI workspace/ingestion tests.
 - **Status:** Implementation pushed in PR #11; full format/lint/typecheck/test/build matrix passed on Ubuntu, macOS and Windows in GitHub Actions run #136. Ubuntu reported 373 passing tests across nine workspace suites; 15/15 typecheck tasks and 9/9 build tasks passed. PR #11 is ready for review and is not merged.
+
+
+## Prompt 12 — Command Center initial vertical slice (draft PR #12)
+
+Branch: `feat/prompt-12-command-center`, based on the Prompt 11 feature branch so API/UI work can be validated together without prematurely merging Prompt 11 into main.
+
+Implemented in this slice:
+- Same-origin authenticated browser API client for repository listing, graph pages, evidence, Change Passports, ATLAS reports and local scan requests.
+- Local API token entry. The token is held in React component memory only, sent in the Authorization header, and not persisted to localStorage/sessionStorage or placed in a URL.
+- Dark-first Engineering Command Center with repository selection, bounded graph/evidence/passport views, ledger head, loading/error/empty states and explicit statements that counts are bounded API results.
+- Overview integration while retaining the Business Module.
+- API client tests for token validation, auth failures, URL encoding and abort-signal forwarding.
+
+Not yet implemented:
+- Full left-sidebar navigation and responsive screen set from `docs/UX_SPECIFICATION.md`.
+- Dedicated ATLAS, WITNESS, FLARE, CAPSULE and FLIGHT RECORDER views.
+- Interactive Engineering Graph, Replay Room timeline/compare UI and evidence hash verification drill-down.
+- Integrations, MCP & AI, Settings and accessibility review across all screens.
+- Browser-level component tests; current added tests cover the API client only.
+
+Validation: draft PR #12 opened against `feat/prompt-11-api-cli`. Cross-platform GitHub Actions result has not yet been observed. Do not describe Prompt 12 as complete or merge it until CI, API integration and UX review pass.
