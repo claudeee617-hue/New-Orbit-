@@ -1,6 +1,8 @@
 import { createHash } from 'node:crypto';
 import type { TelemetrySession } from './flight-recorder.js';
 
+const MAX_THRESHOLD_RULES = 200;
+
 export type TelemetrySeverity = 'info' | 'warning' | 'error';
 
 export interface TelemetryThresholdRule {
@@ -59,11 +61,14 @@ export function analyseTelemetry(
   options: TelemetryAnalysisOptions = {},
 ): TelemetryAnalysis {
   const rules = [...(options.thresholds ?? [])];
+  if (rules.length > MAX_THRESHOLD_RULES) throw new Error(`at most ${MAX_THRESHOLD_RULES} telemetry threshold rules are allowed`);
   const ruleIds = new Set<string>();
   for (const rule of rules) {
     if (!rule.id.trim() || ruleIds.has(rule.id)) throw new Error('telemetry threshold rule IDs must be non-empty and unique');
     ruleIds.add(rule.id);
-    if (!rule.metric.trim()) throw new Error(`threshold ${rule.id} requires a metric name`);
+    if (!/^[A-Za-z][A-Za-z0-9_.-]{0,63}$/.test(rule.metric)) throw new Error(`threshold ${rule.id} requires a valid metric name`);
+    if (rule.min === undefined && rule.max === undefined) throw new Error(`threshold ${rule.id} must define min or max`);
+    if (rule.severity !== undefined && !['info', 'warning', 'error'].includes(rule.severity)) throw new Error(`threshold ${rule.id} severity is invalid`);
     if (rule.min !== undefined && !Number.isFinite(rule.min)) throw new Error(`threshold ${rule.id} min must be finite`);
     if (rule.max !== undefined && !Number.isFinite(rule.max)) throw new Error(`threshold ${rule.id} max must be finite`);
     if (rule.min !== undefined && rule.max !== undefined && rule.min > rule.max) {
@@ -89,7 +94,8 @@ export function analyseTelemetry(
         timestamp: point.timestamp,
         message: `Watchdog-related event observed: ${point.event}`,
       });
-    } else if (event.includes('reset') || event.includes('reboot')) {
+    }
+    if (event.includes('reset') || event.includes('reboot')) {
       const ruleId = 'event.reset';
       anomalies.push({
         id: stableId([session.rawSha256, ruleId, pointIndex, point.event]),
@@ -108,7 +114,7 @@ export function analyseTelemetry(
         timestamp: point.timestamp,
         name,
         value,
-        unit: options.units?.[name] ?? null,
+        unit: options.units?.[name] ?? rules.find((rule) => rule.metric === name && rule.unit)?.unit ?? null,
       });
       const series = values.get(name) ?? [];
       series.push(value);
@@ -144,8 +150,8 @@ export function analyseTelemetry(
     const sum = series.reduce((total, value) => total + value, 0);
     metricStats[name] = {
       count: series.length,
-      min: Math.min(...series),
-      max: Math.max(...series),
+      min: series.reduce((minimum, value) => Math.min(minimum, value), Number.POSITIVE_INFINITY),
+      max: series.reduce((maximum, value) => Math.max(maximum, value), Number.NEGATIVE_INFINITY),
       mean: sum / series.length,
       unit: options.units?.[name] ?? null,
     };
