@@ -525,7 +525,10 @@ export function buildServer(options: BuildServerOptions) {
       const excerpt = text(item.content, 'snippet.content', 12_000);
       const values = snippets.get(evidenceId) ?? [];
       if (values.length >= 5) {
-        throw new OrbitError('INVALID_INPUT', 'At most five excerpts may be attached to one evidence item');
+        throw new OrbitError(
+          'INVALID_INPUT',
+          'At most five excerpts may be attached to one evidence item',
+        );
       }
       values.push(excerpt);
       snippets.set(evidenceId, values);
@@ -596,11 +599,7 @@ export function buildServer(options: BuildServerOptions) {
       if (body.confirmed !== true) {
         throw new OrbitAIError('Explicit user confirmation is required.', 'APPROVAL_REQUIRED');
       }
-      const approvedContextSha256 = text(
-        body.approvedContextSha256,
-        'approvedContextSha256',
-        64,
-      );
+      const approvedContextSha256 = text(body.approvedContextSha256, 'approvedContextSha256', 64);
       if (!/^[a-f0-9]{64}$/i.test(approvedContextSha256)) {
         throw new OrbitError('INVALID_INPUT', 'approvedContextSha256 must be a SHA-256 digest');
       }
