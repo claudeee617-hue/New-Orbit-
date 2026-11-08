@@ -5,7 +5,7 @@ Last updated: 2026-11-08
 
 ## Current phase
 
-**Prompts 0–4 are on `main`. Prompt 5 plus the WITNESS / FLARE / CAPSULE prototypes are on `feat/orbit-evidence-engines` (PR #1 was closed unmerged). The extended Prompt 6–8 work is on `feat/prompts-6-8-completion`.** The latest branch changes have not yet passed GitHub Actions; do not treat Prompts 6–8 as release-complete.
+**Prompts 0–4 are on `main`. Prompt 5 and Prompts 6–8 are implemented on `feat/prompts-6-8-completion` and consolidated in draft PR #5. GitHub Actions run `42477639701` passed on Ubuntu, macOS and Windows, including 316 tests plus format, lint, typecheck and build. These changes are pushed but not merged; treat them as prototypes pending review and remaining release gates.
 
 ## Phase checklist
 
@@ -14,12 +14,12 @@ Last updated: 2026-11-08
 | 0      | Master plan and planning documents             | Done (docs only)                               |
 | 1      | Technical design and architecture finalisation | Done (docs, versions verified)                 |
 | 2      | Monorepo foundation                            | Done (see results below)                       |
-| 3      | ORBIT Core graph                               | Done (see results below; not pushed)           |
+| 3      | ORBIT Core graph                               | Done on `main` (see results below)           |
 | 4      | ATLAS scanning                                 | Done (see results below)                       |
-| 5      | ATLAS memory and MCP                           | Implemented on feature branch; draft PR, CI pending |
-| 6      | WITNESS                                        | Base prototype plus extended verification helpers and CLI on `feat/prompts-6-8-completion`; CI pending |
-| 7      | FLARE                                          | Base prototype plus pytest/Jest/Go adapters and reliability analytics/CLI on `feat/prompts-6-8-completion`; CI pending |
-| 8      | CAPSULE                                        | Base prototype plus polyglot manifest inspection and CLI on `feat/prompts-6-8-completion`; CI pending |
+| 5      | ATLAS memory and MCP                           | Implemented on `feat/prompts-6-8-completion`; PR #5 draft, CI passed on three OSs; not merged |
+| 6      | WITNESS                                        | Base prototype plus extended verification helpers and CLI on `feat/prompts-6-8-completion`; CI passed on three OSs; review pending |
+| 7      | FLARE                                          | Base prototype plus pytest/Jest/Go adapters and reliability analytics/CLI on `feat/prompts-6-8-completion`; CI passed on three OSs; durable history remains outstanding |
+| 8      | CAPSULE                                        | Base prototype plus polyglot manifest inspection and CLI on `feat/prompts-6-8-completion`; CI passed on three OSs; build replay remains out of scope |
 | 9      | FLIGHT RECORDER                                | Recorded-file replay only; no hardware connection |
 | 10     | Change Passport and Replay Room                | Passport assembly prototype; no Replay Room yet |
 | 11     | API and CLI (full)                             | Partial: local engine CLI commands on feature branch |
@@ -41,7 +41,7 @@ The latest pushed main inspected on 2026-11-08 still records Prompt 5 as not sta
 - FLIGHT RECORDER: parse recorded JSON, NDJSON, CSV and key-value telemetry files; hash raw input and identify keyword-based watchdog/reset events. No serial-port connection or device commands.
 - Change Passport: deterministic, content-hashed assembly from explicitly supplied evidence, with missing evidence listed. No graph persistence or Replay Room.
 - CLI: orbit verify, orbit flare summarize, orbit capsule inspect/compare, orbit device replay and orbit passport create.
-- CLI and engine tests have been added. Passing status must be established by the feature branch's GitHub Actions run; baseline test counts do not prove this branch passes.
+- CLI and engine tests have been added. Consolidated PR #5 passed `pnpm run check` on Ubuntu, macOS and Windows (run `42477639701`, 2026-11-08): 316 tests passed, with formatting, lint, typecheck and builds successful.
 
 Known prototype limitations:
 
@@ -111,7 +111,7 @@ Limitations specific to Prompt 4:
 - Manifests other than `package.json` are read with text patterns.
 - Hotspots and ownership use only the last 500 non-merge commits by default, do not follow renames, and ownership is commit share, not surviving lines. Author names are stored; emails are not.
 - Graph writes dominate scan time (seconds at 3000 files); not tested above 3000 files here.
-- Windows and macOS were not tested (paths are normalised to POSIX; git and symlink behaviour unconfirmed until CI runs).
+- The consolidated PR #5 CI matrix now passes on Windows and macOS as well as Linux. Real-world scanner performance and filesystem-specific behaviour have not been separately benchmarked on those operating systems.
 - Vendor and generated files are classified but not parsed.
 - Impact analysis follows file-level imports; imports of a whole workspace package are reported separately as coarser package-level importers.
 
@@ -153,7 +153,7 @@ Manual end-to-end checks that passed: API `/health` returned `ok` with schema ve
 ## Not verified / known limitations
 
 1. **The React UI has not been viewed in a real browser.** Verified: it type-checks, builds, the served HTML and the API proxy work, and the health-state logic is unit-tested. Component rendering itself has no automated test yet (Playwright planned in Prompt 16).
-2. **GitHub Actions CI has not run yet.** The workflow uses `actions/checkout@v4`, `pnpm/action-setup@v4`, `actions/setup-node@v4`; newer majors may exist and could not be checked from this environment. Windows and macOS behaviour (including better-sqlite3 prebuilds and the directory-as-database test) is unconfirmed until CI runs.
+2. **Consolidated branch CI has passed.** GitHub Actions run `42477639701` passed the repository's full check workflow on Ubuntu, macOS and Windows. This validates the feature branch's format, lint, typecheck, tests and builds; it does not mean the branch is merged or release-ready.
 3. A fresh-clone install was tested locally only (see below).
 4. Competitor claims for CodeGraph, CodeCortex, Chisel and PatchProof remain unverified (`docs/COMPETITIVE_ANALYSIS.md`).
 5. Project name availability (GitHub, npm, domains, trademarks) not checked.
@@ -175,10 +175,10 @@ node apps/cli/dist/index.js atlas impact packages/core/src/index.ts --db .orbit/
 
 ## Next step
 
-Prompt 6: continue WITNESS from the feature branch prototype, harden evidence normalization and integrate the engine against CI-produced reports.
+Prompt 9: define the next FLIGHT RECORDER integration slice, keeping recorded-file parsing distinct from any future physical serial/device connection.
 
 
-## Prompt 6–8 extension work on feat/prompts-6-8-completion (CI pending)
+## Prompt 6–8 extension work on feat/prompts-6-8-completion (CI passed; review pending)
 
 This branch is based on `feat/orbit-evidence-engines` at `bbb6626`, which contains the Prompt 5 implementation and the initial cross-engine prototypes. It does not change `main` directly.
 
@@ -210,7 +210,7 @@ This branch is based on `feat/orbit-evidence-engines` at `bbb6626`, which contai
   - deterministic extended fingerprint and explicit parser limitations.
 - CLI adds `orbit capsule inspect-extended <repository>`; it inspects a bounded set of manifest files, never executes package managers or build commands, never reads `.env` secret files, and reports its manifest-only mode.
 
-### Tests added (not yet run by CI)
+### Tests added and verified by CI
 
 - `packages/atlas/src/engines-extended.test.ts`: WITNESS regression/SARIF/sensitive paths, FLARE adapters/analytics, CAPSULE polyglot manifests and limits.
 - `apps/cli/src/advanced-engines.test.ts`: regression comparison, path findings, multi-report reliability analysis, and manifest-only environment inspection.
@@ -224,4 +224,4 @@ This branch is based on `feat/orbit-evidence-engines` at `bbb6626`, which contai
 - pytest/Jest/Go adapters cover common JSON report forms, not every framework/version variation.
 - Failure clustering is heuristic text normalization; duration comparisons do not normalize runner hardware.
 - Capsule fingerprints represent supplied manifest declarations, not actual installed dependencies, container digests or the running OS.
-- No CI result is claimed until the new branch's workflow run is inspected.
+- CI verification: GitHub Actions run `42477639701` passed on Ubuntu, macOS and Windows. The workflow's `pnpm run check` completed format, lint, typecheck, all 316 tests and builds successfully. This does not substitute for product acceptance review or the remaining roadmap gates.
