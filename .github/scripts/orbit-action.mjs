@@ -1,5 +1,5 @@
 import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
 
 function requiredSha(value, label) {
@@ -9,7 +9,7 @@ function requiredSha(value, label) {
   return value;
 }
 function runCli(args) {
-  return execFileSync(process.execPath, ['apps/cli/dist/index.js', ...args], {
+  const runtimeDir = process.env.ORBIT_RUNTIME_DIR;\n  if (!runtimeDir) throw new Error('ORBIT_RUNTIME_DIR is required');\n  return execFileSync(process.execPath, [join(runtimeDir, 'apps/cli/dist/index.js'), ...args], {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
     maxBuffer: 16 * 1024 * 1024,
@@ -27,9 +27,9 @@ function writeSummary(markdown) {
 const event = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8'));
 const base = requiredSha(process.env.INPUT_BASE_SHA || event.pull_request?.base?.sha, 'base SHA');
 const head = requiredSha(process.env.INPUT_HEAD_SHA || event.pull_request?.head?.sha || process.env.GITHUB_SHA, 'head SHA');
-const diffPath = resolve('.orbit-action.diff');
-const reportPath = resolve('.orbit-action-report.md');
-const sarifPath = resolve('.orbit-action-report.sarif');
+const workspace = process.env.GITHUB_WORKSPACE || process.cwd();\nconst diffPath = resolve(workspace, '.orbit-action.diff');
+const reportPath = resolve(workspace, '.orbit-action-report.md');
+const sarifPath = resolve(workspace, '.orbit-action-report.sarif');
 mkdirSync(dirname(diffPath), { recursive: true });
 const diff = execFileSync('git', ['diff', '--no-ext-diff', '--unified=0', `${base}...${head}`, '--'], {
   encoding: 'utf8',
@@ -45,7 +45,7 @@ if (coverageFile) {
   const format = process.env.INPUT_COVERAGE_FORMAT || 'lcov';
   if (!['lcov', 'cobertura'].includes(format)) throw new Error('coverage-format must be lcov or cobertura');
   const option = format === 'lcov' ? '--lcov' : '--cobertura';
-  markdown = runCli(['verify', diffPath, option, resolve(coverageFile), '--format', 'markdown']);
+  markdown = runCli(['verify', diffPath, option, resolve(workspace, coverageFile), '--format', 'markdown']);
   sarif = runCli(['verify', diffPath, option, resolve(coverageFile), '--format', 'sarif']);
   const json = runCli(['verify', diffPath, option, resolve(coverageFile), '--format', 'json']);
   status = JSON.parse(json).summary.status;
