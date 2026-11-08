@@ -5,7 +5,7 @@ Last updated: 2026-11-08
 
 ## Current phase
 
-**Engineering roadmap Prompts 0–10 and App Business Module sub-prompts 0–4 are merged into `main` (PRs #5 and #9). Prompt 11 API/CLI implementation is in `feat/prompt-11-api-cli`; full CI run #136 passed on Ubuntu, macOS and Windows (373 Ubuntu tests), and PR #11 is ready for review but not merged.**
+**Engineering Prompts 0–11 and App Business Module sub-prompts 0–4 are merged into `main` (PRs #5, #9 and #11). Prompt 11 CI passed on Ubuntu, macOS and Windows before merge. Prompt 12 is an incomplete draft in PR #13; Prompt 13 is an incomplete draft in PR #14; Prompt 14's opt-in AI integration is in stacked draft PR #21 and its latest recorded CI run failed on the web typecheck (the optional-signal fix has since been pushed and fresh CI is pending). Security/privacy/release groundwork PR #15 is merged, but the independent security review and release gates remain open.**
 
 ## Phase checklist
 
@@ -24,11 +24,11 @@ Last updated: 2026-11-08
 | 10     | Change Passport and Replay Room                | Merged to `main` via PR #5: commit-scoped evidence correlation, immutable history, comparison and non-executing reproduction plan; no visual Replay Room UI |
 | 11     | API and CLI (full)                             | Merged to `main` via PR #11; CI run #136 passed Ubuntu, macOS and Windows |
 | 12     | Command Center (full)                          | Partial: authenticated local dashboard, repository selector, graph/evidence/passport views, integrity report; remaining engine screens and UX pending (PR #13) |
-| 13     | GitHub Action                                  | Not started                                    |
-| 14     | ORBIT AI                                       | Not started                                    |
-| 15     | Security review                                | Not started                                    |
-| 16     | Testing and validation                         | Not started                                    |
-| 17     | Release polish                                 | Not started                                    |
+| 13     | GitHub Action                                  | Prototype in draft PR #14; action-level tests and cross-platform CI pending |
+| 14     | ORBIT AI                                       | Experimental preview/approval integration in stacked draft PR #21; CI re-run pending |
+| 15     | Security review                                | Security/privacy/release groundwork merged via PR #15; independent review pending |
+| 16     | Testing and validation                         | Partial: unit/API/CLI checks exist; browser E2E, fuzz, migration and action tests pending |
+| 17     | Release polish                                 | Partial: governance docs and release checklist merged; license and release approval gates remain |
 
 
 ## Cross-engine implementation merged via PR #5
