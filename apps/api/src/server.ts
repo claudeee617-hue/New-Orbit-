@@ -317,7 +317,7 @@ export function buildServer(options: BuildServerOptions) {
   server.setErrorHandler((error, _request, reply) => {
     const status = httpStatus(error);
     const code = error instanceof OrbitError ? error.code : 'INTERNAL';
-    const message = status >= 500 ? 'The ORBIT API could not complete the request' : error.message;
+    const message = status >= 500 ? 'The ORBIT API could not complete the request' : error instanceof Error ? error.message : 'Invalid request';
     if (status >= 500) options.logger.error({ code }, 'API request failed');
     return reply.code(status).send({ error: code, message });
   });
