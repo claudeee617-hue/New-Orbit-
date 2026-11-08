@@ -92,7 +92,7 @@ export function analyseTelemetry(
         severity: 'error',
         pointIndex,
         timestamp: point.timestamp,
-        message: `Watchdog-related event observed: ${point.event}`,
+        message: 'Watchdog-related event detected in the supplied telemetry recording.',
       });
     }
     if (event.includes('reset') || event.includes('reboot')) {
@@ -104,7 +104,7 @@ export function analyseTelemetry(
         severity: 'warning',
         pointIndex,
         timestamp: point.timestamp,
-        message: `Reset-related event observed: ${point.event}`,
+        message: 'Reset-related event detected in the supplied telemetry recording.',
       });
     }
 
@@ -153,7 +153,7 @@ export function analyseTelemetry(
       min: series.reduce((minimum, value) => Math.min(minimum, value), Number.POSITIVE_INFINITY),
       max: series.reduce((maximum, value) => Math.max(maximum, value), Number.NEGATIVE_INFINITY),
       mean: sum / series.length,
-      unit: options.units?.[name] ?? null,
+      unit: options.units?.[name] ?? rules.find((rule) => rule.metric === name && rule.unit)?.unit ?? null,
     };
   }
 
