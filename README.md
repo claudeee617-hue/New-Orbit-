@@ -52,6 +52,20 @@ pnpm test
 pnpm check
 ```
 
+### Workspace, API and diagnostics (Prompt 11)
+
+```bash
+node apps/cli/dist/index.js init --repo local/my-project --name "My Project"
+node apps/cli/dist/index.js doctor --json
+node apps/cli/dist/index.js graph summary --json
+node apps/cli/dist/index.js graph nodes --repo local/my-project --type Function
+node apps/cli/dist/index.js ci ingest ci-result.json --repo local/my-project
+node apps/cli/dist/index.js tests ingest junit.xml --repo local/my-project --format junit
+node apps/cli/dist/index.js tests history --repo local/my-project --json
+```
+
+The local API exposes authenticated `/api/v1` repository, graph, evidence, report, Passport and ingestion routes. On first API start it creates a private `api.token` next to the configured workspace database; send it as a Bearer token. See [Prompt 11 API and CLI guide](docs/PROMPT_11_API_CLI.md) for endpoints and security boundaries.
+
 Build the CLI before running it:
 
 ```bash
@@ -137,7 +151,7 @@ See [the threat model](docs/THREAT_MODEL.md), [technical design](docs/architectu
 - [Master plan](ORBIT_MASTER_PLAN.md) and [build state](ORBIT_BUILD_STATE.md)
 - [PRD](docs/PRD.md), [architecture](docs/ARCHITECTURE.md), [technical design](docs/architecture/TECHNICAL_DESIGN.md), [data model](docs/DATA_MODEL.md)
 - [Technical roadmap](docs/ROADMAP.md), [competitive analysis](docs/COMPETITIVE_ANALYSIS.md), [test strategy](docs/TEST_STRATEGY.md), [UX specification](docs/UX_SPECIFICATION.md)
-- [Business model & monetization architecture](docs/BUSINESS_MODEL.md), [commercial product roadmap](docs/COMMERCIAL_ROADMAP.md), [App Business Module](docs/APP_BUSINESS_MODULE.md)
+- [Business model & monetization architecture](docs/BUSINESS_MODEL.md), [commercial product roadmap](docs/COMMERCIAL_ROADMAP.md), [App Business Module](docs/APP_BUSINESS_MODULE.md), [Prompt 11 API and CLI guide](docs/PROMPT_11_API_CLI.md)
 - [Architecture decision records](docs/DECISIONS/)
 
 ## Contributing
