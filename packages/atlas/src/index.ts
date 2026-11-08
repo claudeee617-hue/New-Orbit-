@@ -99,3 +99,36 @@ export {
 export type { FailureCluster, SlowTest, TestReliabilityReport } from './flare-extended.js';
 export { inspectExtendedEnvironment } from './capsule-extended.js';
 export type { ExtendedEnvironmentSnapshot } from './capsule-extended.js';
+
+export {
+  analyseTelemetry,
+  createRecordedFileTransport,
+  SERIAL_TRANSPORT_STATUS,
+} from './flight-recorder-extended.js';
+export type {
+  TelemetrySeverity,
+  TelemetryThresholdRule,
+  TelemetryAnalysisOptions,
+  TypedTelemetryMetric,
+  TelemetryAnomaly,
+  TelemetryAnalysis,
+  TelemetryTransport,
+} from './flight-recorder-extended.js';
+export { storeTelemetrySession } from './telemetry-store.js';
+export type { StoreTelemetrySessionInput, StoredTelemetrySession } from './telemetry-store.js';
+export {
+  recordChangePassport,
+  getPassportHistory,
+  compareChangePassports,
+  createReproductionPlan,
+} from './passport-engine.js';
+export type {
+  PassportDimension,
+  PassportImpact,
+  PassportRecordInput,
+  PersistedPassport,
+  PassportVersionSummary,
+  PassportComparison,
+  ReproductionStep,
+  ReproductionPlan,
+} from './passport-engine.js';
