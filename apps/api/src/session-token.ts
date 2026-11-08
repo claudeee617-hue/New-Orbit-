@@ -69,7 +69,10 @@ export function readTokenFile(filePath: string): string {
   if (process.platform !== 'win32') chmodSync(filePath, 0o600);
   const token = readFileSync(filePath, 'utf8').trim();
   if (!TOKEN_PATTERN.test(token)) {
-    throw new OrbitError('CONFIG_INVALID', 'The local API token file is invalid; remove it and restart ORBIT');
+    throw new OrbitError(
+      'CONFIG_INVALID',
+      'The local API token file is invalid; remove it and restart ORBIT',
+    );
   }
   return token;
 }
