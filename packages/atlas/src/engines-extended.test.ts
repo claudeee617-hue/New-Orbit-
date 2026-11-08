@@ -217,5 +217,10 @@ describe('CAPSULE extended manifest inspection', () => {
         Object.fromEntries(Array.from({ length: 1001 }, (_, i) => [`file-${i}`, 'x'])),
       ),
     ).toThrow(/1000 files/);
+    expect(() =>
+      inspectExtendedEnvironment(
+        Object.fromEntries(Array.from({ length: 9 }, (_, i) => [`file-${i}`, 'x'.repeat(2 * 1024 * 1024)])),
+      ),
+    ).toThrow(/16 MiB total/);
   });
 });
