@@ -8,6 +8,7 @@ import {
   hashArtifact,
   nodeIdFor,
   type EvidenceStatus,
+  type JsonValue,
   type NodeType,
 } from '@orbit/core';
 import {
@@ -235,7 +236,7 @@ function ingestionRepository(store: GraphStore, key: string | undefined) {
 }
 
 
-function sanitizeCiSummary(value: unknown): Record<string, string | number> {
+function sanitizeCiSummary(value: unknown): Record<string, JsonValue> {
   if (value === undefined) return {};
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new OrbitError('INVALID_INPUT', 'CI summary must be a JSON object');
@@ -243,7 +244,7 @@ function sanitizeCiSummary(value: unknown): Record<string, string | number> {
   const source = value as Record<string, unknown>;
   const numericFields = new Set(['passed', 'failed', 'skipped', 'durationSeconds', 'jobCount', 'artifactCount', 'attempt']);
   const stringFields = new Set(['conclusion', 'event', 'runnerOS', 'workflowName']);
-  const result: Record<string, string | number> = {};
+  const result: Record<string, JsonValue> = {};
   for (const [key, item] of Object.entries(source)) {
     if (numericFields.has(key)) {
       if (typeof item !== 'number' || !Number.isFinite(item) || item < 0 || item > 1_000_000_000) {
