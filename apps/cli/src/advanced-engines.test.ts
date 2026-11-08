@@ -33,7 +33,9 @@ describe('extended WITNESS CLI', () => {
     const after = join(root, 'after.info');
     writeFileSync(before, 'SF:src/a.ts\nDA:1,1\nDA:2,1\nend_of_record\n');
     writeFileSync(after, 'SF:src/a.ts\nDA:1,0\nDA:2,1\nend_of_record\n');
-    const report = JSON.parse(await run(['witness', 'coverage-compare', before, after, '--format', 'lcov'])) as {
+    const report = JSON.parse(
+      await run(['witness', 'coverage-compare', before, after, '--format', 'lcov']),
+    ) as {
       comparisons: Array<{ status: string; percentageDelta: number }>;
     };
     expect(report.comparisons[0]).toMatchObject({ status: 'REGRESSION', percentageDelta: -50 });
@@ -42,14 +44,17 @@ describe('extended WITNESS CLI', () => {
   it('flags sensitive filenames without printing file contents', async () => {
     const root = tempDir();
     const diff = join(root, 'secret.diff');
-    writeFileSync(diff, [
-      'diff --git a/id_rsa b/id_rsa',
-      'new file mode 100644',
-      '--- /dev/null',
-      '+++ b/id_rsa',
-      '@@ -0,0 +1 @@',
-      '+PRIVATE CONTENT MUST NOT BE READ',
-    ].join('\n'));
+    writeFileSync(
+      diff,
+      [
+        'diff --git a/id_rsa b/id_rsa',
+        'new file mode 100644',
+        '--- /dev/null',
+        '+++ b/id_rsa',
+        '@@ -0,0 +1 @@',
+        '+PRIVATE CONTENT MUST NOT BE READ',
+      ].join('\n'),
+    );
     const report = JSON.parse(await run(['witness', 'sensitive-paths', diff])) as {
       findings: Array<{ rule: string; message: string }>;
     };
@@ -65,10 +70,15 @@ describe('extended FLARE CLI', () => {
     for (let index = 0; index < 8; index += 1) {
       const file = join(root, `run-${index}.xml`);
       const body = index % 2 === 0 ? '' : '<failure message="unstable"/>';
-      writeFileSync(file, `<testsuite name="unit"><testcase classname="auth" name="login" time="0.1">${body}</testcase></testsuite>`);
+      writeFileSync(
+        file,
+        `<testsuite name="unit"><testcase classname="auth" name="login" time="0.1">${body}</testcase></testsuite>`,
+      );
       files.push(file);
     }
-    const report = JSON.parse(await run(['flare', 'analyse', ...files, '--format', 'junit', '--min-samples', '8'])) as {
+    const report = JSON.parse(
+      await run(['flare', 'analyse', ...files, '--format', 'junit', '--min-samples', '8']),
+    ) as {
       executionsInReports: number;
       summaries: Array<{ classification: string; flipCount: number }>;
     };
@@ -85,7 +95,10 @@ describe('extended CAPSULE CLI', () => {
     writeFileSync(join(root, 'requirements.txt'), 'fastapi==0.115.0');
     writeFileSync(join(root, 'Dockerfile'), 'FROM node:22-alpine');
     writeFileSync(join(root, 'pnpm-workspace.yaml'), 'packages:\n  - apps/*');
-    writeFileSync(join(root, '.devcontainer', 'devcontainer.json'), '{"image":"mcr.microsoft.com/devcontainers/base:ubuntu"}');
+    writeFileSync(
+      join(root, '.devcontainer', 'devcontainer.json'),
+      '{"image":"mcr.microsoft.com/devcontainers/base:ubuntu"}',
+    );
     writeFileSync(join(root, '.env.example'), 'PUBLIC_URL=https://example.invalid');
     writeFileSync(join(root, '.env'), 'TOKEN=DO_NOT_EXPOSE');
     const report = JSON.parse(await run(['capsule', 'inspect-extended', root])) as {

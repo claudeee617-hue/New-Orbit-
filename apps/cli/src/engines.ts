@@ -155,11 +155,12 @@ export function attachEngineCommands(program: Command, io: CliIo): void {
         const coverage = options.lcov ? parseLcov(coverageText) : parseCobertura(coverageText);
         const report = verifyChangedLineCoverage(diff, coverage);
         const sensitivePathFindings = findSensitivePathFindings(diff);
-        const output = options.format === 'markdown'
-          ? markdownVerification(report)
-          : options.format === 'sarif'
-            ? renderWitnessSarif(report, sensitivePathFindings)
-            : `${JSON.stringify({ ...report, sensitivePathFindings }, null, 2)}\n`;
+        const output =
+          options.format === 'markdown'
+            ? markdownVerification(report)
+            : options.format === 'sarif'
+              ? renderWitnessSarif(report, sensitivePathFindings)
+              : `${JSON.stringify({ ...report, sensitivePathFindings }, null, 2)}\n`;
         await writeOutput(options.out, output);
         if (options.out)
           io.stdout(`Wrote ${options.format} verification report to ${options.out}\n`);

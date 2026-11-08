@@ -96,10 +96,6 @@ export {
   parseGoTestJson,
   analyseTestHistory,
 } from './flare-extended.js';
-export type {
-  FailureCluster,
-  SlowTest,
-  TestReliabilityReport,
-} from './flare-extended.js';
+export type { FailureCluster, SlowTest, TestReliabilityReport } from './flare-extended.js';
 export { inspectExtendedEnvironment } from './capsule-extended.js';
 export type { ExtendedEnvironmentSnapshot } from './capsule-extended.js';

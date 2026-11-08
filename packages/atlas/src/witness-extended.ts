@@ -31,11 +31,39 @@ export interface ChangeContext {
   limitations: string[];
 }
 
-const SECRET_RULES: Array<{ id: string; severity: VerificationFinding['severity']; test: RegExp; message: string }> = [
-  { id: 'secrets.environment-file', severity: 'error', test: /(^|\/)\.env(?:\.[^/]+)?$/i, message: 'A non-template environment file is included in the change. Review it for credentials before publishing.' },
-  { id: 'secrets.private-key', severity: 'error', test: /(^|\/)(?:id_(?:rsa|dsa|ecdsa|ed25519)|[^/]+\.(?:pem|key|p12|pfx|keystore))$/i, message: 'A private-key or certificate-like file is included in the change. Confirm it contains no private credential material.' },
-  { id: 'secrets.package-token-config', severity: 'warning', test: /(^|\/)\.npmrc$/i, message: 'An npm configuration file is included. Check that it does not contain an authentication token.' },
-  { id: 'secrets.service-account', severity: 'warning', test: /(^|\/)(?:service[-_]?account|credentials?)(?:[-_.][^/]*)?\.json$/i, message: 'A credentials or service-account JSON file is included. Review it before publishing.' },
+const SECRET_RULES: Array<{
+  id: string;
+  severity: VerificationFinding['severity'];
+  test: RegExp;
+  message: string;
+}> = [
+  {
+    id: 'secrets.environment-file',
+    severity: 'error',
+    test: /(^|\/)\.env(?:\.[^/]+)?$/i,
+    message:
+      'A non-template environment file is included in the change. Review it for credentials before publishing.',
+  },
+  {
+    id: 'secrets.private-key',
+    severity: 'error',
+    test: /(^|\/)(?:id_(?:rsa|dsa|ecdsa|ed25519)|[^/]+\.(?:pem|key|p12|pfx|keystore))$/i,
+    message:
+      'A private-key or certificate-like file is included in the change. Confirm it contains no private credential material.',
+  },
+  {
+    id: 'secrets.package-token-config',
+    severity: 'warning',
+    test: /(^|\/)\.npmrc$/i,
+    message:
+      'An npm configuration file is included. Check that it does not contain an authentication token.',
+  },
+  {
+    id: 'secrets.service-account',
+    severity: 'warning',
+    test: /(^|\/)(?:service[-_]?account|credentials?)(?:[-_.][^/]*)?\.json$/i,
+    message: 'A credentials or service-account JSON file is included. Review it before publishing.',
+  },
 ];
 
 function round(value: number): number {
@@ -66,9 +94,15 @@ export function findSensitivePathFindings(diff: string): VerificationFinding[] {
   return findings.sort((a, b) => a.path.localeCompare(b.path) || a.rule.localeCompare(b.rule));
 }
 
-function coverageStats(lines: Map<number, number> | undefined): { measured: number; covered: number; percentage: number | null } {
+function coverageStats(lines: Map<number, number> | undefined): {
+  measured: number;
+  covered: number;
+  percentage: number | null;
+} {
   if (!lines || lines.size === 0) return { measured: 0, covered: 0, percentage: null };
-  const measured = [...lines.entries()].filter(([line, hits]) => Number.isInteger(line) && line > 0 && Number.isFinite(hits) && hits >= 0);
+  const measured = [...lines.entries()].filter(
+    ([line, hits]) => Number.isInteger(line) && line > 0 && Number.isFinite(hits) && hits >= 0,
+  );
   const covered = measured.filter(([, hits]) => hits > 0).length;
   return {
     measured: measured.length,
@@ -159,8 +193,9 @@ export function renderWitnessMarkdown(
   additionalFindings: readonly VerificationFinding[] = [],
 ): string {
   const findings = [...report.findings, ...additionalFindings];
-  const rows = report.files.map((file) =>
-    `| ${file.path} | ${file.coverage.changedLines} | ${file.coverage.measuredLines} | ${file.coverage.coveredLines} | ${file.coverage.percentage === null ? 'n/a' : `${file.coverage.percentage}%`} | ${file.coverage.status} |`,
+  const rows = report.files.map(
+    (file) =>
+      `| ${file.path} | ${file.coverage.changedLines} | ${file.coverage.measuredLines} | ${file.coverage.coveredLines} | ${file.coverage.percentage === null ? 'n/a' : `${file.coverage.percentage}%`} | ${file.coverage.status} |`,
   );
   return [
     '# ORBIT WITNESS — Verification report',
@@ -173,7 +208,12 @@ export function renderWitnessMarkdown(
     ...rows,
     '',
     '## Findings',
-    ...(findings.length ? findings.map((item) => `- **${item.severity.toUpperCase()} · ${item.rule}** ${item.path}: ${item.message}`) : ['- No findings.']),
+    ...(findings.length
+      ? findings.map(
+          (item) =>
+            `- **${item.severity.toUpperCase()} · ${item.rule}** ${item.path}: ${item.message}`,
+        )
+      : ['- No findings.']),
     '',
     '## Limitations',
     ...report.limitations.map((item) => `- ${item}`),
@@ -188,37 +228,55 @@ export function renderWitnessSarif(
 ): string {
   const findings = [...report.findings, ...additionalFindings];
   const rules = [...new Set(findings.map((finding) => finding.rule))].sort();
-  return `${JSON.stringify({
-    $schema: 'https://json.schemastore.org/sarif-2.1.0.json',
-    version: '2.1.0',
-    runs: [{
-      tool: {
-        driver: {
-          name: 'ORBIT WITNESS',
-          informationUri: 'https://github.com/claudeee617-hue/New-Orbit-',
-          rules: rules.map((id) => ({ id, shortDescription: { text: id.replaceAll('.', ' ') } })),
-        },
-      },
-      results: findings.map((finding) => ({
-        ruleId: finding.rule,
-        level: finding.severity === 'error' ? 'error' : finding.severity === 'info' ? 'note' : 'warning',
-        message: { text: finding.message },
-        locations: [{
-          physicalLocation: {
-            artifactLocation: { uri: finding.path },
-            ...(finding.lines[0] !== undefined ? { region: { startLine: finding.lines[0] } } : {}),
+  return `${JSON.stringify(
+    {
+      $schema: 'https://json.schemastore.org/sarif-2.1.0.json',
+      version: '2.1.0',
+      runs: [
+        {
+          tool: {
+            driver: {
+              name: 'ORBIT WITNESS',
+              informationUri: 'https://github.com/claudeee617-hue/New-Orbit-',
+              rules: rules.map((id) => ({
+                id,
+                shortDescription: { text: id.replaceAll('.', ' ') },
+              })),
+            },
           },
-        }],
-        partialFingerprints: { 'orbit/v1': finding.id },
-        properties: { evidence: finding.evidence, affectedLines: finding.lines },
-      })),
-      properties: {
-        coverageStatus: report.summary.status,
-        changedLines: report.summary.changedLines,
-        measuredLines: report.summary.measuredLines,
-        coveredLines: report.summary.coveredLines,
-        limitations: report.limitations,
-      },
-    }],
-  }, null, 2)}\n`;
+          results: findings.map((finding) => ({
+            ruleId: finding.rule,
+            level:
+              finding.severity === 'error'
+                ? 'error'
+                : finding.severity === 'info'
+                  ? 'note'
+                  : 'warning',
+            message: { text: finding.message },
+            locations: [
+              {
+                physicalLocation: {
+                  artifactLocation: { uri: finding.path },
+                  ...(finding.lines[0] !== undefined
+                    ? { region: { startLine: finding.lines[0] } }
+                    : {}),
+                },
+              },
+            ],
+            partialFingerprints: { 'orbit/v1': finding.id },
+            properties: { evidence: finding.evidence, affectedLines: finding.lines },
+          })),
+          properties: {
+            coverageStatus: report.summary.status,
+            changedLines: report.summary.changedLines,
+            measuredLines: report.summary.measuredLines,
+            coveredLines: report.summary.coveredLines,
+            limitations: report.limitations,
+          },
+        },
+      ],
+    },
+    null,
+    2,
+  )}\n`;
 }

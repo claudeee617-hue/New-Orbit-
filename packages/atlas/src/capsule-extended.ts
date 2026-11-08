@@ -22,8 +22,13 @@ function sortedRecord(source: Record<string, string>): Record<string, string> {
 
 function parseToolVersions(content: string, target: Record<string, string>): void {
   const aliases: Record<string, string> = {
-    nodejs: 'node', python: 'python', java: 'java', golang: 'go',
-    rust: 'rust', ruby: 'ruby', terraform: 'terraform',
+    nodejs: 'node',
+    python: 'python',
+    java: 'java',
+    golang: 'go',
+    rust: 'rust',
+    ruby: 'ruby',
+    terraform: 'terraform',
   };
   for (const line of content.split(/\r?\n/)) {
     const match = /^\s*([A-Za-z0-9_-]+)\s+([^\s#]+)/.exec(line);
@@ -51,7 +56,10 @@ function parsePyproject(content: string, target: Record<string, string>): void {
       section = header[1]!.toLowerCase();
       continue;
     }
-    if (!/(^project\.dependencies$|^tool\.poetry\.dependencies$|^tool\.uv\.sources\.)/.test(section)) continue;
+    if (
+      !/(^project\.dependencies$|^tool\.poetry\.dependencies$|^tool\.uv\.sources\.)/.test(section)
+    )
+      continue;
     const item = /^\s*([A-Za-z0-9_.-]+)\s*=\s*["']([^"']+)["']/.exec(line);
     if (item) target[item[1]!] = item[2]!;
   }
@@ -74,7 +82,8 @@ export function inspectExtendedEnvironment(
   files: Readonly<Record<string, string>>,
 ): ExtendedEnvironmentSnapshot {
   const entries = Object.entries(files).sort(([a], [b]) => a.localeCompare(b));
-  if (entries.length > MAX_TOTAL_FILES) throw new Error(`Environment manifest set exceeds ${MAX_TOTAL_FILES} files`);
+  if (entries.length > MAX_TOTAL_FILES)
+    throw new Error(`Environment manifest set exceeds ${MAX_TOTAL_FILES} files`);
   for (const [path, content] of entries) {
     if (Buffer.byteLength(content, 'utf8') > MAX_FILE_BYTES) {
       throw new Error(`Environment manifest exceeds the 2 MiB limit: ${path}`);
@@ -93,8 +102,9 @@ export function inspectExtendedEnvironment(
     if (basename === '.tool-versions') {
       parseToolVersions(content, toolchains);
     } else if (basename === 'rust-toolchain' || basename === 'rust-toolchain.toml') {
-      const channel = /(?:^|\n)\s*channel\s*=\s*["']([^"']+)["']/.exec(content)?.[1]
-        ?? content.trim().split(/\r?\n/)[0];
+      const channel =
+        /(?:^|\n)\s*channel\s*=\s*["']([^"']+)["']/.exec(content)?.[1] ??
+        content.trim().split(/\r?\n/)[0];
       if (channel) toolchains.rust = channel.slice(0, 100);
     } else if (basename === 'requirements.txt' || basename === 'requirements-dev.txt') {
       parseRequirements(content, declaredDependencies);
@@ -105,11 +115,14 @@ export function inspectExtendedEnvironment(
     } else if (basename === 'devcontainer.json') {
       try {
         const config = JSON.parse(content) as Record<string, unknown>;
-        if (typeof config.image === 'string') containerImages.push({ file: path, image: config.image });
-        if (typeof config.dockerFile === 'string') workspaceSignals.add(`devcontainer-dockerfile:${config.dockerFile}`);
+        if (typeof config.image === 'string')
+          containerImages.push({ file: path, image: config.image });
+        if (typeof config.dockerFile === 'string')
+          workspaceSignals.add(`devcontainer-dockerfile:${config.dockerFile}`);
         const features = config.features;
         if (features && typeof features === 'object' && !Array.isArray(features)) {
-          for (const key of Object.keys(features)) workspaceSignals.add(`devcontainer-feature:${key}`);
+          for (const key of Object.keys(features))
+            workspaceSignals.add(`devcontainer-feature:${key}`);
         }
       } catch {
         ignoredOrUnparsedManifests.push(path);
@@ -146,7 +159,9 @@ export function inspectExtendedEnvironment(
     base,
     toolchains: sortedRecord(toolchains),
     declaredDependencies: sortedRecord(declaredDependencies),
-    containerImages: containerImages.sort((a, b) => a.file.localeCompare(b.file) || a.image.localeCompare(b.image)),
+    containerImages: containerImages.sort(
+      (a, b) => a.file.localeCompare(b.file) || a.image.localeCompare(b.image),
+    ),
     workspaceSignals: [...workspaceSignals].sort(),
     ignoredOrUnparsedManifests: [...new Set(ignoredOrUnparsedManifests)].sort(),
   };
