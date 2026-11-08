@@ -38,6 +38,12 @@ importers:
 
   apps/api:
     dependencies:
+      '@orbit/atlas':
+        specifier: workspace:*
+        version: link:../../packages/atlas
+      '@orbit/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@orbit/database':
         specifier: workspace:*
         version: link:../../packages/database
