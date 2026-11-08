@@ -97,9 +97,9 @@ export function CommandCenter() {
         }
         setRepositoryKey(selected.key);
         const [graphResult, evidenceResult, passportResult, integrityResult] = await Promise.all([
-          client.getGraph(selected.key, { limit: 100, signal }),
-          client.getEvidence(selected.key, { limit: 100, signal }),
-          client.getPassports(selected.key, { limit: 100, signal }),
+          client.getGraph(selected.key, { limit: 100, ...(signal ? { signal } : {}) }),
+          client.getEvidence(selected.key, { limit: 100, ...(signal ? { signal } : {}) }),
+          client.getPassports(selected.key, { limit: 100, ...(signal ? { signal } : {}) }),
           client.getIntegrity(selected.key, signal),
         ]);
         setGraph(graphResult);
