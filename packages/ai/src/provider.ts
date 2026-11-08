@@ -73,7 +73,7 @@ const DEFAULT_MAX_OUTPUT_CHARS = 20_000;
 
 const SECRET_PATTERNS: RegExp[] = [
   /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----[\s\S]*?-----END (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/g,
-  /\b(?:api[_-]?key|access[_-]?token|password|client[_-]?secret)\s*[:=]\s*[^\s,;]+/gi,
+  /\b(?:api[_-]?(?:key|token)|access[_-]?token|password|client[_-]?secret|secret|credential)\s*[:=]\s*[^\s,;]+/gi,
   /\b(?:sk-[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16})\b/g,
   /\bBearer\s+[A-Za-z0-9._~+/-]{20,}/gi,
 ];
