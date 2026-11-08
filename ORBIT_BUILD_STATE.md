@@ -22,8 +22,8 @@ Last updated: 2026-11-08
 | 8      | CAPSULE                                        | Merged to `main` via PR #5: polyglot manifest inspection and CLI; build replay remains out of scope |
 | 9      | FLIGHT RECORDER                                | Merged to `main` via PR #5: recorded-log analysis + hash-verified graph persistence; no physical serial connection |
 | 10     | Change Passport and Replay Room                | Merged to `main` via PR #5: commit-scoped evidence correlation, immutable history, comparison and non-executing reproduction plan; no visual Replay Room UI |
-| 11     | API and CLI (full)                             | Partial: local engine CLI commands on feature branch |
-| 12     | Command Center (full)                          | Not started (shell exists)                     |
+| 11     | API and CLI (full)                             | Merged to `main` via PR #11; CI run #136 passed Ubuntu, macOS and Windows |
+| 12     | Command Center (full)                          | Partial: authenticated local dashboard, repository selector, graph/evidence/passport views, integrity report; remaining engine screens and UX pending (PR #13) |
 | 13     | GitHub Action                                  | Not started                                    |
 | 14     | ORBIT AI                                       | Not started                                    |
 | 15     | Security review                                | Not started                                    |
@@ -275,3 +275,33 @@ Verified by GitHub Actions run `42481493312` on Ubuntu, macOS and Windows; the e
 - Added CLI `init`, `doctor`, `graph summary`, `graph nodes`, `ci ingest`, `tests ingest` and `tests history` commands.
 - Added API token lifecycle, API route/integration and CLI workspace/ingestion tests.
 - **Status:** Implementation pushed in PR #11; full format/lint/typecheck/test/build matrix passed on Ubuntu, macOS and Windows in GitHub Actions run #136. Ubuntu reported 373 passing tests across nine workspace suites; 15/15 typecheck tasks and 9/9 build tasks passed. PR #11 is ready for review and is not merged.
+
+
+## Prompt 11 — merged
+
+PR #11 was merged to main on 2026-11-08 after CI run #136 passed on Ubuntu, macOS and Windows. The PR implementation includes authenticated local API endpoints, local API token lifecycle, bounded input validation and the CLI workflows listed in the README. Merge commit: `96a44e56a9d5400c989a1ad4c190d6b58b1dff79`.
+
+## Prompt 12 — active implementation (PR #13)
+
+A clean feature branch was created from the updated `main` after Prompt 11 was merged. This avoids carrying the Prompt 11 implementation as duplicate changes in the Prompt 12 pull request.
+
+Implemented in the current slice:
+- Same-origin API client for repository listing, graph, evidence, Change Passports, ATLAS impact/report and local scan endpoints.
+- Local API token entry; token stays in component memory and is sent only as a Bearer Authorization header.
+- Dark-first Command Center with repository selection, graph node table, evidence list, passport list, measured metrics, loading/error/empty states.
+- Read-only repository integrity endpoint and integrity status display.
+- Vite proxy rule preserves the authenticated `/api/v1` prefix while retaining the public `/api/health` route.
+- API client tests for malformed tokens, bearer header behavior, 401 responses, URL encoding and abort signals.
+- Business Module remains accessible from the top-level navigation.
+
+Known gaps before Prompt 12 can be called complete:
+- No dedicated ATLAS, WITNESS, FLARE, CAPSULE or FLIGHT RECORDER dashboards yet.
+- Engineering Graph is a bounded table, not an interactive node-link graph; edge detail and filters are pending.
+- No full Change Passport detail/history/compare UI or Replay Room.
+- Evidence Explorer does not yet offer content-hash verification drill-down.
+- MCP & AI, Integrations and Settings screens remain.
+- Responsive sidebar/bottom navigation, accessibility and browser-level end-to-end tests remain.
+- The dashboard's local API token is entered manually; no browser persistence is intentional.
+- The web app must be tested against a running local API with real fixture repositories.
+
+Validation status: source has been committed to the feature branch. Do not claim Prompt 12 CI passes until the PR's Ubuntu/macOS/Windows workflow completes successfully. Do not merge until CI, integration behavior and review pass.
