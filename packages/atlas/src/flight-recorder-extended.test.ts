@@ -68,6 +68,31 @@ describe('FLIGHT RECORDER typed analysis', () => {
     ).toThrow(/unique/);
   });
 
+  it('normalizes caller-constructed session event strings and rejects malformed session data', () => {
+    const fabricated = {
+      schemaVersion: 1 as const,
+      format: 'ndjson' as const,
+      points: [{
+        timestamp: null,
+        metrics: { voltage: 3.3 },
+        event: 'token=NEVER_ECHO_THIS',
+        raw: 'SECRET_RAW_LINE',
+      }],
+      eventCounts: { 'token=NEVER_ECHO_THIS': 1 },
+      metricNames: ['voltage'],
+      watchdogEvents: 0,
+      resetEvents: 0,
+      rawSha256: 'a'.repeat(64),
+      limitations: [],
+    };
+    const result = analyseTelemetry(fabricated);
+    expect(result.eventCounts).toEqual({ other: 1 });
+    expect(JSON.stringify(result)).not.toContain('NEVER_ECHO_THIS');
+    expect(JSON.stringify(result)).not.toContain('SECRET_RAW_LINE');
+    expect(() => analyseTelemetry({ ...fabricated, points: [null] } as never)).toThrow(/invalid point/);
+    expect(() => analyseTelemetry(fabricated, { thresholds: [null] as never })).toThrow(/rule must be an object/);
+  });
+
   it('uses a recorded-file-only transport and explicitly reports serial support unavailable', async () => {
     const transport = createRecordedFileTransport('voltage=3.3');
     expect(transport.kind).toBe('recorded-file');
