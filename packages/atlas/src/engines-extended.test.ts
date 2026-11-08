@@ -200,7 +200,7 @@ describe('CAPSULE extended manifest inspection', () => {
     expect(snapshot.containerImages.map((item) => item.image)).toContain('node:22-alpine');
     expect(snapshot.workspaceSignals).toContain('pnpm-workspace');
     expect(snapshot.workspaceSignals).toContain('turborepo');
-    expect(snapshot.environmentVariableNames).toEqual(['PUBLIC_URL']);
+    expect(snapshot.base.environmentVariableNames).toEqual(['PUBLIC_URL']);
     expect(JSON.stringify(snapshot)).not.toContain('never-read');
   });
 
