@@ -147,8 +147,11 @@ async function withGraphStore<T>(
     store: ReturnType<typeof createGraphStore>,
     repository: { id: string; key: string },
   ) => Promise<T> | T,
+  readOnly = false,
 ): Promise<T> {
-  const database = openDatabase({ path: dbPath });
+  const database = readOnly
+    ? openDatabase({ path: dbPath, migrate: false, readonly: true })
+    : openDatabase({ path: dbPath });
   try {
     const store = createGraphStore(database);
     const repositories = store.repositories.list();
@@ -434,6 +437,7 @@ export function attachEngineCommands(program: Command, io: CliIo): void {
     .action(async (passportNodeId: string, options: { db: string; repo?: string }) => {
       const result = await withGraphStore(options.db, options.repo, (store, repository) =>
         getPassportHistory(store, repository.id, passportNodeId),
+        true,
       );
       io.stdout(`${JSON.stringify(result, null, 2)}\n`);
     });
@@ -446,6 +450,7 @@ export function attachEngineCommands(program: Command, io: CliIo): void {
     .action(async (before: string, after: string, options: { db: string; repo?: string }) => {
       const result = await withGraphStore(options.db, options.repo, (store, repository) =>
         compareChangePassports(store, repository.id, before, after),
+        true,
       );
       io.stdout(`${JSON.stringify(result, null, 2)}\n`);
     });
@@ -458,6 +463,7 @@ export function attachEngineCommands(program: Command, io: CliIo): void {
     .action(async (passportNodeId: string, options: { db: string; repo?: string }) => {
       const result = await withGraphStore(options.db, options.repo, (store, repository) =>
         createReproductionPlan(store, repository.id, passportNodeId),
+        true,
       );
       io.stdout(`${JSON.stringify(result, null, 2)}\n`);
     });
