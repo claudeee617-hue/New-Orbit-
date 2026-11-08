@@ -17,7 +17,7 @@ This repository currently contains the **monorepo foundation only**. Nothing tha
 | SQLite storage and migrations | Working (one `meta` table) |
 | ORBIT Core graph, ATLAS, WITNESS, FLARE, CAPSULE, FLIGHT RECORDER, Change Passport, MCP, AI | **Not implemented yet** — see the [roadmap](docs/ROADMAP.md) |
 
-The dashboard labels every engine as `NOT IMPLEMENTED` rather than showing placeholder numbers.
+The dashboard keeps engine work clearly labelled as roadmap and does not show placeholder analysis metrics.
 
 ## Requirements
 
