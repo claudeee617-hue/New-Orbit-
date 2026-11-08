@@ -58,6 +58,18 @@ describe('business intelligence calculations', () => {
     expect(result.actual.marginPercent).toBe(-40);
   });
 
+  it('returns unavailable percentages when finite inputs would overflow a ratio', () => {
+    const result = calculateBusinessIntelligence({
+      ...emptyInputs,
+      actualRevenue: 1e-320,
+      actualExpenses: 1_000_000_000_000,
+      forecastRevenue: 1_000_000_000_000,
+    });
+    expect(result.actual.marginPercent).toBeNull();
+    expect(result.revenueChangePercent).toBeNull();
+    expect(formatBusinessPercent(Number.POSITIVE_INFINITY)).toBe('—');
+  });
+
   it('sanitises negative, non-finite and excessive inputs', () => {
     const result = calculateBusinessIntelligence({
       ...emptyInputs,
