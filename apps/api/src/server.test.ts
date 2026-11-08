@@ -25,7 +25,7 @@ function setup(): {
   return { database, server, repositoryId: repository.id };
 }
 
-const auth = { authorization: `Bearer ${API_TOKEN}` };
+const auth = { authorization: `*** };
 
 afterEach(async () => {
   for (const server of servers.splice(0)) {
@@ -73,7 +73,7 @@ describe('GET /health', () => {
 });
 
 describe('authenticated local API', () => {
-  it('rejects missing or incorrect Bearer tokens', async () => {
+  it('rejects missing or incorrect ***', async () => {
     const { server } = setup();
     const missing = await server.inject({
       method: 'GET',
@@ -83,7 +83,7 @@ describe('authenticated local API', () => {
     const incorrect = await server.inject({
       method: 'GET',
       url: '/api/v1/repositories',
-      headers: { host: 'localhost', authorization: 'Bearer wrong-token' },
+      headers: { host: 'localhost', authorization: '***' },
     });
     expect(missing.statusCode).toBe(401);
     expect(incorrect.statusCode).toBe(401);
@@ -127,7 +127,10 @@ describe('authenticated local API', () => {
       },
     });
     expect(ingested.statusCode).toBe(200);
-    const payload = ingested.json<{ evidence: { id: string; status: string }; node: { type: string } }>();
+    const payload = ingested.json<{
+      evidence: { id: string; status: string };
+      node: { type: string };
+    }>();
     expect(payload.evidence.status).toBe('FAIL');
     expect(payload.node.type).toBe('CIWorkflow');
 
@@ -145,7 +148,8 @@ describe('authenticated local API', () => {
 
   it('parses and records JUnit test reports without storing the raw report as graph attributes', async () => {
     const { server } = setup();
-    const report = '<testsuite name="unit"><testcase classname="api" name="ok"/><testcase classname="api" name="bad"><failure message="boom"/></testcase></testsuite>';
+    const report =
+      '<testsuite name="unit"><testcase classname="api" name="ok"/><testcase classname="api" name="bad"><failure message="boom"/></testcase></testsuite>';
     const response = await server.inject({
       method: 'POST',
       url: '/api/v1/repositories/example/ingest/test-report',
@@ -269,7 +273,8 @@ describe('host protection', () => {
     await server.listen({ host: '127.0.0.1', port: 0 });
     try {
       const address = server.server.address();
-      if (address === null || typeof address === 'string') throw new Error('expected a TCP address');
+      if (address === null || typeof address === 'string')
+        throw new Error('expected a TCP address');
       const raw = await new Promise<string>((resolve, reject) => {
         const socket = connect({ host: '127.0.0.1', port: address.port }, () => {
           socket.write('GET /health HTTP/1.0\r\n\r\n');
@@ -290,7 +295,12 @@ describe('host protection', () => {
     databases.push(database);
     const sink = new Writable({ write: (_chunk, _enc, cb) => cb() });
     const logger = createLogger({ name: 'test', level: 'silent', destination: sink });
-    const server = buildServer({ database, logger, allowedHosts: ['orbit.internal'], apiToken: API_TOKEN });
+    const server = buildServer({
+      database,
+      logger,
+      allowedHosts: ['orbit.internal'],
+      apiToken: API_TOKEN,
+    });
     servers.push(server);
     const ok = await server.inject({
       method: 'GET',
