@@ -116,9 +116,12 @@ function assertLocalOllama(baseUrl: string, allowRemote: boolean): URL {
     host === '127.0.0.1' ||
     host === '[::1]' ||
     host === '::1';
-  if (!local && !allowRemote) {
+  if (url.username || url.password) {
+    throw new OrbitAIError('Ollama base URL must not contain embedded credentials.', 'INVALID_INPUT');
+  }
+  if (!local && (!allowRemote || url.protocol !== 'https:')) {
     throw new OrbitAIError(
-      'Remote Ollama is blocked. Set allowRemoteOllama only after reviewing the destination.',
+      'Remote Ollama requires explicit approval and HTTPS.',
       'REMOTE_OLLAMA_BLOCKED',
     );
   }
@@ -325,6 +328,7 @@ export async function runOrbitAnalysis(
     headers.authorization = 'Bearer ' + options.apiKey;
     body = {
       model: options.model,
+      max_output_tokens: 2048,
       instructions: 'Analyse only the supplied context. Do not use tools. Cite evidence IDs. State uncertainty and missing evidence.',
       input: context.text,
       store: false,
