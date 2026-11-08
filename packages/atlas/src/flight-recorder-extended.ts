@@ -56,6 +56,26 @@ export interface TelemetryAnalysis {
   limitations: string[];
 }
 
+
+function normalizeEventForAnalysis(value: string | null): string | null {
+  if (!value) return null;
+  const event = value.toLowerCase();
+  const hasWatchdog = event.includes('watchdog') || event.includes('wdt');
+  const hasReset = event.includes('reset') || event.includes('reboot');
+  if (hasWatchdog && hasReset) return 'watchdog_reset';
+  if (hasWatchdog) return 'watchdog';
+  if (hasReset) return 'reset';
+  if (event.includes('boot')) return 'boot';
+  if (event.includes('panic')) return 'panic';
+  if (event.includes('brownout')) return 'brownout';
+  if (event.includes('fault') || event.includes('exception') || event.includes('assert')) return 'fault';
+  if (event.includes('crash')) return 'crash';
+  if (event.includes('disconnect')) return 'disconnected';
+  if (event.includes('connect')) return 'connected';
+  if (event.includes('start')) return 'start';
+  if (event.includes('stop')) return 'stop';
+  return 'other';
+}
 function stableId(value: unknown): string {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex').slice(0, 24);
 }
@@ -65,6 +85,18 @@ export function analyseTelemetry(
   session: TelemetrySession,
   options: TelemetryAnalysisOptions = {},
 ): TelemetryAnalysis {
+  if (!session || typeof session !== 'object' || Array.isArray(session)) {
+    throw new Error('telemetry session must be an object');
+  }
+  if (!/^[0-9a-f]{64}$/i.test(session.rawSha256)) {
+    throw new Error('telemetry session SHA-256 is invalid');
+  }
+  if (!['json', 'ndjson', 'csv', 'key-value'].includes(session.format)) {
+    throw new Error('telemetry session format is invalid');
+  }
+  if (!Array.isArray(session.points) || session.points.length === 0 || session.points.length > 100_000) {
+    throw new Error('telemetry session must contain between 1 and 100000 points');
+  }
   if (!options || typeof options !== 'object' || Array.isArray(options)) {
     throw new Error('telemetry analysis options must be an object');
   }
@@ -129,14 +161,27 @@ export function analyseTelemetry(
     }
     anomalies.push(anomaly);
   };
-  const eventCounts: Record<string, number> = { ...session.eventCounts };
+  const eventCounts: Record<string, number> = {};
 
   session.points.forEach((point, pointIndex) => {
-    const event = point.event?.toLowerCase() ?? '';
-    if (event.includes('watchdog') || event.includes('wdt')) {
+    if (!point || typeof point !== 'object' || Array.isArray(point)) {
+      throw new Error('telemetry session contains an invalid point');
+    }
+    if (
+      (point.timestamp !== null && typeof point.timestamp !== 'string') ||
+      !point.metrics ||
+      typeof point.metrics !== 'object' ||
+      Array.isArray(point.metrics) ||
+      (point.event !== null && typeof point.event !== 'string')
+    ) {
+      throw new Error('telemetry session contains an invalid point shape');
+    }
+    const event = normalizeEventForAnalysis(point.event);
+    if (event) eventCounts[event] = (eventCounts[event] ?? 0) + 1;
+    if (event === 'watchdog' || event === 'watchdog_reset') {
       const ruleId = 'event.watchdog';
       addAnomaly({
-        id: stableId([session.rawSha256, ruleId, pointIndex, point.event]),
+        id: stableId([session.rawSha256, ruleId, pointIndex, event]),
         ruleId,
         kind: 'watchdog',
         severity: 'error',
@@ -145,7 +190,7 @@ export function analyseTelemetry(
         message: 'Watchdog-related event detected in the supplied telemetry recording.',
       });
     }
-    if (event.includes('reset') || event.includes('reboot')) {
+    if (event === 'reset' || event === 'watchdog_reset') {
       const ruleId = 'event.reset';
       addAnomaly({
         id: stableId([session.rawSha256, ruleId, pointIndex, point.event]),
@@ -159,6 +204,9 @@ export function analyseTelemetry(
     }
 
     for (const [name, value] of Object.entries(point.metrics)) {
+      if (!/^[A-Za-z][A-Za-z0-9_.-]{0,63}$/.test(name) || typeof value !== 'number' || !Number.isFinite(value)) {
+        throw new Error('telemetry session contains an invalid metric value');
+      }
       metricSampleCount += 1;
       if (metricSampleCount > MAX_METRIC_SAMPLES) {
         throw new Error('telemetry analysis exceeds the ' + MAX_METRIC_SAMPLES + ' metric sample limit');
