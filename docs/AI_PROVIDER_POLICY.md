@@ -25,7 +25,7 @@ Provider model names and API versions change. Re-verify them against official do
 2. The user explicitly selects a provider, model and task.
 3. ORBIT prepares a bounded context bundle from selected evidence items.
 4. The application shows the exact context text, evidence IDs, hashes, destination, byte size and redaction count.
-5. Secret scanning/redaction runs before the request. The user can inspect and edit the final bundle.
+5. Best-effort secret scanning/redaction runs before the request. The current Command Center displays the prepared bundle for inspection but does not provide an editor for changing its contents.
 6. The user explicitly approves transmission. The adapter requires the SHA-256 of the exact approved preview; changing the context, provider, model or destination invalidates approval.
 7. The provider returns advisory text. The result is not test or correctness evidence.
 8. No AI result may mutate graph facts, create PASS states, run shell commands, connect to hardware, write files or apply patches automatically.
@@ -45,14 +45,14 @@ Provider model names and API versions change. Re-verify them against official do
 
 ## Remaining work before user-facing release
 
-- Integrate with the local API and Command Center, including a context preview/approval screen.
+- Add browser E2E tests proving no provider network call occurs before the user approves the exact preview.
+- Add a safe, explicit way to edit selected excerpts before approval, while keeping evidence provenance and hashes clear.
 - Keep provider keys server-side and never expose them to browser JavaScript.
 - Add cancellation support, token/cost estimates and model capability selection.
 - Add tests for timeout, oversized response, malformed JSON, 401/429/5xx, remote destination approval, changed destination, redaction edge cases and prompt injection.
 - Verify exact official provider schemas and version headers during release validation.
 - Document provider-side retention, regional processing and account-level data settings.
 - Add user-visible disclosure and a way to inspect/clear AI notes.
-- Add browser E2E tests proving no provider network call occurs before the user approves the exact preview.
 
 ## Non-goals
 
