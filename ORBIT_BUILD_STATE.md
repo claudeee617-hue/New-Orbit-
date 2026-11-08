@@ -5,7 +5,7 @@ Last updated: 2026-11-08
 
 ## Current phase
 
-**Engineering roadmap Prompts 0–10 and App Business Module sub-prompts 0–4 are merged into `main` (PRs #5 and #9). Prompt 11 API/CLI implementation is in `feat/prompt-11-api-cli`; CI and review are pending, so it is not merged.**
+**Engineering roadmap Prompts 0–10 and App Business Module sub-prompts 0–4 are merged into `main` (PRs #5 and #9). Prompt 11 API/CLI implementation is in `feat/prompt-11-api-cli`; full CI run #136 passed on Ubuntu, macOS and Windows (373 Ubuntu tests), and PR #11 is ready for review but not merged.**
 
 ## Phase checklist
 
@@ -274,4 +274,4 @@ Verified by GitHub Actions run `42481493312` on Ubuntu, macOS and Windows; the e
 - API ingestion uses bounded inputs and allowlisted CI summary/environment metadata; it does not persist arbitrary credential fields or raw test/telemetry report bodies as graph attributes.
 - Added CLI `init`, `doctor`, `graph summary`, `graph nodes`, `ci ingest`, `tests ingest` and `tests history` commands.
 - Added API token lifecycle, API route/integration and CLI workspace/ingestion tests.
-- **Status:** Implementation pushed to feature branch; full format/lint/typecheck/test/build matrix and fixes are still pending. No Prompt 11 PR has been merged.
+- **Status:** Implementation pushed in PR #11; full format/lint/typecheck/test/build matrix passed on Ubuntu, macOS and Windows in GitHub Actions run #136. Ubuntu reported 373 passing tests across nine workspace suites; 15/15 typecheck tasks and 9/9 build tasks passed. PR #11 is ready for review and is not merged.
