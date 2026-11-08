@@ -132,13 +132,11 @@ describe('ORBIT AI privacy and approval boundary', () => {
 
   it('uses only local Ollama by default', async () => {
     const { context, options } = approved('ollama');
-    const fetchImpl = vi
-      .fn<typeof fetch>()
-      .mockResolvedValue(
-        new Response(JSON.stringify({ message: { content: 'Review based on [ev-coverage-1].' } }), {
-          status: 200,
-        }),
-      );
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(JSON.stringify({ message: { content: 'Review based on [ev-coverage-1].' } }), {
+        status: 200,
+      }),
+    );
     const result = await runOrbitAnalysis({ ...options, fetchImpl }, context);
     expect(fetchImpl.mock.calls[0]?.[0]).toBe('http://127.0.0.1:11434/api/chat');
     expect(result.provider).toBe('ollama');
