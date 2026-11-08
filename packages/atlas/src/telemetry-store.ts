@@ -236,7 +236,7 @@ export async function storeTelemetrySession(
       artifactRelativePath: relativeActual.split(sep).join('/'),
       isDemo: input.isDemo,
       pointCount: verifiedSession.points.length,
-      anomalyCount: input.analysis.anomalies.length,
+      anomalyCount: analysis.anomalies.length,
     };
   });
 }
