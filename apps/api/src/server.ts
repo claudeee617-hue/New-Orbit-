@@ -6,6 +6,7 @@ import {
   hashArtifact,
   nodeIdFor,
   type EvidenceStatus,
+  type JsonValue,
   type NodeType,
   canonicalJson,
 } from '@orbit/core';
@@ -61,7 +62,7 @@ function hostnameOf(hostHeader: string | undefined): string {
   return colon === -1 ? hostHeader : hostHeader.slice(0, colon);
 }
 
-type JsonRecord = Record<string, unknown>;
+type JsonRecord = Record<string, JsonValue>;
 
 function record(value: unknown, what: string): JsonRecord {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
