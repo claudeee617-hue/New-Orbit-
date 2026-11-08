@@ -5,7 +5,7 @@ Last updated: 2026-11-08
 
 ## Current phase
 
-**Prompts 0–4 are on `main`. Prompt 5 and Prompts 6–8 are implemented on `feat/prompts-6-8-completion` and consolidated in draft PR #5. GitHub Actions run `42477639701` passed on Ubuntu, macOS and Windows, including 316 tests plus format, lint, typecheck and build. These changes are pushed but not merged; treat them as prototypes pending review and remaining release gates.
+**Prompts 0–4 are on `main`. Prompts 5–10 are being consolidated on `feat/prompts-6-8-completion` in draft PR #5. Prompt 5–8 previously passed CI on Ubuntu, macOS and Windows; Prompt 9–10 additions are pushed and require a fresh full check before their status can be called verified. These changes are not merged.
 
 ## Phase checklist
 
@@ -20,8 +20,8 @@ Last updated: 2026-11-08
 | 6      | WITNESS                                        | Base prototype plus extended verification helpers and CLI on `feat/prompts-6-8-completion`; CI passed on three OSs; review pending |
 | 7      | FLARE                                          | Base prototype plus pytest/Jest/Go adapters and reliability analytics/CLI on `feat/prompts-6-8-completion`; CI passed on three OSs; durable history remains outstanding |
 | 8      | CAPSULE                                        | Base prototype plus polyglot manifest inspection and CLI on `feat/prompts-6-8-completion`; CI passed on three OSs; build replay remains out of scope |
-| 9      | FLIGHT RECORDER                                | Recorded-file replay only; no hardware connection |
-| 10     | Change Passport and Replay Room                | Passport assembly prototype; no Replay Room yet |
+| 9      | FLIGHT RECORDER                                | Recorded-log analysis + hash-verified graph persistence; no physical serial connection |
+| 10     | Change Passport and Replay Room                | Commit-scoped evidence correlation, immutable history, comparison and non-executing reproduction plan; no visual Replay Room UI |
 | 11     | API and CLI (full)                             | Partial: local engine CLI commands on feature branch |
 | 12     | Command Center (full)                          | Not started (shell exists)                     |
 | 13     | GitHub Action                                  | Not started                                    |
@@ -225,3 +225,24 @@ This branch is based on `feat/orbit-evidence-engines` at `bbb6626`, which contai
 - Failure clustering is heuristic text normalization; duration comparisons do not normalize runner hardware.
 - Capsule fingerprints represent supplied manifest declarations, not actual installed dependencies, container digests or the running OS.
 - CI verification: GitHub Actions run `42477639701` passed on Ubuntu, macOS and Windows. The workflow's `pnpm run check` completed format, lint, typecheck, all 316 tests and builds successfully. This does not substitute for product acceptance review or the remaining roadmap gates.
+
+
+## Prompt 9 summary (FLIGHT RECORDER — recorded telemetry)
+
+- packages/atlas/src/flight-recorder.ts: bounded JSON, NDJSON, CSV and key-value parsing; normalized event categories; SHA-256 of exact input bytes; raw lines are not copied into parsed output.
+- packages/atlas/src/flight-recorder-extended.ts: typed metric analysis, explicit units, explicit threshold rules, stable watchdog/reset/threshold findings and aggregate min/max/mean statistics.
+- packages/atlas/src/telemetry-store.ts: re-reads a repository-local artifact, resolves its real path under the selected root, checks the raw SHA-256 and writes immutable TelemetrySession evidence/node plus optional device/firmware/commit graph links atomically.
+- CLI: orbit device replay accepts units/thresholds; optional persistence requires the DB, repo root and repo-relative artifact path. orbit device serial-status reports that physical serial transport is unavailable.
+- Synthetic ESP32 and STM32 fixtures are clearly labelled DEMO.
+- Boundaries: 10 MiB, at most 100,000 records, at most 200 threshold rules; no USB serial connection, live stream or hardware command support.
+
+## Prompt 10 summary (Change Passport + Replay Room backend)
+
+- packages/atlas/src/passport.ts: strict input validation, canonical content hash, rule-based completeness dimensions, explicit verificationStatus and no aggregate score.
+- packages/atlas/src/passport-engine.ts: only exact-commit immutable evidence is correlated; bounded import-impact/related-test graph context; graph-backed versioned ChangePassport node; atomic evidence/node/edge transaction; history and comparisons; human-run reproduction plan.
+- CLI: orbit passport create --db --repo, history, compare and plan. Plans mark all steps automaticExecution false.
+- Remaining work: visual Replay Room, user-configurable completeness policy, richer UI timeline and live hardware transport; these are not claimed as implemented.
+
+## Prompt 9–10 CI status
+
+Pending. The earlier Prompt 5–8 run 42477639701 is historical evidence only and does not validate the newly added Prompt 9–10 files. Replace this section with the newest run after all fixes and audit.
