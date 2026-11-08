@@ -245,4 +245,4 @@ This branch is based on `feat/orbit-evidence-engines` at `bbb6626`, which contai
 
 ## Prompt 9–10 CI status
 
-Pending. The earlier Prompt 5–8 run 42477639701 is historical evidence only and does not validate the newly added Prompt 9–10 files. Replace this section with the newest run after all fixes and audit.
+Verified by GitHub Actions run `42481493312` (2026-11-08): Ubuntu, macOS and Windows all passed the repository `pnpm run check` workflow. Ubuntu recorded 331 passing tests across 9 workspace test suites; formatting, lint, typecheck and build also passed. This validates the current feature branch, not the merged `main` branch.
