@@ -2,7 +2,6 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { nodeIdFor } from '@orbit/core';
 import { createGraphStore, openDatabase } from '@orbit/database';
 import { buildProgram, type CliIo } from './program.js';
 
@@ -66,15 +65,10 @@ describe('Prompt 9 — Flight Recorder CLI', () => {
     const dbPath = join(root, '.orbit', 'orbit.db');
     const repoRoot = join(root, 'repo');
     const log = join(repoRoot, 'fixtures', 'record.ndjson');
-    const { storeDb, repoId } = (() => {
-      const database = openDatabase({ path: dbPath });
-      const store = createGraphStore(database);
-      const repo = store.repositories.register({ key: 'test/cli-telemetry', displayName: 'CLI Telemetry' }).record;
-      database.close();
-      return { storeDb: dbPath, repoId: repo.id };
-    })();
-    void repoId;
-    void storeDb;
+    const database = openDatabase({ path: dbPath });
+    const store = createGraphStore(database);
+    store.repositories.register({ key: 'test/cli-telemetry', displayName: 'CLI Telemetry' });
+    database.close();
     const fs = await import('node:fs/promises');
     await fs.mkdir(join(repoRoot, 'fixtures'), { recursive: true });
     const raw = '{"timestamp":"2026-11-08T10:00:00Z","event":"watchdog reset","voltage":3.2}';
