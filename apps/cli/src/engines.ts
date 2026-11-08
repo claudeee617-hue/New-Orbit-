@@ -368,8 +368,8 @@ export function attachEngineCommands(program: Command, io: CliIo): void {
           );
         }
         const report = {
-          schemaVersion: 1,
           ...session,
+          schemaVersion: 1,
           source: basename(file),
           mode: 'read-only-recorded-file-replay',
           analysis,
