@@ -49,7 +49,7 @@ The example assumes a trusted ORBIT release has been merged to `main`. For a Cob
 | `head-sha` | PR head SHA | Diff head |
 | `coverage-file` | empty | Optional path to a coverage report |
 | `coverage-format` | `lcov` | `lcov` or `cobertura` |
-| `fail-on-uncovered` | `false` | Fail only when supplied coverage produces PARTIAL changed-line status |
+| `fail-on-uncovered` | `false` | Fail when supplied coverage produces PARTIAL or INCOMPLETE changed-line status |
 | `comment` | `true` | Upsert one marked PR comment |
 | `upload-sarif` | `false` | Upload SARIF (requires `security-events: write`) |
 | `github-token` | empty | Optional token for PR comment 
