@@ -177,6 +177,11 @@ export function analyseTelemetry(
       throw new Error('telemetry session contains an invalid point shape');
     }
     const event = normalizeEventForAnalysis(point.event);
+    const timestamp = point.timestamp === null ? null : new Date(point.timestamp);
+    if (timestamp && !Number.isFinite(timestamp.getTime())) {
+      throw new Error('telemetry session contains an invalid timestamp');
+    }
+    const canonicalTimestamp = timestamp?.toISOString() ?? null;
     if (event) eventCounts[event] = (eventCounts[event] ?? 0) + 1;
     if (event === 'watchdog' || event === 'watchdog_reset') {
       const ruleId = 'event.watchdog';
@@ -186,19 +191,19 @@ export function analyseTelemetry(
         kind: 'watchdog',
         severity: 'error',
         pointIndex,
-        timestamp: point.timestamp,
+        timestamp: canonicalTimestamp,
         message: 'Watchdog-related event detected in the supplied telemetry recording.',
       });
     }
     if (event === 'reset' || event === 'watchdog_reset') {
       const ruleId = 'event.reset';
       addAnomaly({
-        id: stableId([session.rawSha256, ruleId, pointIndex, point.event]),
+        id: stableId([session.rawSha256, ruleId, pointIndex, event]),
         ruleId,
         kind: 'reset',
         severity: 'warning',
         pointIndex,
-        timestamp: point.timestamp,
+        timestamp: canonicalTimestamp,
         message: 'Reset-related event detected in the supplied telemetry recording.',
       });
     }
@@ -213,7 +218,7 @@ export function analyseTelemetry(
       }
       metrics.push({
         pointIndex,
-        timestamp: point.timestamp,
+        timestamp: canonicalTimestamp,
         name,
         value,
         unit:
