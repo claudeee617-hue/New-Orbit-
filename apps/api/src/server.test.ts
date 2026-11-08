@@ -136,7 +136,7 @@ describe('authenticated local API', () => {
 
     const evidence = await server.inject({
       method: 'GET',
-      url: `/api/v1/repositories/example/evidence?commitSha=${commitSha}`,
+      url: '/api/v1/repositories/example/evidence?commitSha=' + commitSha,
       headers: { host: 'localhost', ...auth },
     });
     expect(evidence.statusCode).toBe(200);
