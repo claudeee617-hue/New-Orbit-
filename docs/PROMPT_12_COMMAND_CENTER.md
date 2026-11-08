@@ -36,6 +36,6 @@ Keep `api.token` private. Do not commit it, paste it into an issue, or expose it
 - CAPSULE environment comparison and FLIGHT RECORDER recorded-session playback.
 - Change Passport detail, evidence verification and Replay Room compare/timeline.
 - Browser-level component tests, keyboard/accessibility pass and full Ubuntu/macOS/Windows CI.
-- Browser-level component tests, keyboard/accessibility pass and full Ubuntu/macOS/Windows CI.
+- The separate Prompt 14 experiment in draft PR #21 adds an AI evidence preview/approval panel on a stacked branch; it is not part of PR #13 or `main`.
 
 Prompt 12 is not complete until the remaining screens are implemented, the API/UI behavior is verified against real local data, and the cross-platform CI matrix passes.
