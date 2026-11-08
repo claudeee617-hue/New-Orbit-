@@ -63,6 +63,18 @@ describe('Prompt 11 evidence ingestion', () => {
     expect(history.nodes['CIWorkflow']).toBe(1);
   });
 
+  it('rejects unknown CI summary fields that could contain secrets', async () => {
+    const { database } = workspace();
+    runInit(database, 'local/sample');
+    await expect(
+      ingestCiReport(database, 'local/sample', {
+        status: 'success',
+        summary: { passed: 10, apiToken: 'do-not-store' },
+      }),
+    ).rejects.toThrow(/summary field apiToken is not supported/);
+    expect(runGraphSummary(database).nodes['CIWorkflow']).toBeUndefined();
+  });
+
   it('ingests a JUnit file and exposes the test-run record in history', async () => {
     const { directory, database } = workspace();
     runInit(database, 'local/sample');
