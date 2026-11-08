@@ -53,7 +53,7 @@ The example assumes a trusted ORBIT release has been merged to `main`. For a Cob
 | `comment` | `true` | Upsert one marked PR comment |
 | `upload-sarif` | `false` | Upload SARIF (requires `security-events: write`) |
 | `github-token` | empty | Optional token for PR comment 
-| `runtime-ref` | PR base SHA | Trusted base commit from which ORBIT is installed and built |
+
 
 ## Outputs
 
