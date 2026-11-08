@@ -2,7 +2,7 @@
 
 > **Understand Everything. Trace Every Change. Prove What Works.**
 
-ORBIT is an open-source, local-first engineering intelligence platform. It connects repository structure, code changes, test and coverage reports, declared environments, recorded device telemetry and evidence into a traceable workflow.
+ORBIT is a local-first engineering intelligence platform developed in the open. It connects repository structure, code changes, test and coverage reports, declared environments, recorded device telemetry and evidence into a traceable workflow.
 
 Its central artifact is the **Change Passport**: a content-hashed record of a change, evidence supplied for it, known findings and missing verification. ORBIT does not invent test results, build outcomes, device measurements or correctness guarantees.
 
@@ -146,7 +146,7 @@ The architecture and current roadmap are documented in [docs/ROADMAP.md](docs/RO
 
 ## License
 
-The repository targets Apache-2.0, but the license file has not yet been added. Until that is done, the repository does not grant an open-source license.
+The repository targets Apache-2.0, but the `LICENSE` file has not yet been added. Until that is done, the repository does not grant an open-source license.
 
 ### ATLAS memory and MCP (Prompt 5)
 
