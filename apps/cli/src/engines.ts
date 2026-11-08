@@ -435,8 +435,10 @@ export function attachEngineCommands(program: Command, io: CliIo): void {
     .requiredOption('--db <path>', 'ORBIT workspace database path')
     .option('--repo <key>', 'repository key when the database contains several repositories')
     .action(async (passportNodeId: string, options: { db: string; repo?: string }) => {
-      const result = await withGraphStore(options.db, options.repo, (store, repository) =>
-        getPassportHistory(store, repository.id, passportNodeId),
+      const result = await withGraphStore(
+        options.db,
+        options.repo,
+        (store, repository) => getPassportHistory(store, repository.id, passportNodeId),
         true,
       );
       io.stdout(`${JSON.stringify(result, null, 2)}\n`);
@@ -448,8 +450,10 @@ export function attachEngineCommands(program: Command, io: CliIo): void {
     .requiredOption('--db <path>', 'ORBIT workspace database path')
     .option('--repo <key>', 'repository key when the database contains several repositories')
     .action(async (before: string, after: string, options: { db: string; repo?: string }) => {
-      const result = await withGraphStore(options.db, options.repo, (store, repository) =>
-        compareChangePassports(store, repository.id, before, after),
+      const result = await withGraphStore(
+        options.db,
+        options.repo,
+        (store, repository) => compareChangePassports(store, repository.id, before, after),
         true,
       );
       io.stdout(`${JSON.stringify(result, null, 2)}\n`);
@@ -461,8 +465,10 @@ export function attachEngineCommands(program: Command, io: CliIo): void {
     .requiredOption('--db <path>', 'ORBIT workspace database path')
     .option('--repo <key>', 'repository key when the database contains several repositories')
     .action(async (passportNodeId: string, options: { db: string; repo?: string }) => {
-      const result = await withGraphStore(options.db, options.repo, (store, repository) =>
-        createReproductionPlan(store, repository.id, passportNodeId),
+      const result = await withGraphStore(
+        options.db,
+        options.repo,
+        (store, repository) => createReproductionPlan(store, repository.id, passportNodeId),
         true,
       );
       io.stdout(`${JSON.stringify(result, null, 2)}\n`);

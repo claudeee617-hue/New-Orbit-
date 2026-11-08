@@ -56,7 +56,6 @@ export interface TelemetryAnalysis {
   limitations: string[];
 }
 
-
 function normalizeEventForAnalysis(value: string | null): string | null {
   if (!value) return null;
   const event = value.toLowerCase();
@@ -68,7 +67,8 @@ function normalizeEventForAnalysis(value: string | null): string | null {
   if (event.includes('boot')) return 'boot';
   if (event.includes('panic')) return 'panic';
   if (event.includes('brownout')) return 'brownout';
-  if (event.includes('fault') || event.includes('exception') || event.includes('assert')) return 'fault';
+  if (event.includes('fault') || event.includes('exception') || event.includes('assert'))
+    return 'fault';
   if (event.includes('crash')) return 'crash';
   if (event.includes('disconnect')) return 'disconnected';
   if (event.includes('connect')) return 'connected';
@@ -94,7 +94,11 @@ export function analyseTelemetry(
   if (!['json', 'ndjson', 'csv', 'key-value'].includes(session.format)) {
     throw new Error('telemetry session format is invalid');
   }
-  if (!Array.isArray(session.points) || session.points.length === 0 || session.points.length > 100_000) {
+  if (
+    !Array.isArray(session.points) ||
+    session.points.length === 0 ||
+    session.points.length > 100_000
+  ) {
     throw new Error('telemetry session must contain between 1 and 100000 points');
   }
   if (!options || typeof options !== 'object' || Array.isArray(options)) {
@@ -105,10 +109,18 @@ export function analyseTelemetry(
     throw new Error('telemetry units must be an object');
   }
   const unitEntries = Object.entries(units);
-  if (unitEntries.length > 100 || unitEntries.some(([key, value]) =>
-    !/^[A-Za-z][A-Za-z0-9_.-]{0,63}$/.test(key) || typeof value !== 'string' || value.length > 32
-  )) {
-    throw new Error('telemetry units must contain at most 100 valid metric names and short unit strings');
+  if (
+    unitEntries.length > 100 ||
+    unitEntries.some(
+      ([key, value]) =>
+        !/^[A-Za-z][A-Za-z0-9_.-]{0,63}$/.test(key) ||
+        typeof value !== 'string' ||
+        value.length > 32,
+    )
+  ) {
+    throw new Error(
+      'telemetry units must contain at most 100 valid metric names and short unit strings',
+    );
   }
   const thresholds = options.thresholds ?? [];
   if (!Array.isArray(thresholds)) throw new Error('telemetry thresholds must be an array');
@@ -121,8 +133,15 @@ export function analyseTelemetry(
     if (!rule || typeof rule !== 'object' || Array.isArray(rule)) {
       throw new Error('each telemetry threshold rule must be an object');
     }
-    if (typeof rule.id !== 'string' || !rule.id.trim() || rule.id.length > 128 || ruleIds.has(rule.id)) {
-      throw new Error('telemetry threshold rule IDs must be non-empty, unique strings up to 128 characters');
+    if (
+      typeof rule.id !== 'string' ||
+      !rule.id.trim() ||
+      rule.id.length > 128 ||
+      ruleIds.has(rule.id)
+    ) {
+      throw new Error(
+        'telemetry threshold rule IDs must be non-empty, unique strings up to 128 characters',
+      );
     }
     ruleIds.add(rule.id);
     if (typeof rule.metric !== 'string' || !/^[A-Za-z][A-Za-z0-9_.-]{0,63}$/.test(rule.metric)) {
@@ -157,7 +176,9 @@ export function analyseTelemetry(
   let metricSampleCount = 0;
   const addAnomaly = (anomaly: TelemetryAnomaly): void => {
     if (anomalies.length >= MAX_ANALYSIS_ANOMALIES) {
-      throw new Error('telemetry analysis exceeds the ' + MAX_ANALYSIS_ANOMALIES + ' anomaly limit');
+      throw new Error(
+        'telemetry analysis exceeds the ' + MAX_ANALYSIS_ANOMALIES + ' anomaly limit',
+      );
     }
     anomalies.push(anomaly);
   };
@@ -209,22 +230,25 @@ export function analyseTelemetry(
     }
 
     for (const [name, value] of Object.entries(point.metrics)) {
-      if (!/^[A-Za-z][A-Za-z0-9_.-]{0,63}$/.test(name) || typeof value !== 'number' || !Number.isFinite(value)) {
+      if (
+        !/^[A-Za-z][A-Za-z0-9_.-]{0,63}$/.test(name) ||
+        typeof value !== 'number' ||
+        !Number.isFinite(value)
+      ) {
         throw new Error('telemetry session contains an invalid metric value');
       }
       metricSampleCount += 1;
       if (metricSampleCount > MAX_METRIC_SAMPLES) {
-        throw new Error('telemetry analysis exceeds the ' + MAX_METRIC_SAMPLES + ' metric sample limit');
+        throw new Error(
+          'telemetry analysis exceeds the ' + MAX_METRIC_SAMPLES + ' metric sample limit',
+        );
       }
       metrics.push({
         pointIndex,
         timestamp: canonicalTimestamp,
         name,
         value,
-        unit:
-          units[name] ??
-          rules.find((rule) => rule.metric === name && rule.unit)?.unit ??
-          null,
+        unit: units[name] ?? rules.find((rule) => rule.metric === name && rule.unit)?.unit ?? null,
       });
       const series = values.get(name) ?? [];
       series.push(value);

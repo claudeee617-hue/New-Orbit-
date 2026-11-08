@@ -57,14 +57,16 @@ describe('FLIGHT RECORDER typed analysis', () => {
 
   it('requires explicit bounds and unique IDs for threshold rules', () => {
     const session = parseTelemetry('{"temperature":23}');
-    expect(() => analyseTelemetry(session, { thresholds: [{ id: 'empty', metric: 'temperature' }] })).toThrow(
-      /min or max/,
-    );
     expect(() =>
-      analyseTelemetry(session, { thresholds: [
-        { id: 'same', metric: 'temperature', max: 30 },
-        { id: 'same', metric: 'temperature', max: 20 },
-      ] }),
+      analyseTelemetry(session, { thresholds: [{ id: 'empty', metric: 'temperature' }] }),
+    ).toThrow(/min or max/);
+    expect(() =>
+      analyseTelemetry(session, {
+        thresholds: [
+          { id: 'same', metric: 'temperature', max: 30 },
+          { id: 'same', metric: 'temperature', max: 20 },
+        ],
+      }),
     ).toThrow(/unique/);
   });
 
@@ -72,12 +74,14 @@ describe('FLIGHT RECORDER typed analysis', () => {
     const fabricated = {
       schemaVersion: 1 as const,
       format: 'ndjson' as const,
-      points: [{
-        timestamp: null,
-        metrics: { voltage: 3.3 },
-        event: 'token=NEVER_ECHO_THIS',
-        raw: 'SECRET_RAW_LINE',
-      }],
+      points: [
+        {
+          timestamp: null,
+          metrics: { voltage: 3.3 },
+          event: 'token=NEVER_ECHO_THIS',
+          raw: 'SECRET_RAW_LINE',
+        },
+      ],
       eventCounts: { 'token=NEVER_ECHO_THIS': 1 },
       metricNames: ['voltage'],
       watchdogEvents: 0,
@@ -89,9 +93,18 @@ describe('FLIGHT RECORDER typed analysis', () => {
     expect(result.eventCounts).toEqual({ other: 1 });
     expect(JSON.stringify(result)).not.toContain('NEVER_ECHO_THIS');
     expect(JSON.stringify(result)).not.toContain('SECRET_RAW_LINE');
-    expect(() => analyseTelemetry({ ...fabricated, points: [null] } as never)).toThrow(/invalid point/);
-    expect(() => analyseTelemetry(fabricated, { thresholds: [null] as never })).toThrow(/rule must be an object/);
-    expect(() => analyseTelemetry({ ...fabricated, points: [{ ...fabricated.points[0]!, timestamp: 'api_key=PRIVATE' }] })).toThrow(/invalid timestamp/);
+    expect(() => analyseTelemetry({ ...fabricated, points: [null] } as never)).toThrow(
+      /invalid point/,
+    );
+    expect(() => analyseTelemetry(fabricated, { thresholds: [null] as never })).toThrow(
+      /rule must be an object/,
+    );
+    expect(() =>
+      analyseTelemetry({
+        ...fabricated,
+        points: [{ ...fabricated.points[0]!, timestamp: 'api_key=PRIVATE' }],
+      }),
+    ).toThrow(/invalid timestamp/);
   });
 
   it('uses a recorded-file-only transport and explicitly reports serial support unavailable', async () => {

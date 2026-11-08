@@ -101,8 +101,20 @@ describe('Change Passport evidence engine', () => {
       changedFiles: ['src/a.ts'],
       evidence: [
         { id: 'git', kind: 'git', status: 'PASS', source: 'user-input', sha256: '1'.repeat(64) },
-        { id: 'coverage', kind: 'coverage', status: 'PASS', source: 'user-input', sha256: '2'.repeat(64) },
-        { id: 'tests', kind: 'test-report', status: 'PASS', source: 'user-input', sha256: '3'.repeat(64) },
+        {
+          id: 'coverage',
+          kind: 'coverage',
+          status: 'PASS',
+          source: 'user-input',
+          sha256: '2'.repeat(64),
+        },
+        {
+          id: 'tests',
+          kind: 'test-report',
+          status: 'PASS',
+          source: 'user-input',
+          sha256: '3'.repeat(64),
+        },
         { id: 'ci', kind: 'ci', status: 'PASS', source: 'user-input', sha256: '4'.repeat(64) },
       ],
     });
@@ -110,7 +122,6 @@ describe('Change Passport evidence engine', () => {
     expect(passport.evidenceVerification).toBe('UNVERIFIED_INPUT');
     expect(passport.verificationStatus).toBe('NOT_MEASURED');
   });
-
 
   it('correlates required evidence, graph impact and related tests into a versioned passport', () => {
     const { database, store, repository, fileA } = setup();
