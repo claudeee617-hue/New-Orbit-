@@ -151,7 +151,7 @@ function assembleChangePassport(
       ...item,
       ...(item.sha256 ? { sha256: item.sha256.toLowerCase() } : {}),
       source: item.source.slice(0, 512),
-      limitations: item.limitations?.slice(0, 10).map((value) => value.slice(0, 500)),
+      limitations: (item.limitations ?? []).slice(0, 10).map((value) => value.slice(0, 500)),
     }))
     .sort((a, b) => a.id.localeCompare(b.id));
   const changedFiles = [...new Set(input.changedFiles.map(normalizeRepoPath))].sort();
