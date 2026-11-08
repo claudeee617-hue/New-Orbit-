@@ -91,6 +91,7 @@ describe('FLIGHT RECORDER typed analysis', () => {
     expect(JSON.stringify(result)).not.toContain('SECRET_RAW_LINE');
     expect(() => analyseTelemetry({ ...fabricated, points: [null] } as never)).toThrow(/invalid point/);
     expect(() => analyseTelemetry(fabricated, { thresholds: [null] as never })).toThrow(/rule must be an object/);
+    expect(() => analyseTelemetry({ ...fabricated, points: [{ ...fabricated.points[0]!, timestamp: 'api_key=PRIVATE' }] })).toThrow(/invalid timestamp/);
   });
 
   it('uses a recorded-file-only transport and explicitly reports serial support unavailable', async () => {
