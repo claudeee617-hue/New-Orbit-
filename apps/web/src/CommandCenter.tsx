@@ -78,7 +78,8 @@ export function CommandCenter() {
         setRepositoryKey('');
         setGraph(null);
         setEvidence(null);
-        setPassports([]);\n        setIntegrity(null);
+        setPassports([]);
+        setIntegrity(null);
         setNotice('No repository is registered yet. Scan a local repository with the ORBIT CLI or API.');
         return;
       }
@@ -87,10 +88,12 @@ export function CommandCenter() {
         client.getGraph(selected.key, { limit: 100, signal }),
         client.getEvidence(selected.key, { limit: 100, signal }),
         client.getPassports(selected.key, { limit: 100, signal }),
+        client.getIntegrity(selected.key, signal),
       ]);
       setGraph(graphResult);
       setEvidence(evidenceResult);
-      setPassports(passportResult.passports);\n      setIntegrity(integrityResult.integrity);
+      setPassports(passportResult.passports);
+      setIntegrity(integrityResult.integrity);
       setNotice('');
     } catch (cause) {
       if (!signal?.aborted) setError(messageOf(cause));
@@ -140,6 +143,7 @@ export function CommandCenter() {
     setGraph(null);
     setEvidence(null);
     setPassports([]);
+    setIntegrity(null);
     setError('');
     setNotice('Disconnected. The token was held only in page memory.');
   }
@@ -149,6 +153,7 @@ export function CommandCenter() {
     setGraph(null);
     setEvidence(null);
     setPassports([]);
+    setIntegrity(null);
     // A fresh render triggers a new request through the selected key.
   }
 
