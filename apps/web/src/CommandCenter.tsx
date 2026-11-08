@@ -53,7 +53,8 @@ export function CommandCenter() {
   const [repositoryKey, setRepositoryKey] = useState('');
   const [graph, setGraph] = useState<ApiGraphPage | null>(null);
   const [evidence, setEvidence] = useState<ApiEvidencePage | null>(null);
-  const [passports, setPassports] = useState<unknown[]>([]);\n  const [integrity, setIntegrity] = useState<{ ok: boolean; ledgerEntriesChecked: number; problems: unknown[] } | null>(null);
+  const [passports, setPassports] = useState<unknown[]>([]);
+  const [integrity, setIntegrity] = useState<{ ok: boolean; ledgerEntriesChecked: number; problems: unknown[] } | null>(null);
   const [panel, setPanel] = useState<Panel>('overview');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
