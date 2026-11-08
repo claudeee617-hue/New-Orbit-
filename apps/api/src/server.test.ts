@@ -25,7 +25,7 @@ function setup(): {
   return { database, server, repositoryId: repository.id };
 }
 
-const auth = { authorization: `*** };
+const auth = { authorization: 'Bearer ' + API_TOKEN };
 
 afterEach(async () => {
   for (const server of servers.splice(0)) {
