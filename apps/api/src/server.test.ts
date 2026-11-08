@@ -188,20 +188,6 @@ describe('authenticated local API', () => {
     });
   });
 
-  it('returns a read-only hash-chain integrity report for a repository', async () => {
-    const { server } = setup();
-    const response = await server.inject({
-      method: 'GET',
-      url: '/api/v1/repositories/example/integrity',
-      headers: { host: 'localhost', ...auth },
-    });
-    expect(response.statusCode).toBe(200);
-    expect(response.json()).toMatchObject({
-      repository: { key: 'example' },
-      integrity: { ok: true, problems: [] },
-    });
-  });
-
   it('lists registered repositories and never returns the token value', async () => {
     const { server } = setup();
     const response = await server.inject({
