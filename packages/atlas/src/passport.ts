@@ -107,6 +107,58 @@ function assembleChangePassport(
   options: { now?: () => string },
   evidenceVerification: 'GRAPH_VALIDATED' | 'UNVERIFIED_INPUT',
 ): ChangePassport {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    throw new Error('Change Passport input must be an object');
+  }
+  if (typeof input.repository !== 'string' || !input.repository.trim() || input.repository.length > 256) {
+    throw new Error('repository must be a non-empty string up to 256 characters');
+  }
+  if (typeof input.commitSha !== 'string' || typeof input.diffSha256 !== 'string') {
+    throw new Error('commitSha and diffSha256 must be strings');
+  }
+  if (!Array.isArray(input.evidence)) throw new Error('evidence must be an array');
+  if (!Array.isArray(input.changedFiles)) throw new Error('changedFiles must be an array');
+  if (input.findings !== undefined && !Array.isArray(input.findings)) {
+    throw new Error('findings must be an array');
+  }
+  if (input.completeness !== undefined && !Array.isArray(input.completeness)) {
+    throw new Error('completeness must be an array');
+  }
+  if (input.baseSha !== undefined && typeof input.baseSha !== 'string') throw new Error('baseSha must be a string');
+  if (input.environmentFingerprint !== undefined && typeof input.environmentFingerprint !== 'string') {
+    throw new Error('environmentFingerprint must be a string');
+  }
+  if (input.firmwareBuildId !== undefined && (typeof input.firmwareBuildId !== 'string' || input.firmwareBuildId.length > 128)) {
+    throw new Error('firmwareBuildId must be a string up to 128 characters');
+  }
+  if (input.telemetrySessionSha256 !== undefined && typeof input.telemetrySessionSha256 !== 'string') {
+    throw new Error('telemetrySessionSha256 must be a string');
+  }
+  for (const item of input.evidence) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      throw new Error('each evidence record must be an object');
+    }
+    if (typeof item.id !== 'string' || typeof item.source !== 'string') {
+      throw new Error('evidence ID and source must be strings');
+    }
+    if (item.limitations !== undefined && (!Array.isArray(item.limitations) || item.limitations.some((value) => typeof value !== 'string'))) {
+      throw new Error('evidence limitations must be an array of strings');
+    }
+  }
+  for (const path of input.changedFiles) {
+    if (typeof path !== 'string') throw new Error('changed file paths must be strings');
+  }
+  if ((input.findings?.length ?? 0) > 200) throw new Error('at most 200 findings can be included');
+  for (const item of input.findings ?? []) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error('each finding must be an object');
+    if (typeof item.id !== 'string' || !item.id.trim() || item.id.length > 128) throw new Error('finding ID is invalid');
+    if (typeof item.severity !== 'string' || !item.severity.trim() || item.severity.length > 32) throw new Error('finding severity is invalid');
+    if (typeof item.message !== 'string') throw new Error('finding message must be a string');
+    if (item.path !== undefined && typeof item.path !== 'string') throw new Error('finding path must be a string');
+    if (item.lines !== undefined && (!Array.isArray(item.lines) || item.lines.length > 1000 || item.lines.some((line) => !Number.isInteger(line) || line < 1))) {
+      throw new Error('finding lines must be positive integer line numbers');
+    }
+  }
   if (!input.repository.trim()) throw new Error('repository is required');
   if (!/^[0-9a-f]{7,64}$/i.test(input.commitSha)) throw new Error('commitSha must be a Git SHA');
   if (!/^[0-9a-f]{64}$/i.test(input.diffSha256))
@@ -198,13 +250,17 @@ function assembleChangePassport(
   if (completeness.length > 7) throw new Error('at most seven completeness dimensions are allowed');
   const seenDimensions = new Set<string>();
   for (const item of completeness) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error('each completeness dimension must be an object');
+    if (!['diff', 'coverage', 'tests', 'ci', 'environment', 'build', 'hardware'].includes(item.dimension)) throw new Error('completeness dimension name is invalid');
     if (seenDimensions.has(item.dimension))
       throw new Error(`duplicate completeness dimension: ${item.dimension}`);
     seenDimensions.add(item.dimension);
     if (!['PRESENT', 'PARTIAL', 'MISSING', 'NOT_APPLICABLE'].includes(item.status))
       throw new Error(`completeness dimension ${item.dimension} has an invalid status`);
-    if (!item.rule.trim())
-      throw new Error(`completeness dimension ${item.dimension} requires a rule`);
+    if (typeof item.rule !== 'string' || !item.rule.trim() || item.rule.length > 500)
+      throw new Error(`completeness dimension ${item.dimension} requires a rule up to 500 characters`);
+    if (!Array.isArray(item.evidenceIds) || item.evidenceIds.some((id) => typeof id !== 'string' || !id.trim()))
+      throw new Error(`completeness dimension ${item.dimension} evidence IDs are invalid`);
     if (item.evidenceIds.length > 500)
       throw new Error(
         `completeness dimension ${item.dimension} exceeds the evidence reference limit`,
@@ -231,19 +287,20 @@ function assembleChangePassport(
           )
         ? ('PARTIAL' as const)
         : ('PASS' as const);
-  const createdAt = (options.now ?? (() => new Date().toISOString()))();
-  if (!Number.isFinite(Date.parse(createdAt)))
-    throw new Error('createdAt must be a valid timestamp');
+  const createdAtValue = (options.now ?? (() => new Date().toISOString()))();
+  const createdAtDate = new Date(createdAtValue);
+  if (!Number.isFinite(createdAtDate.getTime())) throw new Error('createdAt must be a valid timestamp');
+  const createdAt = createdAtDate.toISOString();
   const unsigned = {
     schemaVersion: 1 as const,
-    repository: input.repository,
-    commitSha: input.commitSha,
-    baseSha: input.baseSha ?? null,
-    diffSha256: input.diffSha256,
+    repository: input.repository.trim(),
+    commitSha: input.commitSha.toLowerCase(),
+    baseSha: input.baseSha?.toLowerCase() ?? null,
+    diffSha256: input.diffSha256.toLowerCase(),
     changedFiles,
     evidence,
     findings,
-    environmentFingerprint: input.environmentFingerprint ?? null,
+    environmentFingerprint: input.environmentFingerprint?.toLowerCase() ?? null,
     firmwareBuildId: input.firmwareBuildId ?? null,
     telemetrySessionSha256: input.telemetrySessionSha256 ?? null,
     state,
