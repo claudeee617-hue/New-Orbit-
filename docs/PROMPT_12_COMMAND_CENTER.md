@@ -38,4 +38,4 @@ Keep `api.token` private. Do not commit it, paste it into an issue, or expose it
 - Browser-level component tests, keyboard/accessibility pass and full Ubuntu/macOS/Windows CI.
 - The separate Prompt 14 experiment in draft PR #21 adds an AI evidence preview/approval panel on a stacked branch; it is not part of PR #13 or `main`.
 
-Prompt 12 is not complete until the remaining screens are implemented, the API/UI behavior is verified against real local data, and the cross-platform CI matrix passes.
+Prompt 12 is not complete until the remaining screens are implemented, the API/UI behavior is verified against real local data, browser E2E and accessibility tests pass, and the cross-platform CI matrix passes.
