@@ -1,8 +1,9 @@
 import { nodeIdFor, type JsonValue } from '@orbit/core';
 import type { GraphStore } from '@orbit/database';
-import { neighbors, traverse } from '@orbit/graph';
+import { traverse } from '@orbit/graph';
 import type { ChangePassport, ChangePassportInput, PassportEvidence } from './passport.js';
 import { createChangePassport } from './passport.js';
+import { normalizeRepoPath } from './verification.js';
 
 export interface PassportDimension {
   dimension: 'diff' | 'coverage' | 'tests' | 'ci' | 'environment' | 'build' | 'hardware';
@@ -198,9 +199,13 @@ export function recordChangePassport(
   input: PassportRecordInput,
   options: { now?: () => string } = {},
 ): PersistedPassport {
-  if (!store.repositories.get(input.repositoryId)) throw new Error('repository is not registered');
+  const repository = store.repositories.get(input.repositoryId);
+  if (!repository) throw new Error('repository is not registered');
+  if (input.repository !== repository.key && input.repository !== repository.id) {
+    throw new Error('passport repository must match the selected graph repository key or ID');
+  }
   if (!/^[0-9a-f]{7,64}$/i.test(input.commitSha)) throw new Error('commit SHA is invalid');
-  const changedFiles = [...new Set(input.changedFiles)].sort();
+  const changedFiles = [...new Set(input.changedFiles.map(normalizeRepoPath))].sort();
   const impact = computeImpact(store, input.repositoryId, changedFiles);
   const evidence = collectEvidence(store, input.repositoryId, input, impact.nodeIds.filter((id) =>
     store.nodes.get(input.repositoryId, id)?.type === 'File',
@@ -210,6 +215,7 @@ export function recordChangePassport(
   const suppliedPassport = createChangePassport(
     {
       ...input,
+      repository: repository.key,
       evidence,
       changedFiles,
       impact: {
@@ -242,7 +248,6 @@ export function recordChangePassport(
     repositoryId: input.repositoryId,
     source: `change-passport:${suppliedPassport.id}`,
     sourceType: 'manual',
-    ...(options.now ? { timestamp: options.now() } : {}),
     commitSha: suppliedPassport.commitSha,
     contentHash: suppliedPassport.contentSha256,
     status: verificationStatus,
@@ -272,20 +277,37 @@ export function recordChangePassport(
       missingEvidence: suppliedPassport.missingEvidence,
       completeness: dimensions as unknown as JsonValue,
       impact: {
-        changedFiles: impact.changedFiles,
-        affectedFiles: impact.affectedFiles,
-        relatedTests: impact.relatedTests,
-        affectedModules: impact.affectedModules,
-        nodeIds: impact.nodeIds,
-        edgeIds: impact.edgeIds,
-        truncated: impact.truncated,
+        changedFiles: impact.changedFiles.slice(0, 50).map((value) => value.slice(0, 256)),
+        affectedFiles: impact.affectedFiles.slice(0, 50).map((value) => value.slice(0, 256)),
+        relatedTests: impact.relatedTests.slice(0, 50).map((value) => value.slice(0, 256)),
+        affectedModules: impact.affectedModules.slice(0, 50).map((value) => value.slice(0, 256)),
+        nodeIds: impact.nodeIds.slice(0, 100),
+        edgeIds: impact.edgeIds.slice(0, 100),
+        truncated: impact.truncated ||
+          impact.changedFiles.length > 50 ||
+          impact.affectedFiles.length > 50 ||
+          impact.relatedTests.length > 50 ||
+          impact.affectedModules.length > 50 ||
+          impact.nodeIds.length > 100 ||
+          impact.edgeIds.length > 100,
       } as unknown as JsonValue,
-      evidence: suppliedPassport.evidence as unknown as JsonValue,
-      findings: suppliedPassport.findings as unknown as JsonValue,
+      evidence: suppliedPassport.evidence.slice(0, 100).map((item) => ({
+        id: item.id,
+        kind: item.kind,
+        status: item.status,
+        source: item.source.slice(0, 256),
+        ...(item.sha256 ? { sha256: item.sha256 } : {}),
+      })) as unknown as JsonValue,
+      findings: suppliedPassport.findings.slice(0, 50).map((item) => ({
+        id: item.id,
+        severity: item.severity,
+        message: item.message.slice(0, 300),
+        ...(item.path ? { path: item.path.slice(0, 256) } : {}),
+        ...(item.lines ? { lines: item.lines.slice(0, 50) } : {}),
+      })) as unknown as JsonValue,
       environmentFingerprint: suppliedPassport.environmentFingerprint,
       firmwareBuildId: suppliedPassport.firmwareBuildId,
       telemetrySessionSha256: suppliedPassport.telemetrySessionSha256,
-      createdAt: suppliedPassport.createdAt,
       limitations: suppliedPassport.limitations,
     },
     sourceEvidenceId: passportEvidence.record.id,
