@@ -138,12 +138,31 @@ function assembleChangePassport(
     if (!item || typeof item !== 'object' || Array.isArray(item)) {
       throw new Error('each evidence record must be an object');
     }
-    if (typeof item.id !== 'string' || typeof item.source !== 'string') {
-      throw new Error('evidence ID and source must be strings');
+    if (typeof item.id !== 'string' || !item.id.trim() || item.id.length > 256 || typeof item.source !== 'string' || !item.source.trim() || item.source.length > 2048) {
+      throw new Error('evidence ID and source must be non-empty bounded strings');
     }
-    if (item.limitations !== undefined && (!Array.isArray(item.limitations) || item.limitations.some((value) => typeof value !== 'string'))) {
+    if (item.sha256 !== undefined && typeof item.sha256 !== 'string') throw new Error('evidence SHA-256 must be a string');
+    if (item.limitations !== undefined && (!Array.isArray(item.limitations) || item.limitations.length > 100 || item.limitations.some((value) => typeof value !== 'string' || value.length > 5000))) {
       throw new Error('evidence limitations must be an array of strings');
     }
+  }
+  if (input.impact !== undefined) {
+    const impact = input.impact;
+    if (!impact || typeof impact !== 'object' || Array.isArray(impact)) throw new Error('impact must be an object');
+    const lists: Array<[string, unknown, number]> = [
+      ['changedFiles', impact.changedFiles, 1000],
+      ['affectedFiles', impact.affectedFiles, 5000],
+      ['relatedTests', impact.relatedTests, 5000],
+      ['affectedModules', impact.affectedModules, 1000],
+      ['nodeIds', impact.nodeIds, 5000],
+      ['edgeIds', impact.edgeIds, 10000],
+    ];
+    for (const [name, value, max] of lists) {
+      if (!Array.isArray(value) || value.length > max || value.some((entry) => typeof entry !== 'string' || entry.length > 1024)) {
+        throw new Error('impact ' + name + ' must be an array of bounded strings');
+      }
+    }
+    if (typeof impact.truncated !== 'boolean') throw new Error('impact truncated flag must be boolean');
   }
   for (const path of input.changedFiles) {
     if (typeof path !== 'string') throw new Error('changed file paths must be strings');
