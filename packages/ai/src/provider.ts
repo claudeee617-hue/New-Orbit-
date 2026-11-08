@@ -238,14 +238,6 @@ export function prepareAIContext(input: {
 }
 
 async function responseText(response: Response): Promise<string> {
-  const raw = await response.text();
-  if (Buffer.byteLength(raw, 'utf8') > MAX_OUTPUT_BYTES) {
-    throw new OrbitAIError(
-      'Provider response exceeds the 256 KiB limit.',
-      'RESPONSE_TOO_LARGE',
-      response.status,
-    );
-  }
   if (!response.ok) {
     throw new OrbitAIError(
       'AI provider request failed. Check provider credentials, model availability and rate limits.',
@@ -253,7 +245,38 @@ async function responseText(response: Response): Promise<string> {
       response.status,
     );
   }
-  return raw;
+
+  const reader = response.body?.getReader();
+  if (!reader) return '';
+
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > MAX_OUTPUT_BYTES) {
+        await reader.cancel();
+        throw new OrbitAIError(
+          'Provider response exceeds the 256 KiB limit.',
+          'RESPONSE_TOO_LARGE',
+          response.status,
+        );
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
 }
 
 function extractText(provider: AIProvider, payload: unknown): string {
