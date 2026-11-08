@@ -8,7 +8,7 @@ Its central artifact is the **Change Passport**: a content-hashed record of a ch
 
 ## Current status
 
-The public `main` branch contains engineering roadmap Prompts 0–10 and the separate App Business Module sub-prompts 0–4. Engineering Prompts 5–10 were merged through PR #5; the Business Module was merged through PR #9 on 2026-11-08. Their full CI matrices passed on Ubuntu, macOS and Windows. Prompt 11 (local API and CLI) is in [PR #11](https://github.com/claudeee617-hue/New-Orbit-/pull/11); its full Ubuntu/macOS/Windows CI passed, and it is awaiting review (not yet merged).
+The public `main` branch contains engineering roadmap Prompts 0–10 and the separate App Business Module sub-prompts 0–4. Engineering Prompts 5–10 were merged through PR #5; the Business Module was merged through PR #9. Prompt 11 local API/CLI was merged through PR #11 after cross-platform CI.
 
 | Capability | Current implementation |
 | --- | --- |
@@ -22,7 +22,7 @@ The public `main` branch contains engineering roadmap Prompts 0–10 and the sep
 | FLIGHT RECORDER recorded telemetry parser, caller-defined analysis and hash-verified graph persistence | Implemented on `main` as recorded-file prototype; physical serial/USB capture unavailable |
 | Change Passport graph correlation, versioned history, comparisons and non-executing reproduction plan | Implemented on `main` as backend/CLI prototype; visual Replay Room UI not implemented |
 | App Business Module | Implemented on `main` via PR #9: strategy, market references, local actual-vs-forecast calculator and pricing simulator; no live accounting/CRM/billing data |
-| Specialist AI agents, GitHub Action and full dashboard | Not implemented (MCP stdio server is now on `main`) |
+| Command Center | Partial in PR #13; see `docs/PROMPT_12_COMMAND_CENTER.md` |\n| GitHub Action | Partial in PR #14; see `docs/GITHUB_ACTION.md` |\n| Optional AI provider adapters and local preview/approval UI | Partial in PR #21; not released; see `docs/AI_PROVIDER_POLICY.md` |
 
 See [ORBIT_BUILD_STATE.md](ORBIT_BUILD_STATE.md) for phase-by-phase implementation details, branch status, known limitations and verified test results.
 
