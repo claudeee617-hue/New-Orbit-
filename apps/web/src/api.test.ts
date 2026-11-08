@@ -44,9 +44,11 @@ describe('local ORBIT API client', () => {
   });
 
   it('turns authentication failures into a safe actionable error', async () => {
-    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
-      jsonResponse({ error: 'UNAUTHENTICATED', message: 'Sensitive server detail' }, 401),
-    );
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(
+        jsonResponse({ error: 'UNAUTHENTICATED', message: 'Sensitive server detail' }, 401),
+      );
     const client = createOrbitApiClient({ token: TOKEN, fetchImpl });
 
     await expect(client.listRepositories()).rejects.toMatchObject({
@@ -58,9 +60,7 @@ describe('local ORBIT API client', () => {
   });
 
   it('passes abort signals through to fetch', async () => {
-    const fetchImpl = vi
-      .fn<typeof fetch>()
-      .mockResolvedValue(jsonResponse({ repositories: [] }));
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ repositories: [] }));
     const controller = new AbortController();
     const client = createOrbitApiClient({ token: TOKEN, fetchImpl });
 
