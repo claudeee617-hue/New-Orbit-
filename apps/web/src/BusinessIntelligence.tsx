@@ -71,7 +71,9 @@ function NumberField({
 }) {
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const next = event.currentTarget.value;
-    if (next === '' || (/^\d*(\.\d*)?$/.test(next) && Number.isFinite(Number(next)))) {
+    const isCount = field.key.toLowerCase().includes('customer') || field.key === 'targetSeats';
+    const validNumber = isCount ? /^\d*$/.test(next) : /^\d*(\.\d*)?$/.test(next);
+    if (next === '' || (validNumber && Number.isFinite(Number(next)))) {
       onChange(field.key, next);
     }
   };
@@ -129,16 +131,9 @@ export function BusinessIntelligence() {
   };
   const money = (value: number) => formatBusinessCurrency(value, currency);
 
-  const actualBar = Math.min(100, metrics.actual.revenue > 0 ? 100 : 0);
-  const forecastBar =
-    metrics.forecast.revenue > 0
-      ? Math.min(
-          100,
-          (metrics.forecast.revenue /
-            Math.max(metrics.actual.revenue, metrics.forecast.revenue, 1)) *
-            100,
-        )
-      : 0;
+  const comparisonMaximum = Math.max(metrics.actual.revenue, metrics.forecast.revenue);
+  const actualBar = comparisonMaximum > 0 ? (metrics.actual.revenue / comparisonMaximum) * 100 : 0;
+  const forecastBar = comparisonMaximum > 0 ? (metrics.forecast.revenue / comparisonMaximum) * 100 : 0;
 
   return (
     <div className="space-y-8">
