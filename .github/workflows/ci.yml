@@ -35,6 +35,13 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      - name: Temporary API test formatter preview
+        if: matrix.os == 'ubuntu-latest' && github.event.pull_request.head.ref == 'feat/prompt-12-command-center-final'
+        run: |
+          pnpm exec prettier --write apps/web/src/api.test.ts
+          echo '--- API TESTS ---'
+          cat apps/web/src/api.test.ts
+
       # format:check, lint, typecheck, test, build
       - name: Check
         run: pnpm run check
