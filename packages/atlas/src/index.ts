@@ -57,7 +57,7 @@ export type { EnvironmentSnapshot, EnvironmentDifference } from './capsule.js';
 export { parseTelemetry } from './flight-recorder.js';
 export type { TelemetryPoint, TelemetrySession } from './flight-recorder.js';
 export { createChangePassport } from './passport.js';
-export type { ChangePassport, ChangePassportInput, PassportEvidence } from './passport.js';
+export type { ChangePassport, ChangePassportInput, PassportEvidence, PassportCompletenessDimension, PassportImpactSummary } from './passport.js';
 
 export {
   MEMORY_KINDS,
