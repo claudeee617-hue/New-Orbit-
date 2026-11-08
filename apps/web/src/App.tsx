@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ORBIT_TAGLINE } from '@orbit/shared/health';
+import { BusinessModule } from './BusinessModule.js';
 import { loadHealth, type HealthState } from './health.js';
 
-/** Engines planned for ORBIT. None are implemented in the foundation build; the UI says so. */
 const ENGINES = [
   { name: 'ATLAS', purpose: 'Codebase intelligence and decision memory' },
   { name: 'WITNESS', purpose: 'Evidence-based pull-request verification' },
@@ -10,6 +10,8 @@ const ENGINES = [
   { name: 'CAPSULE', purpose: 'Reproducible environments' },
   { name: 'FLIGHT RECORDER', purpose: 'Embedded telemetry capture and replay' },
 ] as const;
+
+type WorkspaceView = 'overview' | 'business';
 
 function StatusBadge({ state }: { state: HealthState }) {
   const styles: Record<HealthState['kind'], { label: string; dot: string; text: string }> = {
@@ -61,6 +63,7 @@ function ApiDetails({ state }: { state: HealthState }) {
 
 export function App() {
   const [state, setState] = useState<HealthState>({ kind: 'loading' });
+  const [view, setView] = useState<WorkspaceView>('overview');
 
   const refresh = useCallback(() => {
     setState({ kind: 'loading' });
@@ -74,55 +77,90 @@ export function App() {
   useEffect(() => refresh(), [refresh]);
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-4 py-10 sm:px-6">
-      <header>
-        <h1 className="font-mono text-2xl font-semibold tracking-[0.3em] text-cyan">ORBIT</h1>
-        <p className="mt-1 text-sm text-mute">{ORBIT_TAGLINE}</p>
+    <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-8 px-4 py-10 sm:px-6">
+      <header className="flex flex-wrap items-end justify-between gap-5">
+        <div>
+          <h1 className="font-mono text-2xl font-semibold tracking-[0.3em] text-cyan">ORBIT</h1>
+          <p className="mt-1 text-sm text-mute">{ORBIT_TAGLINE}</p>
+        </div>
+        <nav aria-label="Command Center sections" className="flex gap-2">
+          <button
+            type="button"
+            aria-current={view === 'overview' ? 'page' : undefined}
+            onClick={() => setView('overview')}
+            className={`rounded-md border px-4 py-2 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan ${view === 'overview' ? 'border-cyan bg-cyan/10 text-cyan' : 'border-edge text-mute hover:border-cyan hover:text-ink'}`}
+          >
+            Overview
+          </button>
+          <button
+            type="button"
+            aria-current={view === 'business' ? 'page' : undefined}
+            onClick={() => setView('business')}
+            className={`rounded-md border px-4 py-2 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan ${view === 'business' ? 'border-cyan bg-cyan/10 text-cyan' : 'border-edge text-mute hover:border-cyan hover:text-ink'}`}
+          >
+            Business
+          </button>
+        </nav>
       </header>
 
-      <section aria-labelledby="api-heading" className="rounded-lg border border-edge bg-panel p-5">
-        <div className="mb-4 flex items-center justify-between gap-4">
-          <h2 id="api-heading" className="text-sm font-medium uppercase tracking-wider text-mute">
-            Local API
-          </h2>
-          <StatusBadge state={state} />
-        </div>
-        <ApiDetails state={state} />
-        <button
-          type="button"
-          onClick={refresh}
-          disabled={state.kind === 'loading'}
-          className="mt-5 rounded-md border border-edge px-3 py-1.5 text-sm text-ink transition-colors hover:border-cyan hover:text-cyan focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan disabled:opacity-50"
-        >
-          Check again
-        </button>
-      </section>
+      {view === 'business' ? (
+        <main>
+          <BusinessModule />
+        </main>
+      ) : (
+        <main className="flex flex-col gap-8">
+          <section
+            aria-labelledby="api-heading"
+            className="rounded-lg border border-edge bg-panel p-5"
+          >
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <h2
+                id="api-heading"
+                className="text-sm font-medium uppercase tracking-wider text-mute"
+              >
+                Local API
+              </h2>
+              <StatusBadge state={state} />
+            </div>
+            <ApiDetails state={state} />
+            <button
+              type="button"
+              onClick={refresh}
+              disabled={state.kind === 'loading'}
+              className="mt-5 rounded-md border border-edge px-3 py-1.5 text-sm text-ink transition-colors hover:border-cyan hover:text-cyan focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan disabled:opacity-50"
+            >
+              Check again
+            </button>
+          </section>
 
-      <section
-        aria-labelledby="engines-heading"
-        className="rounded-lg border border-edge bg-panel p-5"
-      >
-        <h2
-          id="engines-heading"
-          className="mb-1 text-sm font-medium uppercase tracking-wider text-mute"
-        >
-          Engines
-        </h2>
-        <p className="mb-4 text-sm text-mute">
-          This is the foundation build. No engine is implemented yet, so no analysis data is shown.
-        </p>
-        <ul className="divide-y divide-edge">
-          {ENGINES.map((engine) => (
-            <li key={engine.name} className="flex items-baseline justify-between gap-4 py-2">
-              <div>
-                <span className="font-mono text-sm text-ink">{engine.name}</span>
-                <span className="ml-3 text-sm text-mute">{engine.purpose}</span>
-              </div>
-              <span className="shrink-0 font-mono text-xs text-violet">NOT IMPLEMENTED</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+          <section
+            aria-labelledby="engines-heading"
+            className="rounded-lg border border-edge bg-panel p-5"
+          >
+            <h2
+              id="engines-heading"
+              className="mb-1 text-sm font-medium uppercase tracking-wider text-mute"
+            >
+              Engines
+            </h2>
+            <p className="mb-4 text-sm text-mute">
+              This main-branch foundation view lists the engine roadmap. Feature-branch prototypes
+              are not represented as merged or released capabilities.
+            </p>
+            <ul className="divide-y divide-edge">
+              {ENGINES.map((engine) => (
+                <li key={engine.name} className="flex items-baseline justify-between gap-4 py-2">
+                  <div>
+                    <span className="font-mono text-sm text-ink">{engine.name}</span>
+                    <span className="ml-3 text-sm text-mute">{engine.purpose}</span>
+                  </div>
+                  <span className="shrink-0 font-mono text-xs text-violet">ROADMAP</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </main>
+      )}
     </div>
   );
 }

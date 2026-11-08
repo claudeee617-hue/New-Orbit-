@@ -172,3 +172,12 @@ node apps/cli/dist/index.js mcp start --db .orbit/orbit.db --repo local/my-repos
 ```
 
 `mcp start` uses stdio transport and opens an existing SQLite database in read-only mode. It does not create or migrate databases. The 12 tools are `orbit_repository_map`, `orbit_search_symbols`, `orbit_get_symbol`, `orbit_get_callers`, `orbit_get_callees`, `orbit_analyze_impact`, `orbit_find_related_tests`, `orbit_search_history`, `orbit_search_memory`, `orbit_get_architecture`, `orbit_get_change_context` and `orbit_get_evidence`. No tool can mutate the graph, run commands, write files or control hardware. MCP responses are capped at 48 KiB.
+
+
+## ORBIT Business Module
+
+The optional Business Module is a local-first strategy workspace for commercial planning and research. It does not add billing, checkout, CRM, payment processing, hosted customer data or automatic revenue claims.
+
+See [Business Module documentation](docs/APP_BUSINESS_MODULE.md) for the scope, evidence references and product boundaries.
+
+Business inputs are treated as planning assumptions or user-entered values, not as measured company data. Missing customer analytics remain unavailable until a privacy-reviewed source is connected.
