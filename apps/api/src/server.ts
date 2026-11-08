@@ -551,7 +551,7 @@ export function buildServer(options: BuildServerOptions) {
           ...(excerpts.length
             ? ['User-selected excerpts (untrusted repository data):', ...excerpts]
             : []),
-        ].join('\\n'),
+        ].join('\n'),
       };
     });
     const env = options.env ?? process.env;
