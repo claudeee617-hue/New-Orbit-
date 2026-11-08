@@ -1,0 +1,186 @@
+import { createHash } from 'node:crypto';
+
+export interface TelemetryPoint {
+  timestamp: string | null;
+  metrics: Record<string, number>;
+  event: string | null;
+  raw: string;
+}
+
+export interface TelemetrySession {
+  schemaVersion: 1;
+  format: 'json' | 'ndjson' | 'csv' | 'key-value';
+  points: TelemetryPoint[];
+  eventCounts: Record<string, number>;
+  metricNames: string[];
+  watchdogEvents: number;
+  resetEvents: number;
+  rawSha256: string;
+  limitations: string[];
+}
+
+const MAX_TELEMETRY_BYTES = 10 * 1024 * 1024;
+const METRIC_NAME = /^[A-Za-z][A-Za-z0-9_.-]{0,63}$/;
+
+function normaliseRecord(value: Record<string, unknown>, raw: string): TelemetryPoint {
+  const metrics: Record<string, number> = {};
+  let timestamp: string | null = null;
+  let event: string | null = null;
+  for (const [key, item] of Object.entries(value)) {
+    const lower = key.toLowerCase();
+    if (['timestamp', 'time', 'ts', 'datetime'].includes(lower)) {
+      const parsed = typeof item === 'number' ? new Date(item).toISOString() : String(item);
+      if (Number.isFinite(Date.parse(parsed))) timestamp = new Date(parsed).toISOString();
+    } else if (['event', 'type', 'message', 'status'].includes(lower)) {
+      if (typeof item === 'string' && item.trim()) event = item.trim().slice(0, 300);
+    } else if (typeof item === 'number' && Number.isFinite(item) && METRIC_NAME.test(key)) {
+      metrics[key] = item;
+    } else if (
+      typeof item === 'string' &&
+      item.trim() !== '' &&
+      Number.isFinite(Number(item)) &&
+      METRIC_NAME.test(key)
+    ) {
+      metrics[key] = Number(item);
+    }
+  }
+  return {
+    timestamp,
+    metrics: Object.fromEntries(Object.entries(metrics).sort(([a], [b]) => a.localeCompare(b))),
+    event,
+    raw,
+  };
+}
+
+function csvCells(line: string): string[] {
+  const cells: string[] = [];
+  let cell = '';
+  let quoted = false;
+  for (let i = 0; i < line.length; i += 1) {
+    const char = line[i]!;
+    if (char === '"' && quoted && line[i + 1] === '"') {
+      cell += '"';
+      i += 1;
+    } else if (char === '"') quoted = !quoted;
+    else if (char === ',' && !quoted) {
+      cells.push(cell);
+      cell = '';
+    } else cell += char;
+  }
+  if (quoted) throw new Error('CSV contains an unterminated quoted field');
+  cells.push(cell);
+  return cells;
+}
+
+function parseKeyValue(line: string): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  const pattern = /([A-Za-z][A-Za-z0-9_.-]{0,63})\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s,]+))/g;
+  for (const match of line.matchAll(pattern)) {
+    const value = match[2] ?? match[3] ?? match[4] ?? '';
+    result[match[1]!] = value;
+  }
+  return result;
+}
+
+/** Parse recorded device output. This function never opens a serial port or sends device commands. */
+export function parseTelemetry(
+  input: string,
+  format?: TelemetrySession['format'],
+): TelemetrySession {
+  if (Buffer.byteLength(input, 'utf8') > MAX_TELEMETRY_BYTES)
+    throw new Error('Telemetry exceeds the 10 MiB parser limit');
+  const trimmed = input.trim();
+  let detected = format;
+  if (!detected) {
+    try {
+      JSON.parse(trimmed);
+      detected = 'json';
+    } catch {
+      const rows = trimmed.split(/\r?\n/).filter(Boolean);
+      const isNdjson =
+        rows.length > 1 &&
+        rows.every((row) => {
+          try {
+            const value = JSON.parse(row) as unknown;
+            return !!value && typeof value === 'object' && !Array.isArray(value);
+          } catch {
+            return false;
+          }
+        });
+      if (isNdjson) detected = 'ndjson';
+      else if (/^[^\r\n]*,[^\r\n]*\r?\n/.test(trimmed)) detected = 'csv';
+      else detected = 'key-value';
+    }
+  }
+
+  let records: Array<{ value: Record<string, unknown>; raw: string }>;
+  if (detected === 'json') {
+    const parsed = JSON.parse(trimmed) as unknown;
+    const values = Array.isArray(parsed) ? parsed : [parsed];
+    records = values
+      .filter(
+        (item): item is Record<string, unknown> =>
+          !!item && typeof item === 'object' && !Array.isArray(item),
+      )
+      .map((value) => ({ value, raw: JSON.stringify(value) }));
+  } else if (detected === 'ndjson') {
+    records = trimmed
+      .split(/\r?\n/)
+      .filter(Boolean)
+      .map((raw) => {
+        const value = JSON.parse(raw) as unknown;
+        if (!value || typeof value !== 'object' || Array.isArray(value))
+          throw new Error('NDJSON rows must be objects');
+        return { value: value as Record<string, unknown>, raw };
+      });
+  } else if (detected === 'csv') {
+    const [headerLine, ...dataLines] = trimmed.split(/\r?\n/);
+    const headers = csvCells(headerLine ?? '').map((value) => value.trim());
+    records = dataLines
+      .filter((line) => line.trim())
+      .map((raw) => {
+        const cells = csvCells(raw);
+        const value: Record<string, unknown> = {};
+        headers.forEach((header, index) => {
+          value[header] = cells[index] ?? '';
+        });
+        return { value, raw };
+      });
+  } else {
+    records = trimmed
+      .split(/\r?\n/)
+      .filter(Boolean)
+      .map((raw) => ({ value: parseKeyValue(raw), raw }));
+  }
+
+  const points = records.map(({ value, raw }) => normaliseRecord(value, raw));
+  const eventCounts: Record<string, number> = {};
+  const metricNames = new Set<string>();
+  let watchdogEvents = 0;
+  let resetEvents = 0;
+  for (const point of points) {
+    for (const name of Object.keys(point.metrics)) metricNames.add(name);
+    const event = point.event?.toLowerCase() ?? '';
+    if (event) eventCounts[event] = (eventCounts[event] ?? 0) + 1;
+    if (event.includes('watchdog') || event.includes('wdt')) watchdogEvents += 1;
+    if (event.includes('reset') || event.includes('reboot') || event.includes('boot'))
+      resetEvents += 1;
+  }
+  return {
+    schemaVersion: 1,
+    format: detected,
+    points,
+    eventCounts: Object.fromEntries(
+      Object.entries(eventCounts).sort(([a], [b]) => a.localeCompare(b)),
+    ),
+    metricNames: [...metricNames].sort(),
+    watchdogEvents,
+    resetEvents,
+    rawSha256: createHash('sha256').update(input).digest('hex'),
+    limitations: [
+      'This parser analyses supplied log data only; it does not connect to or control hardware.',
+      'Metric names and units are source-defined. ORBIT does not infer units from numeric values.',
+      'Event classification is keyword-based and must be checked against the device firmware log format.',
+    ],
+  };
+}

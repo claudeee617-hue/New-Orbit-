@@ -1,7 +1,9 @@
 import { Command, InvalidArgumentError } from 'commander';
 import { ORBIT_TAGLINE, ORBIT_VERSION, loadConfig } from '@orbit/shared';
+import { attachEngineCommands } from './engines.js';
 import { renderScan, runExport, runImpact, runScan } from './atlas.js';
 import { collectStatus, renderStatus } from './status.js';
+import { startOrbitMcpServer } from '@orbit/mcp';
 
 export interface CliIo {
   stdout: (text: string) => void;
@@ -127,5 +129,24 @@ export function buildProgram(io: CliIo = defaultIo): Command {
       io.stdout(`${lines.join('\n')}\n`);
     });
 
+  program
+    .command('mcp')
+    .description('start read-only MCP access to an indexed ORBIT repository')
+    .command('start')
+    .description('serve ATLAS graph and memory tools over stdio (read-only)')
+    .option('--db <path>', 'existing ORBIT database path')
+    .option(
+      '--repo <key>',
+      'repository key (required when the database contains multiple repositories)',
+    )
+    .action(async (options: { db?: string; repo?: string }) => {
+      const config = loadConfig(io.env);
+      await startOrbitMcpServer({
+        dbPath: options.db ?? config.dbPath,
+        ...(options.repo ? { repositoryKey: options.repo } : {}),
+      });
+    });
+
+  attachEngineCommands(program, io);
   return program;
 }

@@ -5,7 +5,7 @@ Last updated: 2026-11-08
 
 ## Current phase
 
-**Prompts 0–4 complete.** Next: Prompt 5 (ATLAS memory and MCP).
+**Prompts 0–4 are on main. Prompt 5 is implemented on `feat/orbit-evidence-engines` and included in draft PR #1; it has not been merged to main.** Full local workspace check passes on 2026-11-08. GitHub Actions for the Prompt 5 commit must still confirm the branch CI result.
 
 ## Phase checklist
 
@@ -16,19 +16,58 @@ Last updated: 2026-11-08
 | 2      | Monorepo foundation                            | Done (see results below)                       |
 | 3      | ORBIT Core graph                               | Done (see results below; not pushed)           |
 | 4      | ATLAS scanning                                 | Done (see results below)                       |
-| 5      | ATLAS memory and MCP                           | Not started                                    |
-| 6      | WITNESS                                        | Not started                                    |
-| 7      | FLARE                                          | Not started                                    |
-| 8      | CAPSULE                                        | Not started                                    |
-| 9      | FLIGHT RECORDER                                | Not started                                    |
-| 10     | Change Passport and Replay Room                | Not started                                    |
-| 11     | API and CLI (full)                             | Not started (shell exists: `/health`, `status`) |
+| 5      | ATLAS memory and MCP                           | Implemented on feature branch; draft PR, CI pending |
+| 6      | WITNESS                                        | Partial prototype on feature branch; CI pending |
+| 7      | FLARE                                          | Partial prototype on feature branch; CI pending |
+| 8      | CAPSULE                                        | Partial prototype on feature branch; CI pending |
+| 9      | FLIGHT RECORDER                                | Recorded-file replay only; no hardware connection |
+| 10     | Change Passport and Replay Room                | Passport assembly prototype; no Replay Room yet |
+| 11     | API and CLI (full)                             | Partial: local engine CLI commands on feature branch |
 | 12     | Command Center (full)                          | Not started (shell exists)                     |
 | 13     | GitHub Action                                  | Not started                                    |
 | 14     | ORBIT AI                                       | Not started                                    |
 | 15     | Security review                                | Not started                                    |
 | 16     | Testing and validation                         | Not started                                    |
 | 17     | Release polish                                 | Not started                                    |
+
+
+## Cross-engine prototype on feat/orbit-evidence-engines (not yet merged)
+
+The latest pushed main inspected on 2026-11-08 still records Prompt 5 as not started. The feature branch contains the cross-engine prototypes below plus the Prompt 5 implementation described next; neither is merged into main.
+
+- WITNESS: unified-diff added-line parsing, LCOV and Cobertura line-coverage adapters, changed-line coverage summaries, deterministic finding IDs and explicit status semantics.
+- FLARE: bounded JUnit XML parser and supplied-history test summaries using outcome flips and Wilson 95% intervals. Persistent history and Jest/pytest/Go adapters are not implemented.
+- CAPSULE: inspect supplied manifest files for declared runtimes, package managers, scripts, dependencies, environment variable names, container manifests and lockfile hashes. No build replay.
+- FLIGHT RECORDER: parse recorded JSON, NDJSON, CSV and key-value telemetry files; hash raw input and identify keyword-based watchdog/reset events. No serial-port connection or device commands.
+- Change Passport: deterministic, content-hashed assembly from explicitly supplied evidence, with missing evidence listed. No graph persistence or Replay Room.
+- CLI: orbit verify, orbit flare summarize, orbit capsule inspect/compare, orbit device replay and orbit passport create.
+- CLI and engine tests have been added. Passing status must be established by the feature branch's GitHub Actions run; baseline test counts do not prove this branch passes.
+
+Known prototype limitations:
+
+- Engine modules are temporarily colocated in @orbit/atlas rather than split into independent packages.
+- Verification currently analyses added lines in unified-diff hunks and supports LCOV/Cobertura only.
+- Test reliability requires multiple historical CI runs; a single JUnit report cannot establish flaky behaviour.
+- Environment snapshots describe supplied manifests, not the actual OS image or installed dependency tree.
+- Telemetry analysis works on recorded files only; physical ESP32/STM32 serial capture is unimplemented.
+- Change Passport requires a user-supplied evidence JSON bundle; graph correlation and replay UI remain future work.
+
+## Prompt 5 summary (ATLAS persistent memory + read-only MCP)
+
+- `packages/atlas/src/memory.ts`: validated memory records stored as versioned `Decision` / `Documentation` graph nodes with deterministic SHA-256 evidence; lexical search; append-only updates; tombstone invalidation; Markdown/ADR import; explicit `Supersedes` edges and declared-conflict notices; source freshness only when callers provide current hashes.
+- Memory is deliberately contextual (`NOT_MEASURED`), not a correctness or test signal. Missing source hashes produce `unknown`; changed hashes produce `stale`. Contradictions are not inferred by an AI model: only source-authored `Conflicts with` metadata is flagged. Supersedes edges are added only when the referenced memory node has the same graph type.
+- `packages/mcp`: stdio MCP server with 12 read-only tools for repository map, symbol search/detail, callers/callees, impact, related tests, indexed history, memory search, architecture, change context and evidence retrieval. Responses are capped at 48 KiB; list/search inputs are bounded.
+- SQLite `openDatabase({ readonly: true })` uses the driver's read-only + file-exists flags, skips directory creation and migrations, and rejects writes at the database connection layer. MCP has no graph mutation, shell, file-write, network-fetch or device-control tool.
+- CLI entry point: `orbit mcp start --db <existing-db> [--repo <repository-key>]`. ADR-0012 documents the boundary and trade-offs.
+- Local validation on Linux / Node 22: `pnpm run check` passed (format, lint, all workspace typechecks, tests and builds). Counts: shared 36, core 66, database 41, graph 14, atlas 104, api 12, cli 19, web 6 and MCP 2 = **300 tests**. A clean standalone MCP build and source test run also passed (2/2 tests).
+
+Known Prompt 5 limitations:
+
+- Memory ranking is deterministic lexical matching, not embeddings, semantic retrieval or an LLM assistant.
+- Staleness is evaluated against a caller-supplied hash manifest; ORBIT does not yet run a background document watcher.
+- Conflict detection is limited to explicit document metadata. Semantic contradictions and unreferenced decisions require human review.
+- MCP reads only data already present in the local ORBIT database. The server does not index the repository or create/migrate a database when launched.
+- MCP transport currently supports stdio only; remote HTTP transport, authentication and hosted multi-tenant operation are not included.
 
 ## Prompt 3 summary (ORBIT Core: Living Engineering Graph)
 
@@ -120,7 +159,7 @@ Manual end-to-end checks that passed: API `/health` returned `ok` with schema ve
 5. Project name availability (GitHub, npm, domains, trademarks) not checked.
 6. No `LICENSE` file yet (Apache-2.0 targeted).
 7. Repository moved/renamed: GitHub reports the canonical URL as `claudeee617-hue/New-Orbit-`; the session's remote uses the lowercase form, which redirects.
-8. MCP SDK not installed yet; registry latest at check time was 1.32.2.
+8. MCP SDK 1.32.2 is now installed and used by the Prompt 5 stdio server on the feature branch; this is not yet merged into main.
 
 ## Commands
 
@@ -136,4 +175,4 @@ node apps/cli/dist/index.js atlas impact packages/core/src/index.ts --db .orbit/
 
 ## Next step
 
-Prompt 5: ATLAS memory and MCP (persistent architectural memory; MCP server exposing the graph read-only).
+Prompt 6: continue WITNESS from the feature branch prototype, harden evidence normalization and integrate the engine against CI-produced reports.

@@ -24,22 +24,31 @@ export interface OrbitDatabase {
   close(): void;
 }
 
+/** Open an existing database with optional migration and read-only modes. */
 export interface OpenDatabaseOptions {
   path: string;
   /** Apply pending migrations after opening. Defaults to true. */
   migrate?: boolean;
+  /** Open an existing database without write access. Migrations are never run in read-only mode. */
+  readonly?: boolean;
 }
 
-/** Open (and by default migrate) a workspace database. Parent directories are created. */
+/** Open (and by default migrate) a workspace database. Read-only mode requires an existing file. */
 export function openDatabase(options: OpenDatabaseOptions): OrbitDatabase {
   const isMemory = options.path === IN_MEMORY;
   const path = isMemory ? IN_MEMORY : resolve(options.path);
 
   let sqlite: Database.Database;
   try {
-    if (!isMemory) mkdirSync(dirname(path), { recursive: true });
-    sqlite = new Database(path);
-    sqlite.pragma('journal_mode = WAL');
+    if (!isMemory && !options.readonly) mkdirSync(dirname(path), { recursive: true });
+    if (options.readonly && isMemory) {
+      throw new Error('A read-only in-memory database is not supported');
+    }
+    sqlite = new Database(
+      path,
+      options.readonly ? { readonly: true, fileMustExist: true } : undefined,
+    );
+    if (!options.readonly) sqlite.pragma('journal_mode = WAL');
     sqlite.pragma('foreign_keys = ON');
     sqlite.pragma('busy_timeout = 5000');
   } catch (error) {
@@ -51,7 +60,12 @@ export function openDatabase(options: OpenDatabaseOptions): OrbitDatabase {
 
   const db = drizzle(sqlite, { schema });
 
-  if (options.migrate ?? true) {
+  if (options.readonly && (options.migrate ?? false)) {
+    sqlite.close();
+    throw new OrbitError('INVALID_INPUT', 'Read-only databases cannot run migrations');
+  }
+
+  if (!options.readonly && (options.migrate ?? true)) {
     try {
       migrate(db, { migrationsFolder: MIGRATIONS_FOLDER });
     } catch (error) {
