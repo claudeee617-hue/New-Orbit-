@@ -67,6 +67,7 @@ export interface ChangePassport {
   telemetrySessionSha256: string | null;
   state: 'COMPLETE' | 'PARTIAL';
   verificationStatus: 'PASS' | 'FAIL' | 'PARTIAL' | 'NOT_MEASURED';
+  evidenceVerification: 'GRAPH_VALIDATED' | 'UNVERIFIED_INPUT';
   completeness: PassportCompletenessDimension[];
   impact: PassportImpactSummary | null;
   missingEvidence: string[];
@@ -88,7 +89,10 @@ function stableJson(value: unknown): string {
 /** Assemble a passport from supplied facts. Missing evidence is explicit; no test result is inferred. */
 export function createChangePassport(
   input: ChangePassportInput,
-  options: { now?: () => string } = {},
+  options: {
+    now?: () => string;
+    evidenceVerification?: 'GRAPH_VALIDATED' | 'UNVERIFIED_INPUT';
+  } = {},
 ): ChangePassport {
   if (!input.repository.trim()) throw new Error('repository is required');
   if (!/^[0-9a-f]{7,64}$/i.test(input.commitSha)) throw new Error('commitSha must be a Git SHA');
@@ -202,9 +206,10 @@ export function createChangePassport(
   )
     ? ('PARTIAL' as const)
     : ('COMPLETE' as const);
+  const evidenceVerification = options.evidenceVerification ?? 'UNVERIFIED_INPUT';
   const verificationStatus = evidence.some((item) => item.status === 'FAIL')
     ? ('FAIL' as const)
-    : missingEvidence.length > 0
+    : evidenceVerification !== 'GRAPH_VALIDATED' || missingEvidence.length > 0
       ? ('NOT_MEASURED' as const)
       : evidence.some(
             (item) =>
@@ -231,6 +236,7 @@ export function createChangePassport(
     telemetrySessionSha256: input.telemetrySessionSha256 ?? null,
     state,
     verificationStatus,
+    evidenceVerification,
     completeness,
     impact: input.impact ?? null,
     missingEvidence,
