@@ -11,14 +11,13 @@ import {
   type NodeType,
 } from '@orbit/core';
 import {
-  analyseTestHistory,
   parseGoTestJson,
   parseJestJsonReport,
   parseJunitXml,
   parsePytestJsonReport,
 } from '@orbit/atlas';
 import { createGraphStore, openDatabase, type GraphStore } from '@orbit/database';
-import { loadConfig, OrbitError, type JsonValue } from '@orbit/shared';
+import { loadConfig, OrbitError } from '@orbit/shared';
 import type { Command } from 'commander';
 import type { CliIo } from './program.js';
 
