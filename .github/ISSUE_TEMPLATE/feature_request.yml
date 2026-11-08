@@ -1,0 +1,30 @@
+name: Feature request
+description: Propose an evidence-backed improvement.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Use case or supporting evidence
+    validations:
+      required: false
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: Privacy, security and limitations
+      description: Note any new network, credential, file-system or hardware access.
+    validations:
+      required: true
