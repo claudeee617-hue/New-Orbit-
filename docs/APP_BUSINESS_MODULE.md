@@ -15,15 +15,14 @@ The initial beachhead is GitHub-centric product engineering teams (roughly 5–5
 | Vendor / plan | Public price | Unit and billing | Source |
 |---|---:|---|---|
 | GitHub Team | $4 | Per user / month | https://github.com/pricing |
-| JetBrains Qodana Ultimate | $5 | Per active contributor / month, annual; minimum 3 | https://www.jetbrains.com/qodana/buy/ |
-| JetBrains Qodana Ultimate Plus | $15 | Per active contributor / month, annual; minimum 3 | https://www.jetbrains.com/qodana/buy/ |
+| JetBrains Qodana | Quote / plan-dependent | Per active contributor; 90-day activity window; minimum 3 | https://www.jetbrains.com/qodana/buy/ and https://www.jetbrains.com/help/qodana/contributors.html |
 | Graphite Starter | $20 | Per user / month, annual | https://graphite.com/pricing |
 | Graphite Team | $40 | Per user / month, annual | https://graphite.com/pricing |
 | CodeRabbit Essentials | $24 | Per developer / month, annual | https://www.coderabbit.ai/pricing |
 | CodeRabbit Team | $48 | Per developer / month, annual | https://www.coderabbit.ai/pricing |
 | CodeRabbit Advanced | $72 | Per developer / month, annual | https://www.coderabbit.ai/pricing |
 
-The reference points are adjacent developer tools, not direct substitutes. Pricing pages can change; the application displays the research date and links to vendor-owned pages. Tax, region, contributor definitions, annual commitments and usage limits may differ.
+The reference points are adjacent developer tools, not direct substitutes. Pricing pages can change; the application displays the research date and links to vendor-owned pages. Qodana's official contributor documentation defines the active-contributor window and minimum licence quantity; its pricing page is a plan selector, so this module deliberately does not infer a universal list price. Tax, region, annual commitments and usage limits may differ.
 
 ## Prompt 1 — Business model and packaging
 
