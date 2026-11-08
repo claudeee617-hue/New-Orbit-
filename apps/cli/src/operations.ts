@@ -43,7 +43,7 @@ async function readBounded(path: string): Promise<string> {
 function openExisting(dbPath: string, readonly = true) {
   const path = resolve(dbPath);
   if (!existsSync(path)) {
-    throw new OrbitError('NOT_FOUND', `No ORBIT database at ${path}. Run ` + '`orbit init`' + ` first`, {
+    throw new OrbitError('NOT_FOUND', `No ORBIT database at ${path}. Run \`orbit init\` first`, {
       details: { path },
     });
   }
@@ -234,6 +234,34 @@ function ingestionRepository(store: GraphStore, key: string | undefined) {
   return pickRepository(store, key);
 }
 
+
+function sanitizeCiSummary(value: unknown): Record<string, string | number> {
+  if (value === undefined) return {};
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new OrbitError('INVALID_INPUT', 'CI summary must be a JSON object');
+  }
+  const source = value as Record<string, unknown>;
+  const numericFields = new Set(['passed', 'failed', 'skipped', 'durationSeconds', 'jobCount', 'artifactCount', 'attempt']);
+  const stringFields = new Set(['conclusion', 'event', 'runnerOS', 'workflowName']);
+  const result: Record<string, string | number> = {};
+  for (const [key, item] of Object.entries(source)) {
+    if (numericFields.has(key)) {
+      if (typeof item !== 'number' || !Number.isFinite(item) || item < 0 || item > 1_000_000_000) {
+        throw new OrbitError('INVALID_INPUT', `CI summary field ${key} must be a non-negative finite number`);
+      }
+      result[key] = item;
+    } else if (stringFields.has(key)) {
+      if (typeof item !== 'string' || item.length === 0 || item.length > 128) {
+        throw new OrbitError('INVALID_INPUT', `CI summary field ${key} must be a string of at most 128 characters`);
+      }
+      result[key] = item;
+    } else {
+      throw new OrbitError('INVALID_INPUT', `CI summary field ${key} is not supported`);
+    }
+  }
+  return result;
+}
+
 export async function ingestCiReport(
   dbPath: string,
   repositoryKey: string | undefined,
@@ -257,7 +285,7 @@ export async function ingestCiReport(
     ...(typeof body.runId === 'string' ? { runId: body.runId.slice(0, 256) } : {}),
     ...(typeof body.workflow === 'string' ? { workflow: body.workflow.slice(0, 256) } : {}),
     ...(typeof body.branch === 'string' ? { branch: body.branch.slice(0, 256) } : {}),
-    ...(body.summary !== undefined ? { summary: body.summary } : {}),
+    ...(body.summary !== undefined ? { summary: sanitizeCiSummary(body.summary) } : {}),
   };
   const encoded = canonicalJson(payload);
   if (Buffer.byteLength(encoded, 'utf8') > MAX_REPORT_BYTES) throw new OrbitError('INVALID_INPUT', 'CI report exceeds the 2 MiB limit');
