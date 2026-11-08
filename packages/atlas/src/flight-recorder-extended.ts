@@ -2,6 +2,8 @@ import { createHash } from 'node:crypto';
 import type { TelemetrySession } from './flight-recorder.js';
 
 const MAX_THRESHOLD_RULES = 200;
+const MAX_METRIC_SAMPLES = 250_000;
+const MAX_ANALYSIS_ANOMALIES = 100_000;
 
 export type TelemetrySeverity = 'info' | 'warning' | 'error';
 
@@ -63,39 +65,77 @@ export function analyseTelemetry(
   session: TelemetrySession,
   options: TelemetryAnalysisOptions = {},
 ): TelemetryAnalysis {
-  const rules = [...(options.thresholds ?? [])];
-  if (rules.length > MAX_THRESHOLD_RULES)
-    throw new Error(`at most ${MAX_THRESHOLD_RULES} telemetry threshold rules are allowed`);
+  if (!options || typeof options !== 'object' || Array.isArray(options)) {
+    throw new Error('telemetry analysis options must be an object');
+  }
+  const units = options.units ?? {};
+  if (!units || typeof units !== 'object' || Array.isArray(units)) {
+    throw new Error('telemetry units must be an object');
+  }
+  const unitEntries = Object.entries(units);
+  if (unitEntries.length > 100 || unitEntries.some(([key, value]) =>
+    !/^[A-Za-z][A-Za-z0-9_.-]{0,63}$/.test(key) || typeof value !== 'string' || value.length > 32
+  )) {
+    throw new Error('telemetry units must contain at most 100 valid metric names and short unit strings');
+  }
+  const thresholds = options.thresholds ?? [];
+  if (!Array.isArray(thresholds)) throw new Error('telemetry thresholds must be an array');
+  const rules = [...thresholds];
+  if (rules.length > MAX_THRESHOLD_RULES) {
+    throw new Error('at most ' + MAX_THRESHOLD_RULES + ' telemetry threshold rules are allowed');
+  }
   const ruleIds = new Set<string>();
   for (const rule of rules) {
-    if (!rule.id.trim() || ruleIds.has(rule.id))
-      throw new Error('telemetry threshold rule IDs must be non-empty and unique');
+    if (!rule || typeof rule !== 'object' || Array.isArray(rule)) {
+      throw new Error('each telemetry threshold rule must be an object');
+    }
+    if (typeof rule.id !== 'string' || !rule.id.trim() || rule.id.length > 128 || ruleIds.has(rule.id)) {
+      throw new Error('telemetry threshold rule IDs must be non-empty, unique strings up to 128 characters');
+    }
     ruleIds.add(rule.id);
-    if (!/^[A-Za-z][A-Za-z0-9_.-]{0,63}$/.test(rule.metric))
-      throw new Error(`threshold ${rule.id} requires a valid metric name`);
-    if (rule.min === undefined && rule.max === undefined)
-      throw new Error(`threshold ${rule.id} must define min or max`);
-    if (rule.severity !== undefined && !['info', 'warning', 'error'].includes(rule.severity))
-      throw new Error(`threshold ${rule.id} severity is invalid`);
-    if (rule.min !== undefined && !Number.isFinite(rule.min))
-      throw new Error(`threshold ${rule.id} min must be finite`);
-    if (rule.max !== undefined && !Number.isFinite(rule.max))
-      throw new Error(`threshold ${rule.id} max must be finite`);
+    if (typeof rule.metric !== 'string' || !/^[A-Za-z][A-Za-z0-9_.-]{0,63}$/.test(rule.metric)) {
+      throw new Error('threshold ' + rule.id + ' requires a valid metric name');
+    }
+    if (rule.unit !== undefined && (typeof rule.unit !== 'string' || rule.unit.length > 32)) {
+      throw new Error('threshold ' + rule.id + ' unit must be a short string');
+    }
+    if (rule.label !== undefined && (typeof rule.label !== 'string' || rule.label.length > 200)) {
+      throw new Error('threshold ' + rule.id + ' label must be a string up to 200 characters');
+    }
+    if (rule.min === undefined && rule.max === undefined) {
+      throw new Error('threshold ' + rule.id + ' must define min or max');
+    }
+    if (rule.severity !== undefined && !['info', 'warning', 'error'].includes(rule.severity)) {
+      throw new Error('threshold ' + rule.id + ' severity is invalid');
+    }
+    if (rule.min !== undefined && !Number.isFinite(rule.min)) {
+      throw new Error('threshold ' + rule.id + ' min must be finite');
+    }
+    if (rule.max !== undefined && !Number.isFinite(rule.max)) {
+      throw new Error('threshold ' + rule.id + ' max must be finite');
+    }
     if (rule.min !== undefined && rule.max !== undefined && rule.min > rule.max) {
-      throw new Error(`threshold ${rule.id} min must not exceed max`);
+      throw new Error('threshold ' + rule.id + ' min must not exceed max');
     }
   }
 
   const metrics: TypedTelemetryMetric[] = [];
   const anomalies: TelemetryAnomaly[] = [];
   const values = new Map<string, number[]>();
+  let metricSampleCount = 0;
+  const addAnomaly = (anomaly: TelemetryAnomaly): void => {
+    if (anomalies.length >= MAX_ANALYSIS_ANOMALIES) {
+      throw new Error('telemetry analysis exceeds the ' + MAX_ANALYSIS_ANOMALIES + ' anomaly limit');
+    }
+    anomalies.push(anomaly);
+  };
   const eventCounts: Record<string, number> = { ...session.eventCounts };
 
   session.points.forEach((point, pointIndex) => {
     const event = point.event?.toLowerCase() ?? '';
     if (event.includes('watchdog') || event.includes('wdt')) {
       const ruleId = 'event.watchdog';
-      anomalies.push({
+      addAnomaly({
         id: stableId([session.rawSha256, ruleId, pointIndex, point.event]),
         ruleId,
         kind: 'watchdog',
@@ -119,13 +159,17 @@ export function analyseTelemetry(
     }
 
     for (const [name, value] of Object.entries(point.metrics)) {
+      metricSampleCount += 1;
+      if (metricSampleCount > MAX_METRIC_SAMPLES) {
+        throw new Error('telemetry analysis exceeds the ' + MAX_METRIC_SAMPLES + ' metric sample limit');
+      }
       metrics.push({
         pointIndex,
         timestamp: point.timestamp,
         name,
         value,
         unit:
-          options.units?.[name] ??
+          units[name] ??
           rules.find((rule) => rule.metric === name && rule.unit)?.unit ??
           null,
       });
@@ -141,7 +185,7 @@ export function analyseTelemetry(
         const limit = below ? rule.min : rule.max;
         const comparator = below ? 'below' : 'above';
         const ruleId = `threshold.${rule.id}`;
-        anomalies.push({
+        addAnomaly({
           id: stableId([session.rawSha256, ruleId, pointIndex, name, value, limit]),
           ruleId,
           kind: 'threshold',
@@ -153,7 +197,7 @@ export function analyseTelemetry(
           ...(limit !== undefined ? { limit } : {}),
           message:
             rule.label?.slice(0, 200) ??
-            `${name}=${value}${options.units?.[name] ? ` ${options.units[name]}` : ''} is ${comparator} configured limit ${limit}`,
+            `${name}=${value}${options.units?.[name] ? ` ${units[name]}` : ''} is ${comparator} configured limit ${limit}`,
         });
       }
     }
