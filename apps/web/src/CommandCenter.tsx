@@ -89,6 +89,7 @@ export function CommandCenter() {
   const [aiLoading, setAiLoading] = useState(false);
 
   const client = useMemo(() => (token ? createOrbitApiClient({ token }) : null), [token]);
+  const selectedRepository = repositories.find((item) => item.key === repositoryKey);
 
   const loadWorkspace = useCallback(
     async (signal?: AbortSignal) => {
@@ -160,7 +161,7 @@ export function CommandCenter() {
   }
 
   async function previewAI() {
-    if (!selectedRepository) return;
+    if (!client || !selectedRepository) return;
     if (!aiModel.trim() || !aiPrompt.trim() || selectedEvidenceIds.length === 0) {
       setError('Choose at least one evidence record and enter a model and analysis question.');
       return;
@@ -188,7 +189,7 @@ export function CommandCenter() {
   }
 
   async function analyseAI() {
-    if (!selectedRepository || !aiRequest || !aiPreview || !aiConfirmed) return;
+    if (!client || !selectedRepository || !aiRequest || !aiPreview || !aiConfirmed) return;
     setAiLoading(true);
     setError('');
     try {
@@ -299,8 +300,6 @@ export function CommandCenter() {
       </section>
     );
   }
-
-  const selectedRepository = repositories.find((item) => item.key === repositoryKey);
 
   return (
     <div className="space-y-6">
