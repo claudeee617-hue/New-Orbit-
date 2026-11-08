@@ -123,40 +123,59 @@ function computeImpact(
   const nodeIds = new Set<string>();
   const edgeIds = new Set<string>();
   let truncated = false;
+  const MAX_IMPACT_NODES = 5000;
+  const MAX_IMPACT_EDGES = 10_000;
   for (const path of [...new Set(changedFiles)].sort()) {
+    if (nodeIds.size >= MAX_IMPACT_NODES) {
+      truncated = true;
+      break;
+    }
     const fileId = nodeIdFor(repositoryId, 'File', path);
     const file = store.nodes.get(repositoryId, fileId);
     if (!file) continue;
     nodeIds.add(file.id);
-    const impactEdges = store.edges.list(repositoryId, { fromId: file.id, limit: 10_000 });
-    for (const edge of impactEdges) edgeIds.add(edge.id);
+    const impactEdges = store.edges.list(repositoryId, { fromId: file.id, limit: 100 });
+    for (const edge of impactEdges) {
+      if (edgeIds.size < MAX_IMPACT_EDGES) edgeIds.add(edge.id);
+      else truncated = true;
+    }
     const module = asString(file.attrs['module']);
-    if (module) affectedModules.add(module);
+    if (module && affectedModules.size < 1000) affectedModules.add(module);
+    const remaining = Math.max(1, MAX_IMPACT_NODES - nodeIds.size);
     const walk = traverse(store, repositoryId, file.id, {
       direction: 'in',
       types: ['IMPORTS'],
       maxDepth: 10,
-      maxNodes: 1000,
+      maxNodes: Math.min(100, remaining),
     });
     truncated ||= walk.truncated;
     for (const item of walk.nodes) {
       if (item.node.type === 'File') {
-        affectedFiles.add(item.node.key);
-        nodeIds.add(item.node.id);
+        if (affectedFiles.size < MAX_IMPACT_NODES) affectedFiles.add(item.node.key);
+        else truncated = true;
+        if (nodeIds.size < MAX_IMPACT_NODES) nodeIds.add(item.node.id);
+        else truncated = true;
       }
     }
-    for (const edge of walk.edges) edgeIds.add(edge.id);
-    for (const edge of store.edges.list(repositoryId, {
-      toId: file.id,
-      types: ['TESTS'],
-      limit: 1000,
-    })) {
-      const test = store.nodes.get(repositoryId, edge.fromId);
-      if (test) {
-        relatedTests.add(test.key);
-        nodeIds.add(test.id);
-        edgeIds.add(edge.id);
+    for (const edge of walk.edges) {
+      if (edgeIds.size < MAX_IMPACT_EDGES) edgeIds.add(edge.id);
+      else truncated = true;
+    }
+    if (relatedTests.size < MAX_IMPACT_NODES) {
+      const tests = store.edges.list(repositoryId, { toId: file.id, types: ['TESTS'], limit: 100 });
+      for (const edge of tests) {
+        const test = store.nodes.get(repositoryId, edge.fromId);
+        if (test) {
+          if (relatedTests.size < MAX_IMPACT_NODES) relatedTests.add(test.key);
+          else truncated = true;
+          if (nodeIds.size < MAX_IMPACT_NODES) nodeIds.add(test.id);
+          else truncated = true;
+          if (edgeIds.size < MAX_IMPACT_EDGES) edgeIds.add(edge.id);
+          else truncated = true;
+        }
       }
+    } else {
+      truncated = true;
     }
   }
   return {
@@ -249,6 +268,16 @@ export function recordChangePassport(
   input: PassportRecordInput,
   options: { now?: () => string } = {},
 ): PersistedPassport {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('Passport record input must be an object');
+  if (typeof input.repositoryId !== 'string' || !input.repositoryId.trim()) throw new Error('repositoryId is required');
+  if (typeof input.repository !== 'string' || !input.repository.trim()) throw new Error('repository is required');
+  if (typeof input.commitSha !== 'string' || !/^[0-9a-f]{7,64}$/i.test(input.commitSha)) throw new Error('commit SHA is invalid');
+  if (typeof input.diffSha256 !== 'string' || !/^[0-9a-f]{64}$/i.test(input.diffSha256)) throw new Error('diff SHA-256 is invalid');
+  if (!Array.isArray(input.changedFiles) || input.changedFiles.length > 1000 || input.changedFiles.some((path) => typeof path !== 'string')) throw new Error('changedFiles must be an array of at most 1000 paths');
+  if (!Array.isArray(input.evidence)) throw new Error('evidence must be an array');
+  if (input.evidence.length > 500) throw new Error('at most 500 evidence records can be supplied');
+  if (input.evidenceIds !== undefined && (!Array.isArray(input.evidenceIds) || input.evidenceIds.length > 500 || input.evidenceIds.some((id) => typeof id !== 'string' || !id.trim()))) throw new Error('evidenceIds must contain at most 500 non-empty strings');
+  if (input.evidence.some((item) => !item || typeof item !== 'object' || typeof item.id !== 'string' || typeof item.sha256 !== 'string' || typeof item.source !== 'string' || typeof item.status !== 'string')) throw new Error('supplied evidence references must include ID, SHA-256, source and status');
   const repository = store.repositories.get(input.repositoryId);
   if (!repository) throw new Error('repository is not registered');
   if (input.repository !== repository.key && input.repository !== repository.id) {
