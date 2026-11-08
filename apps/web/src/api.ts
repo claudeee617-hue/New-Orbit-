@@ -122,7 +122,12 @@ export function createOrbitApiClient(options: ApiClientOptions) {
     },
     getEvidence(
       repositoryKey: string,
-      options: { limit?: number; commitSha?: string; sourceType?: string; signal?: AbortSignal } = {},
+      options: {
+        limit?: number;
+        commitSha?: string;
+        sourceType?: string;
+        signal?: AbortSignal;
+      } = {},
     ) {
       const query = new URLSearchParams();
       if (options.limit !== undefined) query.set('limit', String(options.limit));
@@ -142,7 +147,10 @@ export function createOrbitApiClient(options: ApiClientOptions) {
       );
     },
     getIntegrity(repositoryKey: string, signal?: AbortSignal) {
-      return request<{ repository: ApiRepository; integrity: { ok: boolean; ledgerEntriesChecked: number; problems: unknown[] } }>(
+      return request<{
+        repository: ApiRepository;
+        integrity: { ok: boolean; ledgerEntriesChecked: number; problems: unknown[] };
+      }>(
         `/repositories/${encodeURIComponent(repositoryKey)}/integrity`,
         { signal },
       );
