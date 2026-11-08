@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { nodeIdFor } from '@orbit/core';
 import { IN_MEMORY, openDatabase, createGraphStore } from '@orbit/database';
 import {
   compareChangePassports,
