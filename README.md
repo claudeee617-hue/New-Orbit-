@@ -4,20 +4,21 @@
 
 ORBIT is an open-source, local-first platform that connects a repository's code, history, tests, CI, environments and (for embedded projects) real device telemetry into one evidence graph, and produces a **Change Passport** for important changes. Every claim should point to a real artifact. ORBIT never invents a test result, build, measurement or confidence score.
 
-## Status: foundation build
+## Status: active development
 
-This repository currently contains the **monorepo foundation only**. Nothing that analyses code exists yet.
+Prompts 0–4 are complete. The current next step is Prompt 5 (ATLAS memory and MCP); see [ORBIT_BUILD_STATE.md](ORBIT_BUILD_STATE.md) for verified implementation details, test results and known limitations.
 
 | Area | State |
 | --- | --- |
 | Monorepo, TypeScript, lint, tests, CI | Working |
+| ORBIT Core graph, SQLite graph store and graph queries | Implemented |
+| ATLAS repository scanning and architecture intelligence | Implemented for TypeScript, JavaScript, Python, Java, C and C++; see build-state limitations |
 | Local API (`GET /health`) | Working |
-| CLI (`orbit status`) | Working |
-| Command Center (dashboard shell) | Working shell, no analysis data |
-| SQLite storage and migrations | Working (one `meta` table) |
-| ORBIT Core graph, ATLAS, WITNESS, FLARE, CAPSULE, FLIGHT RECORDER, Change Passport, MCP, AI | **Not implemented yet** — see the [roadmap](docs/ROADMAP.md) |
+| CLI (`status`, `scan`, `atlas export`, `atlas impact`) | Implemented |
+| Command Center | Dashboard shell; full engine views are not implemented |
+| WITNESS, FLARE, CAPSULE, FLIGHT RECORDER, Change Passport, full MCP, ORBIT AI | Not implemented yet — see the [engineering roadmap](docs/ROADMAP.md) |
 
-The dashboard labels every engine as `NOT IMPLEMENTED` rather than showing placeholder numbers.
+No feature is considered available merely because it appears in a plan or dashboard mockup.
 
 ## Requirements
 
@@ -52,8 +53,10 @@ Then open <http://127.0.0.1:5173>. The page shows the live status of the local A
 
 ```bash
 pnpm build
-node apps/cli/dist/index.js status          # human-readable
-node apps/cli/dist/index.js status --json   # machine-readable
+node apps/cli/dist/index.js status --json
+node apps/cli/dist/index.js scan . --db .orbit/orbit.db
+node apps/cli/dist/index.js atlas export --db .orbit/orbit.db --out atlas.json
+node apps/cli/dist/index.js atlas impact packages/core/src/index.ts --db .orbit/orbit.db
 node apps/cli/dist/index.js --version
 ```
 
@@ -81,7 +84,10 @@ apps/
   web/        React + Vite + Tailwind dashboard
 packages/
   shared/     errors, logging, configuration, shared types
-  database/   SQLite (better-sqlite3 + Drizzle) and migrations
+  database/   SQLite (better-sqlite3 + Drizzle), migrations and graph store
+  core/       canonical graph vocabulary, schemas and hashing
+  graph/      deterministic graph queries and traversal
+  atlas/      repository scanning and architecture intelligence
 docs/         planning and design documents
 ```
 
@@ -99,7 +105,7 @@ See [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md). ORBIT is not a security cert
 
 - [Master plan](ORBIT_MASTER_PLAN.md) and [build state](ORBIT_BUILD_STATE.md)
 - [PRD](docs/PRD.md), [architecture](docs/ARCHITECTURE.md), [technical design](docs/architecture/TECHNICAL_DESIGN.md), [data model](docs/DATA_MODEL.md)
-- [Roadmap](docs/ROADMAP.md), [competitive analysis](docs/COMPETITIVE_ANALYSIS.md), [test strategy](docs/TEST_STRATEGY.md), [UX specification](docs/UX_SPECIFICATION.md)
+- [Engineering roadmap](docs/ROADMAP.md), [commercialization strategy](docs/COMMERCIALIZATION_STRATEGY.md), [competitive analysis](docs/COMPETITIVE_ANALYSIS.md), [test strategy](docs/TEST_STRATEGY.md), [UX specification](docs/UX_SPECIFICATION.md)
 - [Architecture decision records](docs/DECISIONS/)
 
 ## Licence
