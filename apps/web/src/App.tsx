@@ -4,14 +4,6 @@ import { BusinessModule } from './BusinessModule.js';
 import { CommandCenter } from './CommandCenter.js';
 import { loadHealth, type HealthState } from './health.js';
 
-const ENGINES = [
-  { name: 'ATLAS', purpose: 'Codebase intelligence and decision memory' },
-  { name: 'WITNESS', purpose: 'Evidence-based pull-request verification' },
-  { name: 'FLARE', purpose: 'CI intelligence and flaky-test detection' },
-  { name: 'CAPSULE', purpose: 'Reproducible environments' },
-  { name: 'FLIGHT RECORDER', purpose: 'Embedded telemetry capture and replay' },
-] as const;
-
 type WorkspaceView = 'overview' | 'business';
 
 function StatusBadge({ state }: { state: HealthState }) {
