@@ -69,17 +69,30 @@ function collectEvidence(
     records.set(item.id, item);
   }
   for (const entityId of changedFileIds) {
-    for (const item of store.evidence.forEntity(repositoryId, entityId)) records.set(item.id, item);
+    for (const item of store.evidence.forEntity(repositoryId, entityId)) {
+      if (item.commitSha === input.commitSha.toLowerCase()) records.set(item.id, item);
+    }
   }
   for (const id of input.evidenceIds ?? []) {
     const item = store.evidence.get(repositoryId, id);
     if (!item) throw new Error(`Evidence ${id} does not exist in the selected repository`);
+    if (item.commitSha !== input.commitSha.toLowerCase()) {
+      throw new Error(`Evidence ${id} is not scoped to commit ${input.commitSha}`);
+    }
     records.set(item.id, item);
   }
-  const supplied = [...(input.evidence ?? [])];
-  for (const item of supplied) {
-    if (item.id && item.source && item.sha256) continue;
-    throw new Error('supplied passport evidence requires id, source and SHA-256 hash');
+  for (const supplied of input.evidence ?? []) {
+    const item = store.evidence.get(repositoryId, supplied.id);
+    if (
+      !item ||
+      item.commitSha !== input.commitSha.toLowerCase() ||
+      item.contentHash !== supplied.sha256?.toLowerCase() ||
+      item.source !== supplied.source ||
+      item.status !== supplied.status
+    ) {
+      throw new Error(`Supplied evidence ${supplied.id} does not match an immutable stored evidence record for this commit`);
+    }
+    records.set(item.id, item);
   }
   const mapped: PassportEvidence[] = [...records.values()]
     .filter((item): item is NonNullable<typeof item> => Boolean(item))
