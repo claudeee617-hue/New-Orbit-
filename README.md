@@ -8,7 +8,7 @@ Its central artifact is the **Change Passport**: a content-hashed record of a ch
 
 ## Current status
 
-The public `main` branch contains Engineering Prompts 0–11 and App Business Module sub-prompts 0–4. Engineering Prompts 5–10 were merged through PR #5, the Business Module through PR #9, and Prompt 11 (local API and CLI) through PR #11 on 2026-11-08. PR #11's Ubuntu/macOS/Windows CI passed before merge. Prompts 12–14 are being developed in draft PRs #13, #14 and #21; they are not part of `main` and must not be treated as released capabilities. Security/privacy/release groundwork (PR #15) is merged, but it is not a completed independent security audit or release approval.
+The public `main` branch contains Engineering Prompts 0–11 and App Business Module sub-prompts 0–4. Engineering Prompts 5–10 were merged through PR #5, the Business Module through PR #9, and Prompt 11 (local API and CLI) through PR #11 on 2026-11-08. PR #11's Ubuntu/macOS/Windows CI passed before merge. Security/privacy/release groundwork was merged through PR #15; this is not an independent security audit or release approval. Prompts 12–14 remain experimental in draft PRs #13, #14 and #21 and are not part of `main`.
 
 | Capability | Current implementation |
 | --- | --- |
@@ -22,10 +22,10 @@ The public `main` branch contains Engineering Prompts 0–11 and App Business Mo
 | FLIGHT RECORDER recorded telemetry parser, caller-defined analysis and hash-verified graph persistence | Implemented on `main` as recorded-file prototype; physical serial/USB capture unavailable |
 | Change Passport graph correlation, versioned history, comparisons and non-executing reproduction plan | Implemented on `main` as backend/CLI prototype; visual Replay Room UI not implemented |
 | App Business Module | Implemented on `main` via PR #9: strategy, market references, local actual-vs-forecast calculator and pricing simulator; no live accounting/CRM/billing data |
-| Command Center (Prompt 12) | Draft PR #13: initial authenticated local dashboard; full UX and engine views remain incomplete | 
-| GitHub Action (Prompt 13) | Draft PR #14: composite action prototype; end-to-end action tests and CI validation remain pending |
-| Opt-in AI (Prompt 14) | Draft PR #21 stacked on Prompt 12; preview/approval integration is experimental and not merged |
-| Security/privacy/release groundwork | Merged via PR #15; independent security review and release gates remain open |
+| Command Center (Prompt 12) | Draft PR #13: initial authenticated local dashboard; full UX and engine views remain incomplete |
+| GitHub Action (Prompt 13) | Draft PR #14: composite action prototype; action harness added, CI validation pending |
+| Opt-in AI (Prompt 14) | Draft PR #21 stacked on Prompt 12; experimental preview/approval integration, not merged |
+| Security/privacy/release groundwork | Merged via PR #15; independent review and release gates remain open |
 
 See [ORBIT_BUILD_STATE.md](ORBIT_BUILD_STATE.md) for phase-by-phase implementation details, branch status, known limitations and verified test results.
 
@@ -192,6 +192,11 @@ node apps/cli/dist/index.js mcp start --db .orbit/orbit.db --repo local/my-repos
 `mcp start` uses stdio transport and opens an existing SQLite database in read-only mode. It does not create or migrate databases. The 12 tools are `orbit_repository_map`, `orbit_search_symbols`, `orbit_get_symbol`, `orbit_get_callers`, `orbit_get_callees`, `orbit_analyze_impact`, `orbit_find_related_tests`, `orbit_search_history`, `orbit_search_memory`, `orbit_get_architecture`, `orbit_get_change_context` and `orbit_get_evidence`. No tool can mutate the graph, run commands, write files or control hardware. MCP responses are capped at 48 KiB.
 
 
+## Security and contribution
+
+Read [SECURITY.md](SECURITY.md) before reporting a vulnerability, [docs/PRIVACY.md](docs/PRIVACY.md) for data handling, and [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. The release checklist is in [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md).
+
+
 ## Engineering Command Center
 
-The current Prompt 12 implementation and its limitations are tracked in [docs/PROMPT_12_COMMAND_CENTER.md](docs/PROMPT_12_COMMAND_CENTER.md). The dashboard is a local API client and requires a running ORBIT local API plus a private API token.
+The Prompt 12 implementation and its known limitations are tracked in [docs/PROMPT_12_COMMAND_CENTER.md](docs/PROMPT_12_COMMAND_CENTER.md). The dashboard is a local API client and requires a running ORBIT local API plus a private API token. The current implementation is a draft vertical slice, not a complete engine dashboard.
