@@ -129,7 +129,8 @@ writeOutput('report-path', reportPath);
 writeOutput('sarif-path', coverageFile ? sarifPath : '');
 writeOutput('verification-status', status);
 
-if (process.env.INPUT_FAIL_ON_UNCOVERED === 'true' &&\n  ['PARTIAL', 'INCOMPLETE'].includes(status)) {
+if (process.env.INPUT_FAIL_ON_UNCOVERED === 'true' &&
+  ['PARTIAL', 'INCOMPLETE'].includes(status)) {
   throw new Error(
     'ORBIT reports uncovered or incompletely measured changed lines (PARTIAL). Review the generated report.',
   );
