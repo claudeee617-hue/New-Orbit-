@@ -121,6 +121,16 @@ describe('pricing simulator', () => {
     ).toBeNull();
   });
 
+  it('does not display an infinite break-even seat count for tiny contributions', () => {
+    const result = calculatePricing({
+      pricePerSeat: 1e-320,
+      variableCostPerSeat: 0,
+      fixedMonthlyCost: 100,
+      targetSeats: 1,
+    });
+    expect(result.breakEvenSeats).toBeNull();
+  });
+
   it('supports a zero fixed-cost break-even point', () => {
     const result = calculatePricing({
       pricePerSeat: 20,
