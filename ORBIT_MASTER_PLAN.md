@@ -3,7 +3,7 @@
 **ORBIT — Engineering Intelligence Platform**
 Tagline: *Understand Everything. Trace Every Change. Prove What Works.*
 Philosophy: **Evidence before confidence.**
-Status: Active master plan. Engineering roadmap Prompts 0–10 are implemented on `main` as of 2026-11-08; the separate App Business Module sub-prompts 0–4 are in draft PR #9. See ORBIT_BUILD_STATE.md for verified branch and CI status.
+Status: Active master plan. Engineering roadmap Prompts 0–10 and the separate App Business Module sub-prompts 0–4 are implemented on `main` as of 2026-11-08 (PRs #5 and #9). See ORBIT_BUILD_STATE.md for verified branch, CI status and remaining limitations.
 Date: 2026-11-07
 
 > "ORBIT" is a working codename, not a cleared brand. Before any public release, check GitHub, npm, domains and trademarks (task REL-01).
