@@ -10,7 +10,7 @@ async function main(): Promise<void> {
   const allowedHosts = config.allowNonLoopback
     ? [...DEFAULT_ALLOWED_HOSTS, config.host]
     : DEFAULT_ALLOWED_HOSTS;
-  const server = buildServer({ database, logger, allowedHosts });
+  const server = buildServer({ database, logger, allowedHosts, databasePath: config.dbPath });
 
   const shutdown = async (signal: string): Promise<void> => {
     logger.info({ signal }, 'Shutting down');
