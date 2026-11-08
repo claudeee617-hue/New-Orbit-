@@ -15,18 +15,6 @@ describe('BusinessModule', () => {
     expect(html).toContain('Quote / plan-dependent');
   });
 
-  it('mounts the interactive business intelligence workspace inside Business', () => {
-    const html = renderToStaticMarkup(<BusinessModule />);
-
-    expect(html).toContain('Prompt 4 · Business intelligence');
-    expect(html).toContain('Actuals versus forecast');
-    expect(html).toContain('Pricing and profitability simulator');
-    expect(html).toContain('Break-even seats');
-    expect(html).toContain('Customer records');
-    expect(html).toContain('USER-ENTERED · NOT CONNECTED');
-    expect(html).toContain('Reporting currency');
-  });
-
   it('shows commercial KPIs as unmeasured rather than fabricated values', () => {
     const html = renderToStaticMarkup(<BusinessModule />);
 

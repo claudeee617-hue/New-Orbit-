@@ -8,21 +8,20 @@ Its central artifact is the **Change Passport**: a content-hashed record of a ch
 
 ## Current status
 
-The public `main` branch contains engineering roadmap Prompts 0–10 and the separate App Business Module sub-prompts 0–4. Engineering Prompts 5–10 were merged through PR #5; the Business Module was merged through PR #9 on 2026-11-08. Their full CI matrices passed on Ubuntu, macOS and Windows.
+The public `main` branch contains the monorepo foundation, immutable evidence graph and ATLAS repository scanner. Engineering Prompts 5–10 are consolidated on `feat/prompts-6-8-completion` in draft PR #5 and remain unmerged pending a fresh full CI pass. App Business Module Prompts 0–4 are in separate draft PRs #6 and #7. None of these feature PRs is merged or release-complete.
 
 | Capability | Current implementation |
 | --- | --- |
 | Monorepo, TypeScript, lint, tests and CI foundation | Implemented on `main` |
 | ORBIT Core graph, versioned records and hash-chained ledger | Implemented on `main` |
 | ATLAS repository scanner and architecture reports | Implemented on `main` |
-| ATLAS persistent decision memory and read-only stdio MCP | Implemented on `main` (PR #5 merged; full Ubuntu/macOS/Windows CI passed) |
-| WITNESS changed-line coverage, baseline comparison, filename findings, Markdown/SARIF | Extended prototype on `main` (PR #5 merged; full cross-platform CI passed) |
-| FLARE JUnit, pytest, Jest and Go JSON reports; failure clusters and duration summaries | Extended prototype on `main`; durable history across independent invocations remains outstanding |
-| CAPSULE polyglot toolchain, dependency, container and workspace manifest inspection | Extended prototype on `main`; build replay is not implemented |
-| FLIGHT RECORDER recorded telemetry parser, caller-defined analysis and hash-verified graph persistence | Implemented on `main` as recorded-file prototype; physical serial/USB capture unavailable |
-| Change Passport graph correlation, versioned history, comparisons and non-executing reproduction plan | Implemented on `main` as backend/CLI prototype; visual Replay Room UI not implemented |
-| App Business Module | Implemented on `main` via PR #9: strategy, market references, local actual-vs-forecast calculator and pricing simulator; no live accounting/CRM/billing data |
-| Specialist AI agents, GitHub Action and full dashboard | Not implemented (MCP stdio server is now on `main`) |
+| ATLAS persistent decision memory and read-only stdio MCP | Implemented on the Prompt 5–8 feature branch; CI passed; PR #5 draft, not merged |
+| WITNESS changed-line coverage, baseline comparison, filename findings, Markdown/SARIF | Extended prototype on `feat/prompts-6-8-completion`; CI passed, PR #5 draft |
+| FLARE JUnit, pytest, Jest and Go JSON reports; failure clusters and duration summaries | Extended prototype on `feat/prompts-6-8-completion`; no durable history store yet |
+| CAPSULE polyglot toolchain, dependency, container and workspace manifest inspection | Extended prototype on `feat/prompts-6-8-completion`; no build replay yet |
+| FLIGHT RECORDER recorded telemetry parser, caller-defined analysis and hash-verified graph persistence | Prompt 9 prototype; serial/USB capture unavailable |
+| Change Passport graph correlation, versioned history, comparisons and non-executing reproduction plan | Prompt 10 backend/CLI prototype; visual Replay Room UI not implemented |
+| Specialist AI agents, GitHub Action and full dashboard | Not implemented (MCP stdio server is on the feature branch) |
 
 See [ORBIT_BUILD_STATE.md](ORBIT_BUILD_STATE.md) for phase-by-phase implementation details, branch status, known limitations and verified test results.
 
@@ -97,7 +96,7 @@ node apps/cli/dist/index.js passport create passport-input.json
 
 All `--out` paths are created without overwriting an existing file.
 
-Extended commands on `main`:
+Extended commands on `feat/prompts-6-8-completion` (branch CI pending):
 
 ```bash
 node apps/cli/dist/index.js witness coverage-compare before.info after.info --format lcov
@@ -137,7 +136,7 @@ See [the threat model](docs/THREAT_MODEL.md), [technical design](docs/architectu
 - [Master plan](ORBIT_MASTER_PLAN.md) and [build state](ORBIT_BUILD_STATE.md)
 - [PRD](docs/PRD.md), [architecture](docs/ARCHITECTURE.md), [technical design](docs/architecture/TECHNICAL_DESIGN.md), [data model](docs/DATA_MODEL.md)
 - [Technical roadmap](docs/ROADMAP.md), [competitive analysis](docs/COMPETITIVE_ANALYSIS.md), [test strategy](docs/TEST_STRATEGY.md), [UX specification](docs/UX_SPECIFICATION.md)
-- [Business model & monetization architecture](docs/BUSINESS_MODEL.md), [commercial product roadmap](docs/COMMERCIAL_ROADMAP.md), [App Business Module](docs/APP_BUSINESS_MODULE.md)
+- [Business model & monetization architecture](docs/BUSINESS_MODEL.md), [commercial product roadmap](docs/COMMERCIAL_ROADMAP.md)
 - [Architecture decision records](docs/DECISIONS/)
 
 ## Contributing
@@ -173,3 +172,12 @@ node apps/cli/dist/index.js mcp start --db .orbit/orbit.db --repo local/my-repos
 ```
 
 `mcp start` uses stdio transport and opens an existing SQLite database in read-only mode. It does not create or migrate databases. The 12 tools are `orbit_repository_map`, `orbit_search_symbols`, `orbit_get_symbol`, `orbit_get_callers`, `orbit_get_callees`, `orbit_analyze_impact`, `orbit_find_related_tests`, `orbit_search_history`, `orbit_search_memory`, `orbit_get_architecture`, `orbit_get_change_context` and `orbit_get_evidence`. No tool can mutate the graph, run commands, write files or control hardware. MCP responses are capped at 48 KiB.
+
+
+## ORBIT Business Module
+
+The optional Business Module is a local-first strategy workspace for commercial planning and research. It does not add billing, checkout, CRM, payment processing, hosted customer data or automatic revenue claims.
+
+See [Business Module documentation](docs/APP_BUSINESS_MODULE.md) for the scope, evidence references and product boundaries.
+
+Business inputs are treated as planning assumptions or user-entered values, not as measured company data. Missing customer analytics remain unavailable until a privacy-reviewed source is connected.
