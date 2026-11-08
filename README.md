@@ -8,7 +8,7 @@ Its central artifact is the **Change Passport**: a content-hashed record of a ch
 
 ## Current status
 
-The public `main` branch contains the monorepo foundation, immutable evidence graph and ATLAS repository scanner. Prompts 5–10 are being consolidated on `feat/prompts-6-8-completion` in draft PR #5. Prompt 5–8 previously passed the full CI matrix; the new Prompt 9–10 telemetry and Passport code is awaiting its fresh full CI run. The branch is not yet merged or release-complete.
+The public `main` branch contains the monorepo foundation, immutable evidence graph and ATLAS repository scanner. Engineering Prompts 5–10 are consolidated on `feat/prompts-6-8-completion` in draft PR #5 and remain unmerged pending a fresh full CI pass. App Business Module Prompts 0–4 are in separate draft PRs #6 and #7. None of these feature PRs is merged or release-complete.
 
 | Capability | Current implementation |
 | --- | --- |
