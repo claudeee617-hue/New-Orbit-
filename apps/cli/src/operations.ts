@@ -67,7 +67,11 @@ function pickRepository(store: GraphStore, key: string | undefined) {
     return found;
   }
   if (repositories.length === 1 && repositories[0]) return repositories[0];
-  if (repositories.length === 0) throw new OrbitError('NOT_FOUND', 'No repository is registered. Run orbit scan or orbit init --repo first.');
+  if (repositories.length === 0)
+    throw new OrbitError(
+      'NOT_FOUND',
+      'No repository is registered. Run orbit scan or orbit init --repo first.',
+    );
   throw new OrbitError('INVALID_INPUT', 'Several repositories exist. Supply --repo <key>.');
 }
 
@@ -75,12 +79,17 @@ export function runInit(
   dbPath: string,
   repositoryKey?: string,
   displayName?: string,
-): { databasePath: string; schemaVersion: number; repository?: { id: string; key: string; displayName: string } } {
+): {
+  databasePath: string;
+  schemaVersion: number;
+  repository?: { id: string; key: string; displayName: string };
+} {
   const database = openDatabase({ path: resolve(dbPath) });
   try {
     const store = createGraphStore(database);
     const repository = repositoryKey
-      ? store.repositories.register({ key: repositoryKey, ...(displayName ? { displayName } : {}) }).record
+      ? store.repositories.register({ key: repositoryKey, ...(displayName ? { displayName } : {}) })
+          .record
       : undefined;
     return {
       databasePath: database.path,
@@ -118,25 +127,28 @@ export function runDoctor(
   if (tokenFileExists) {
     try {
       const stat = lstatSync(tokenFile);
-      privatePermissions = process.platform === 'win32'
-        ? stat.isFile() && !stat.isSymbolicLink()
-        : stat.isFile() && !stat.isSymbolicLink() && (stat.mode & 0o777) === 0o600;
+      privatePermissions =
+        process.platform === 'win32'
+          ? stat.isFile() && !stat.isSymbolicLink()
+          : stat.isFile() && !stat.isSymbolicLink() && (stat.mode & 0o777) === 0o600;
     } catch {
       privatePermissions = false;
     }
   }
-  const tokenSource = tokenFromEnvironment !== undefined
-    ? 'environment'
-    : tokenFileExists
-      ? 'file'
-      : 'missing';
+  const tokenSource =
+    tokenFromEnvironment !== undefined ? 'environment' : tokenFileExists ? 'file' : 'missing';
   const warnings: string[] = [];
-  if (tokenSource === 'missing') warnings.push('Start the local API once to create its private session token, or set ORBIT_API_TOKEN.');
+  if (tokenSource === 'missing')
+    warnings.push(
+      'Start the local API once to create its private session token, or set ORBIT_API_TOKEN.',
+    );
   if (tokenFromEnvironment && !/^[A-Za-z0-9_-]{40,128}$/.test(tokenFromEnvironment)) {
     warnings.push('ORBIT_API_TOKEN is not in the required 40–128 character URL-safe format.');
   }
   if (tokenFileExists && privatePermissions === false) {
-    warnings.push('The API token file must be a regular file with private 0600 permissions (on Unix).');
+    warnings.push(
+      'The API token file must be a regular file with private 0600 permissions (on Unix).',
+    );
   }
   if (!existsSync(path)) {
     warnings.push('Workspace database has not been initialised yet. Run orbit init.');
@@ -162,12 +174,16 @@ export function runDoctor(
       const result = store.verifyIntegrity(repository.id);
       return { repositoryKey: repository.key, ok: result.ok, problems: result.problems.length };
     });
-    if (integrity.some((item) => !item.ok)) warnings.push('One or more repository evidence ledgers failed integrity verification.');
+    if (integrity.some((item) => !item.ok))
+      warnings.push('One or more repository evidence ledgers failed integrity verification.');
     const ok = warnings.length === 0 && integrity.every((item) => item.ok);
     return {
       ok,
       database: { path, exists: true, schemaVersion: database.schemaVersion() },
-      repositories: { count: repositories.length, keys: repositories.map((item) => item.key).sort() },
+      repositories: {
+        count: repositories.length,
+        keys: repositories.map((item) => item.key).sort(),
+      },
       integrity,
       apiAuthentication: {
         configured: tokenSource !== 'missing',
@@ -203,7 +219,11 @@ export function runGraphSummary(dbPath: string, repositoryKey?: string) {
       nodes,
       edges,
       ledger: { entries: head?.seq ?? 0, headHash: head?.hash ?? null },
-      integrity: { ok: integrity.ok, checked: integrity.ledgerEntriesChecked, problems: integrity.problems.length },
+      integrity: {
+        ok: integrity.ok,
+        checked: integrity.ledgerEntriesChecked,
+        problems: integrity.problems.length,
+      },
     };
   } finally {
     database.close();
@@ -225,7 +245,15 @@ export function runGraphNodes(
       limit: Math.min(limit, MAX_PAGE),
       offset,
     });
-    return { repository: repository.key, nodes, page: { limit: Math.min(limit, MAX_PAGE), offset, hasMore: nodes.length === Math.min(limit, MAX_PAGE) } };
+    return {
+      repository: repository.key,
+      nodes,
+      page: {
+        limit: Math.min(limit, MAX_PAGE),
+        offset,
+        hasMore: nodes.length === Math.min(limit, MAX_PAGE),
+      },
+    };
   } finally {
     database.close();
   }
@@ -235,25 +263,38 @@ function ingestionRepository(store: GraphStore, key: string | undefined) {
   return pickRepository(store, key);
 }
 
-
 function sanitizeCiSummary(value: unknown): Record<string, JsonValue> {
   if (value === undefined) return {};
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new OrbitError('INVALID_INPUT', 'CI summary must be a JSON object');
   }
   const source = value as Record<string, unknown>;
-  const numericFields = new Set(['passed', 'failed', 'skipped', 'durationSeconds', 'jobCount', 'artifactCount', 'attempt']);
+  const numericFields = new Set([
+    'passed',
+    'failed',
+    'skipped',
+    'durationSeconds',
+    'jobCount',
+    'artifactCount',
+    'attempt',
+  ]);
   const stringFields = new Set(['conclusion', 'event', 'runnerOS', 'workflowName']);
   const result: Record<string, JsonValue> = {};
   for (const [key, item] of Object.entries(source)) {
     if (numericFields.has(key)) {
       if (typeof item !== 'number' || !Number.isFinite(item) || item < 0 || item > 1_000_000_000) {
-        throw new OrbitError('INVALID_INPUT', `CI summary field ${key} must be a non-negative finite number`);
+        throw new OrbitError(
+          'INVALID_INPUT',
+          `CI summary field ${key} must be a non-negative finite number`,
+        );
       }
       result[key] = item;
     } else if (stringFields.has(key)) {
       if (typeof item !== 'string' || item.length === 0 || item.length > 128) {
-        throw new OrbitError('INVALID_INPUT', `CI summary field ${key} must be a string of at most 128 characters`);
+        throw new OrbitError(
+          'INVALID_INPUT',
+          `CI summary field ${key} must be a string of at most 128 characters`,
+        );
       }
       result[key] = item;
     } else {
@@ -269,8 +310,10 @@ export async function ingestCiReport(
   input: unknown,
 ) {
   const body = input as Record<string, unknown>;
-  if (!body || typeof body !== 'object' || Array.isArray(body)) throw new OrbitError('INVALID_INPUT', 'CI report must be a JSON object');
-  if (typeof body.status !== 'string' || body.status.trim().length === 0 || body.status.length > 32) throw new OrbitError('INVALID_INPUT', 'CI report status is required');
+  if (!body || typeof body !== 'object' || Array.isArray(body))
+    throw new OrbitError('INVALID_INPUT', 'CI report must be a JSON object');
+  if (typeof body.status !== 'string' || body.status.trim().length === 0 || body.status.length > 32)
+    throw new OrbitError('INVALID_INPUT', 'CI report status is required');
   const statusText = body.status.trim().toLowerCase();
   const status: EvidenceStatus = ['success', 'pass', 'passed'].includes(statusText)
     ? 'PASS'
@@ -278,7 +321,8 @@ export async function ingestCiReport(
       ? 'FAIL'
       : 'PARTIAL';
   const commitSha = typeof body.commitSha === 'string' ? body.commitSha : undefined;
-  if (commitSha && !/^[0-9a-f]{7,64}$/i.test(commitSha)) throw new OrbitError('INVALID_INPUT', 'commitSha is invalid');
+  if (commitSha && !/^[0-9a-f]{7,64}$/i.test(commitSha))
+    throw new OrbitError('INVALID_INPUT', 'commitSha is invalid');
   const payload = {
     status: statusText,
     source: typeof body.source === 'string' ? body.source.slice(0, 512) : 'cli:ci-ingest',
@@ -289,7 +333,8 @@ export async function ingestCiReport(
     ...(body.summary !== undefined ? { summary: sanitizeCiSummary(body.summary) } : {}),
   };
   const encoded = canonicalJson(payload);
-  if (Buffer.byteLength(encoded, 'utf8') > MAX_REPORT_BYTES) throw new OrbitError('INVALID_INPUT', 'CI report exceeds the 2 MiB limit');
+  if (Buffer.byteLength(encoded, 'utf8') > MAX_REPORT_BYTES)
+    throw new OrbitError('INVALID_INPUT', 'CI report exceeds the 2 MiB limit');
   const hash = hashArtifact(encoded);
   const key = `ci:${commitSha?.toLowerCase() ?? hash}`;
   const database = openDatabase({ path: resolve(dbPath), migrate: false });
@@ -304,7 +349,8 @@ export async function ingestCiReport(
       ...(commitSha ? { commitSha } : {}),
       contentHash: hash,
       status,
-      limitations: status === 'PARTIAL' ? ['The supplied CI state is not a recognised pass/fail value.'] : [],
+      limitations:
+        status === 'PARTIAL' ? ['The supplied CI state is not a recognised pass/fail value.'] : [],
       relatedEntityIds: [nodeId],
     }).record;
     const node = store.nodes.upsert({
@@ -328,7 +374,10 @@ export async function ingestTestReport(
   format: string,
 ) {
   if (!['junit', 'pytest-json', 'jest-json', 'go-json'].includes(format)) {
-    throw new OrbitError('INVALID_INPUT', 'format must be junit, pytest-json, jest-json or go-json');
+    throw new OrbitError(
+      'INVALID_INPUT',
+      'format must be junit, pytest-json, jest-json or go-json',
+    );
   }
   const content = await readBounded(path);
   let cases;
@@ -336,7 +385,11 @@ export async function ingestTestReport(
   else if (format === 'pytest-json') cases = parsePytestJsonReport(content);
   else if (format === 'jest-json') cases = parseJestJsonReport(content);
   else if (format === 'go-json') cases = parseGoTestJson(content);
-  else throw new OrbitError('INVALID_INPUT', 'format must be junit, pytest-json, jest-json or go-json');
+  else
+    throw new OrbitError(
+      'INVALID_INPUT',
+      'format must be junit, pytest-json, jest-json or go-json',
+    );
   const summary = {
     format,
     total: cases.length,
@@ -374,13 +427,32 @@ export async function ingestTestReport(
   }
 }
 
-export function runTestHistory(dbPath: string, repositoryKey: string | undefined, limit: number, offset: number) {
+export function runTestHistory(
+  dbPath: string,
+  repositoryKey: string | undefined,
+  limit: number,
+  offset: number,
+) {
   const { database, store } = openExisting(dbPath);
   try {
     const repository = pickRepository(store, repositoryKey);
-    const rows = store.nodes.find(repository.id, { type: 'TestRun', limit: Math.min(limit, MAX_PAGE), offset });
-    const runs = rows.filter((item) => item.attrs['producer'] === 'orbit-cli' || item.attrs['producer'] === 'orbit-api');
-    return { repository: repository.key, runs, page: { limit: Math.min(limit, MAX_PAGE), offset, hasMore: rows.length === Math.min(limit, MAX_PAGE) } };
+    const rows = store.nodes.find(repository.id, {
+      type: 'TestRun',
+      limit: Math.min(limit, MAX_PAGE),
+      offset,
+    });
+    const runs = rows.filter(
+      (item) => item.attrs['producer'] === 'orbit-cli' || item.attrs['producer'] === 'orbit-api',
+    );
+    return {
+      repository: repository.key,
+      runs,
+      page: {
+        limit: Math.min(limit, MAX_PAGE),
+        offset,
+        hasMore: rows.length === Math.min(limit, MAX_PAGE),
+      },
+    };
   } finally {
     database.close();
   }
@@ -414,7 +486,10 @@ export function attachOperationsCommands(program: Command, io: CliIo): void {
           `Database: ${report.database.exists ? `ready (schema ${report.database.schemaVersion})` : 'not initialised'} — ${report.database.path}`,
           `Repositories: ${report.repositories.count}${report.repositories.keys.length ? ` (${report.repositories.keys.join(', ')})` : ''}`,
           `API authentication: ${report.apiAuthentication.configured ? report.apiAuthentication.source : 'not configured'}`,
-          ...report.integrity.map((item) => `Ledger ${item.repositoryKey}: ${item.ok ? 'OK' : `FAILED (${item.problems} problems)`}`),
+          ...report.integrity.map(
+            (item) =>
+              `Ledger ${item.repositoryKey}: ${item.ok ? 'OK' : `FAILED (${item.problems} problems)`}`,
+          ),
           ...report.warnings.map((warning) => `Warning: ${warning}`),
         ];
         io.stdout(`${lines.join('\n')}\n`);
@@ -453,20 +528,40 @@ export function attachOperationsCommands(program: Command, io: CliIo): void {
     .option('--limit <n>', 'maximum nodes', '100')
     .option('--offset <n>', 'pagination offset', '0')
     .option('--json', 'print JSON')
-    .action((options: { db?: string; repo?: string; type?: string; limit: string; offset: string; json?: boolean }) => {
-      const config = loadConfig(io.env);
-      const type = options.type as NodeType | undefined;
-      if (type && !NODE_TYPES.includes(type)) throw new Error(`--type must be one of: ${NODE_TYPES.join(', ')}`);
-      const limit = parsePositive(options.limit, '--limit', MAX_PAGE);
-      const offset = Number(options.offset);
-      if (!Number.isInteger(offset) || offset < 0 || offset > 1_000_000) throw new Error('--offset must be from 0 to 1000000');
-      const result = runGraphNodes(options.db ?? config.dbPath, options.repo, type, limit, offset);
-      io.stdout(options.json ? `${JSON.stringify(result, null, 2)}\n` : `${result.nodes.map((item) => `${item.type} ${item.key} [${item.id}]`).join('\n')}\n`);
-    });
+    .action(
+      (options: {
+        db?: string;
+        repo?: string;
+        type?: string;
+        limit: string;
+        offset: string;
+        json?: boolean;
+      }) => {
+        const config = loadConfig(io.env);
+        const type = options.type as NodeType | undefined;
+        if (type && !NODE_TYPES.includes(type))
+          throw new Error(`--type must be one of: ${NODE_TYPES.join(', ')}`);
+        const limit = parsePositive(options.limit, '--limit', MAX_PAGE);
+        const offset = Number(options.offset);
+        if (!Number.isInteger(offset) || offset < 0 || offset > 1_000_000)
+          throw new Error('--offset must be from 0 to 1000000');
+        const result = runGraphNodes(
+          options.db ?? config.dbPath,
+          options.repo,
+          type,
+          limit,
+          offset,
+        );
+        io.stdout(
+          options.json
+            ? `${JSON.stringify(result, null, 2)}\n`
+            : `${result.nodes.map((item) => `${item.type} ${item.key} [${item.id}]`).join('\n')}\n`,
+        );
+      },
+    );
 
   const ci = program.command('ci').description('ingest and inspect CI evidence');
-  ci
-    .command('ingest <json-file>')
+  ci.command('ingest <json-file>')
     .description('append a CI result from a JSON file to the workspace evidence graph')
     .requiredOption('--repo <key>', 'registered repository key')
     .option('--db <path>')
@@ -486,23 +581,37 @@ export function attachOperationsCommands(program: Command, io: CliIo): void {
     .option('--db <path>')
     .action(async (file: string, options: { db?: string; repo: string; format: string }) => {
       const config = loadConfig(io.env);
-      const result = await ingestTestReport(options.db ?? config.dbPath, options.repo, file, options.format);
+      const result = await ingestTestReport(
+        options.db ?? config.dbPath,
+        options.repo,
+        file,
+        options.format,
+      );
       io.stdout(`${JSON.stringify(result, null, 2)}\n`);
     });
   tests
     .command('history')
-    .description('list ingested test-report runs (historical flakiness still requires multiple runs)')
+    .description(
+      'list ingested test-report runs (historical flakiness still requires multiple runs)',
+    )
     .option('--db <path>')
     .option('--repo <key>')
     .option('--limit <n>', 'maximum runs', '100')
     .option('--offset <n>', 'pagination offset', '0')
     .option('--json', 'print JSON')
-    .action((options: { db?: string; repo?: string; limit: string; offset: string; json?: boolean }) => {
-      const config = loadConfig(io.env);
-      const limit = parsePositive(options.limit, '--limit', MAX_PAGE);
-      const offset = Number(options.offset);
-      if (!Number.isInteger(offset) || offset < 0 || offset > 1_000_000) throw new Error('--offset must be from 0 to 1000000');
-      const result = runTestHistory(options.db ?? config.dbPath, options.repo, limit, offset);
-      io.stdout(options.json ? `${JSON.stringify(result, null, 2)}\n` : `${result.runs.map((item) => `${item.key} — ${String(item.attrs['passed'] ?? 0)} passed / ${String(item.attrs['failed'] ?? 0)} failed`).join('\n')}\n`);
-    });
+    .action(
+      (options: { db?: string; repo?: string; limit: string; offset: string; json?: boolean }) => {
+        const config = loadConfig(io.env);
+        const limit = parsePositive(options.limit, '--limit', MAX_PAGE);
+        const offset = Number(options.offset);
+        if (!Number.isInteger(offset) || offset < 0 || offset > 1_000_000)
+          throw new Error('--offset must be from 0 to 1000000');
+        const result = runTestHistory(options.db ?? config.dbPath, options.repo, limit, offset);
+        io.stdout(
+          options.json
+            ? `${JSON.stringify(result, null, 2)}\n`
+            : `${result.runs.map((item) => `${item.key} — ${String(item.attrs['passed'] ?? 0)} passed / ${String(item.attrs['failed'] ?? 0)} failed`).join('\n')}\n`,
+        );
+      },
+    );
 }
