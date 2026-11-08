@@ -23,6 +23,25 @@ export interface TelemetrySession {
 const MAX_TELEMETRY_BYTES = 10 * 1024 * 1024;
 const METRIC_NAME = /^[A-Za-z][A-Za-z0-9_.-]{0,63}$/;
 
+function normaliseEvent(value: string): string {
+  const event = value.toLowerCase();
+  const hasWatchdog = event.includes('watchdog') || event.includes('wdt');
+  const hasReset = event.includes('reset') || event.includes('reboot');
+  if (hasWatchdog && hasReset) return 'watchdog_reset';
+  if (hasWatchdog) return 'watchdog';
+  if (hasReset) return 'reset';
+  if (event.includes('boot')) return 'boot';
+  if (event.includes('panic')) return 'panic';
+  if (event.includes('brownout')) return 'brownout';
+  if (event.includes('fault') || event.includes('exception') || event.includes('assert')) return 'fault';
+  if (event.includes('crash')) return 'crash';
+  if (event.includes('disconnect')) return 'disconnected';
+  if (event.includes('connect')) return 'connected';
+  if (event.includes('start')) return 'start';
+  if (event.includes('stop')) return 'stop';
+  return 'other';
+}
+
 function normaliseRecord(value: Record<string, unknown>): TelemetryPoint {
   const metrics: Record<string, number> = {};
   let timestamp: string | null = null;
@@ -33,7 +52,7 @@ function normaliseRecord(value: Record<string, unknown>): TelemetryPoint {
       const parsed = typeof item === 'number' ? new Date(item) : new Date(String(item));
       if (Number.isFinite(parsed.getTime())) timestamp = parsed.toISOString();
     } else if (['event', 'type', 'message', 'status'].includes(lower)) {
-      if (typeof item === 'string' && item.trim()) event = item.trim().slice(0, 300);
+      if (typeof item === 'string' && item.trim()) event = normaliseEvent(item);
     } else if (typeof item === 'number' && Number.isFinite(item) && METRIC_NAME.test(key)) {
       metrics[key] = item;
     } else if (
