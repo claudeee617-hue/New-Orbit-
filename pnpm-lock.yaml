@@ -38,6 +38,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@orbit/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
       '@orbit/atlas':
         specifier: workspace:*
         version: link:../../packages/atlas
@@ -109,6 +112,8 @@ importers:
       vite:
         specifier: 8.3.6
         version: 8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)
+
+  packages/ai: {}
 
   packages/atlas:
     dependencies:
