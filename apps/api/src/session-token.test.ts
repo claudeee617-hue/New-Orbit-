@@ -29,6 +29,7 @@ describe('API session token', () => {
     expect(readFileSync(first.filePath!, 'utf8').trim()).toBe(first.token);
     if (process.platform !== 'win32') {
       expect(statSync(first.filePath!).mode & 0o777).toBe(0o600);
+      expect(statSync(join(directory, '.orbit')).mode & 0o777).toBe(0o700);
     }
   });
 
