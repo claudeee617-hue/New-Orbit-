@@ -2,7 +2,14 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { runDoctor, runGraphSummary, runInit, runTestHistory, ingestCiReport, ingestTestReport } from './operations.js';
+import {
+  runDoctor,
+  runGraphSummary,
+  runInit,
+  runTestHistory,
+  ingestCiReport,
+  ingestTestReport,
+} from './operations.js';
 
 const directories: string[] = [];
 
@@ -13,7 +20,8 @@ function workspace(): { directory: string; database: string } {
 }
 
 afterEach(() => {
-  for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true });
+  for (const directory of directories.splice(0))
+    rmSync(directory, { recursive: true, force: true });
 });
 
 describe('Prompt 11 workspace commands', () => {
