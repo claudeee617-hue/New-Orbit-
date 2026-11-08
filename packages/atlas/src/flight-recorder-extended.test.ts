@@ -41,7 +41,7 @@ describe('FLIGHT RECORDER typed analysis', () => {
       thresholds: [{ id: 'voltage-limit', metric: 'voltage', max: 3.5, unit: 'V', severity: 'warning' }],
     });
     expect(analysis.metricStats.voltage).toMatchObject({ count: 2, min: 3.3, max: 3.7, unit: 'V' });
-    expect(analysis.anomalies.map((item) => item.kind)).toEqual(['watchdog', 'reset', 'threshold']);
+    expect(analysis.anomalies.map((item) => item.kind)).toEqual(['reset', 'watchdog', 'threshold']);
     expect(analysis.anomalies.find((item) => item.kind === 'threshold')).toMatchObject({
       metric: 'voltage',
       value: 3.7,
