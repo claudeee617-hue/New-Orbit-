@@ -35,6 +35,17 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      - name: Temporary formatter preview
+        if: matrix.os == 'ubuntu-latest' && github.event.pull_request.head.ref == 'feat/prompt-12-command-center-final'
+        run: |
+          pnpm exec prettier --write apps/web/src/api.ts apps/web/src/api.test.ts apps/web/src/CommandCenter.tsx
+          echo '--- API CLIENT ---'
+          cat apps/web/src/api.ts
+          echo '--- API TESTS ---'
+          cat apps/web/src/api.test.ts
+          echo '--- COMMAND CENTER ---'
+          cat apps/web/src/CommandCenter.tsx
+
       # format:check, lint, typecheck, test, build
       - name: Check
         run: pnpm run check
