@@ -11,6 +11,7 @@ import {
 } from '@orbit/core';
 import {
   analyseTelemetry,
+  compareChangePassports,
   exportAtlas,
   getPassportHistory,
   impactMap,
