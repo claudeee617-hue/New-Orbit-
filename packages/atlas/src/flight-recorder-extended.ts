@@ -244,7 +244,7 @@ export function analyseTelemetry(
           kind: 'threshold',
           severity: rule.severity ?? 'warning',
           pointIndex,
-          timestamp: point.timestamp,
+          timestamp: canonicalTimestamp,
           metric: name,
           value,
           ...(limit !== undefined ? { limit } : {}),
