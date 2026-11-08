@@ -2,7 +2,7 @@ import { nodeIdFor, type JsonValue } from '@orbit/core';
 import type { GraphStore } from '@orbit/database';
 import { traverse } from '@orbit/graph';
 import type { ChangePassport, ChangePassportInput, PassportEvidence } from './passport.js';
-import { createChangePassport } from './passport.js';
+import { createGraphValidatedChangePassport } from './passport.js';
 import { normalizeRepoPath } from './verification.js';
 
 export interface PassportDimension {
@@ -69,7 +69,7 @@ function collectEvidence(
     commitSha: input.commitSha,
     limit: 10_000,
   })) {
-    records.set(item.id, item);
+    if (!item.source.startsWith('change-passport:')) records.set(item.id, item);
   }
   for (const entityId of changedFileIds) {
     for (const item of store.evidence.forEntity(repositoryId, entityId)) {
@@ -109,9 +109,7 @@ function collectEvidence(
       sha256: item.contentHash,
       limitations: item.limitations,
     }));
-  const all = new Map<string, PassportEvidence>();
-  for (const item of [...mapped, ...supplied]) all.set(item.id, item);
-  return [...all.values()].sort((a, b) => a.id.localeCompare(b.id));
+  return mapped.sort((a, b) => a.id.localeCompare(b.id));
 }
 
 function computeImpact(
@@ -268,7 +266,7 @@ export function recordChangePassport(
   );
   const dimensions = completeness(evidence);
   const missing = dimensions.filter((item) => item.status === 'MISSING');
-  const suppliedPassport = createChangePassport(
+  const suppliedPassport = createGraphValidatedChangePassport(
     {
       ...canonicalInput,
       repository: repository.key,
@@ -285,7 +283,7 @@ export function recordChangePassport(
       },
       completeness: dimensions,
     },
-    { ...options, evidenceVerification: 'GRAPH_VALIDATED' },
+    options,
   );
 
   const verificationStatus = suppliedPassport.verificationStatus;
