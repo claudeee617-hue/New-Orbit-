@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use ORBIT in research or teaching, please cite the repository and the exact version or commit you used."
+title: "ORBIT — Engineering Intelligence Platform"
+type: software
+repository-code: "https://github.com/claudeee617-hue/New-Orbit-"
+abstract: "A local-first engineering intelligence platform connecting repository structure, verification evidence, CI history, declared environments, recorded telemetry and change passports."
+license: Apache-2.0
+version: 0.0.1
+date-released: 2026-11-08
+authors:
+  - name: "ORBIT contributors"
