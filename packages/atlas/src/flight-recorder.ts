@@ -4,6 +4,7 @@ export interface TelemetryPoint {
   timestamp: string | null;
   metrics: Record<string, number>;
   event: string | null;
+  /** Kept empty for backwards-compatible shape; raw lines can contain secrets and are not copied into reports. */
   raw: string;
 }
 
@@ -22,15 +23,15 @@ export interface TelemetrySession {
 const MAX_TELEMETRY_BYTES = 10 * 1024 * 1024;
 const METRIC_NAME = /^[A-Za-z][A-Za-z0-9_.-]{0,63}$/;
 
-function normaliseRecord(value: Record<string, unknown>, raw: string): TelemetryPoint {
+function normaliseRecord(value: Record<string, unknown>): TelemetryPoint {
   const metrics: Record<string, number> = {};
   let timestamp: string | null = null;
   let event: string | null = null;
   for (const [key, item] of Object.entries(value)) {
     const lower = key.toLowerCase();
     if (['timestamp', 'time', 'ts', 'datetime'].includes(lower)) {
-      const parsed = typeof item === 'number' ? new Date(item).toISOString() : String(item);
-      if (Number.isFinite(Date.parse(parsed))) timestamp = new Date(parsed).toISOString();
+      const parsed = typeof item === 'number' ? new Date(item) : new Date(String(item));
+      if (Number.isFinite(parsed.getTime())) timestamp = parsed.toISOString();
     } else if (['event', 'type', 'message', 'status'].includes(lower)) {
       if (typeof item === 'string' && item.trim()) event = item.trim().slice(0, 300);
     } else if (typeof item === 'number' && Number.isFinite(item) && METRIC_NAME.test(key)) {
@@ -48,7 +49,7 @@ function normaliseRecord(value: Record<string, unknown>, raw: string): Telemetry
     timestamp,
     metrics: Object.fromEntries(Object.entries(metrics).sort(([a], [b]) => a.localeCompare(b))),
     event,
-    raw,
+    raw: '',
   };
 }
 
@@ -90,6 +91,7 @@ export function parseTelemetry(
   if (Buffer.byteLength(input, 'utf8') > MAX_TELEMETRY_BYTES)
     throw new Error('Telemetry exceeds the 10 MiB parser limit');
   const trimmed = input.trim();
+  if (!trimmed) throw new Error('Telemetry input is empty');
   let detected = format;
   if (!detected) {
     try {
@@ -117,17 +119,19 @@ export function parseTelemetry(
   if (detected === 'json') {
     const parsed = JSON.parse(trimmed) as unknown;
     const values = Array.isArray(parsed) ? parsed : [parsed];
-    records = values
-      .filter(
-        (item): item is Record<string, unknown> =>
-          !!item && typeof item === 'object' && !Array.isArray(item),
-      )
-      .map((value) => ({ value, raw: JSON.stringify(value) }));
+    if (values.length === 0 || values.length > 100_000) {
+      throw new Error('JSON telemetry must contain between 1 and 100000 records');
+    }
+    records = values.map((value) => {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        throw new Error('JSON telemetry records must be objects');
+      }
+      return { value: value as Record<string, unknown>, raw: '' };
+    });
   } else if (detected === 'ndjson') {
-    records = trimmed
-      .split(/\r?\n/)
-      .filter(Boolean)
-      .map((raw) => {
+    const lines = trimmed.split(/\r?\n/).filter(Boolean);
+    if (lines.length === 0 || lines.length > 100_000) throw new Error('NDJSON must contain between 1 and 100000 records');
+    records = lines.map((raw) => {
         const value = JSON.parse(raw) as unknown;
         if (!value || typeof value !== 'object' || Array.isArray(value))
           throw new Error('NDJSON rows must be objects');
@@ -136,24 +140,31 @@ export function parseTelemetry(
   } else if (detected === 'csv') {
     const [headerLine, ...dataLines] = trimmed.split(/\r?\n/);
     const headers = csvCells(headerLine ?? '').map((value) => value.trim());
-    records = dataLines
-      .filter((line) => line.trim())
-      .map((raw) => {
-        const cells = csvCells(raw);
-        const value: Record<string, unknown> = {};
-        headers.forEach((header, index) => {
-          value[header] = cells[index] ?? '';
-        });
-        return { value, raw };
+    if (headers.length === 0 || headers.some((header) => !header) || new Set(headers).size !== headers.length) {
+      throw new Error('CSV telemetry requires unique, non-empty column names');
+    }
+    const lines = dataLines.filter((line) => line.trim());
+    if (lines.length === 0 || lines.length > 100_000) throw new Error('CSV must contain between 1 and 100000 data rows');
+    records = lines.map((raw) => {
+      const cells = csvCells(raw);
+      if (cells.length !== headers.length) throw new Error('CSV row has a different number of columns than its header');
+      const value: Record<string, unknown> = {};
+      headers.forEach((header, index) => {
+        value[header] = cells[index] ?? '';
       });
+      return { value, raw: '' };
+    });
   } else {
-    records = trimmed
-      .split(/\r?\n/)
-      .filter(Boolean)
-      .map((raw) => ({ value: parseKeyValue(raw), raw }));
+    const lines = trimmed.split(/\r?\n/).filter(Boolean);
+    if (lines.length === 0 || lines.length > 100_000) throw new Error('Key-value telemetry must contain between 1 and 100000 records');
+    records = lines.map((raw) => {
+      const value = parseKeyValue(raw);
+      if (Object.keys(value).length === 0) throw new Error('Key-value telemetry line contains no key/value pairs');
+      return { value, raw: '' };
+    });
   }
 
-  const points = records.map(({ value, raw }) => normaliseRecord(value, raw));
+  const points = records.map(({ value }) => normaliseRecord(value));
   const eventCounts: Record<string, number> = {};
   const metricNames = new Set<string>();
   let watchdogEvents = 0;
@@ -163,7 +174,7 @@ export function parseTelemetry(
     const event = point.event?.toLowerCase() ?? '';
     if (event) eventCounts[event] = (eventCounts[event] ?? 0) + 1;
     if (event.includes('watchdog') || event.includes('wdt')) watchdogEvents += 1;
-    if (event.includes('reset') || event.includes('reboot') || event.includes('boot'))
+    if (event.includes('reset') || event.includes('reboot'))
       resetEvents += 1;
   }
   return {
@@ -180,6 +191,7 @@ export function parseTelemetry(
     limitations: [
       'This parser analyses supplied log data only; it does not connect to or control hardware.',
       'Metric names and units are source-defined. ORBIT does not infer units from numeric values.',
+      'Raw log lines are not copied into parsed records because they may contain credentials or personal data; the raw artifact is represented by its SHA-256 digest.',
       'Event classification is keyword-based and must be checked against the device firmware log format.',
     ],
   };
