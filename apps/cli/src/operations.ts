@@ -298,6 +298,9 @@ export async function ingestTestReport(
   path: string,
   format: string,
 ) {
+  if (!['junit', 'pytest-json', 'jest-json', 'go-json'].includes(format)) {
+    throw new OrbitError('INVALID_INPUT', 'format must be junit, pytest-json, jest-json or go-json');
+  }
   const content = await readBounded(path);
   let cases;
   if (format === 'junit') cases = parseJunitXml(content);
