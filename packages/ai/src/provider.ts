@@ -130,7 +130,10 @@ function assertLocalOllama(baseUrl: string, allowRemote: boolean): URL {
     host === '[::1]' ||
     host === '::1';
   if (url.username || url.password) {
-    throw new OrbitAIError('Ollama base URL must not contain embedded credentials.', 'INVALID_INPUT');
+    throw new OrbitAIError(
+      'Ollama base URL must not contain embedded credentials.',
+      'INVALID_INPUT',
+    );
   }
   if (!local && (!allowRemote || url.protocol !== 'https:')) {
     throw new OrbitAIError(
@@ -163,7 +166,10 @@ export function prepareAIContext(input: {
     throw new OrbitAIError('At most 50 evidence items can be selected.', 'INVALID_INPUT');
   }
   if (input.provider === 'ollama') {
-    assertLocalOllama(input.baseUrl ?? 'http://127.0.0.1:11434', input.allowRemoteOllama === true);
+    assertLocalOllama(
+      input.baseUrl ?? 'http://127.0.0.1:11434',
+      input.allowRemoteOllama === true,
+    );
   }
 
   const ids = new Set<string>();
@@ -177,7 +183,10 @@ export function prepareAIContext(input: {
       !/^[a-f0-9]{64}$/i.test(item.sha256) ||
       item.content.length > MAX_CONTEXT_BYTES
     ) {
-      throw new OrbitAIError('Evidence metadata or content is invalid or too large.', 'INVALID_INPUT');
+      throw new OrbitAIError(
+        'Evidence metadata or content is invalid or too large.',
+        'INVALID_INPUT',
+      );
     }
     if (ids.has(item.id)) {
       throw new OrbitAIError('Duplicate evidence IDs are not allowed.', 'INVALID_INPUT');
@@ -214,12 +223,15 @@ export function prepareAIContext(input: {
   }
 
   const target = destination(input.provider, input.baseUrl);
-  return {
+  const preview = {
     provider: input.provider,
     model: input.model,
     destination: target,
     text,
-    sha256: previewDigest({ provider: input.provider, model: input.model, destination: target, text }),
+  };
+  return {
+    ...preview,
+    sha256: previewDigest(preview),
     bytes,
     evidenceIds: [...ids],
     redactions,
@@ -235,7 +247,11 @@ export function prepareAIContext(input: {
 async function responseText(response: Response): Promise<string> {
   const raw = await response.text();
   if (Buffer.byteLength(raw, 'utf8') > MAX_OUTPUT_BYTES) {
-    throw new OrbitAIError('Provider response exceeds the 256 KiB limit.', 'RESPONSE_TOO_LARGE', response.status);
+    throw new OrbitAIError(
+      'Provider response exceeds the 256 KiB limit.',
+      'RESPONSE_TOO_LARGE',
+      response.status,
+    );
   }
   if (!response.ok) {
     throw new OrbitAIError(
@@ -244,11 +260,7 @@ async function responseText(response: Response): Promise<string> {
       response.status,
     );
   }
-  try {
-    return raw;
-  } catch {
-    throw new OrbitAIError('AI provider returned an invalid response.', 'INVALID_RESPONSE', response.status);
-  }
+  return raw;
 }
 
 function extractText(provider: AIProvider, payload: unknown): string {
@@ -280,7 +292,10 @@ function extractText(provider: AIProvider, payload: unknown): string {
   }
   if (provider === 'anthropic') {
     if (!Array.isArray(data.content)) {
-      throw new OrbitAIError('Anthropic Messages payload did not contain content blocks.', 'INVALID_RESPONSE');
+      throw new OrbitAIError(
+        'Anthropic Messages payload did not contain content blocks.',
+        'INVALID_RESPONSE',
+      );
     }
     const text = data.content
       .flatMap((block) =>
@@ -293,7 +308,11 @@ function extractText(provider: AIProvider, payload: unknown): string {
     throw new OrbitAIError('Anthropic response contained no text block.', 'INVALID_RESPONSE');
   }
   const message = data.message;
-  if (message && typeof message === 'object' && typeof (message as Record<string, unknown>).content === 'string') {
+  if (
+    message &&
+    typeof message === 'object' &&
+    typeof (message as Record<string, unknown>).content === 'string'
+  ) {
     return (message as Record<string, unknown>).content as string;
   }
   throw new OrbitAIError('Ollama response did not contain message.content.', 'INVALID_RESPONSE');
@@ -306,10 +325,19 @@ export async function runOrbitAnalysis(
 ): Promise<AIAnalysisResult> {
   if (!options.enabled) throw new OrbitAIError('ORBIT AI is disabled.', 'AI_DISABLED');
   if (!options.userApproved) {
-    throw new OrbitAIError('Explicit user approval is required before sending context.', 'APPROVAL_REQUIRED');
+    throw new OrbitAIError(
+      'Explicit user approval is required before sending context.',
+      'APPROVAL_REQUIRED',
+    );
   }
-  if (options.approvedContextSha256 !== context.sha256 || previewDigest(context) !== context.sha256) {
-    throw new OrbitAIError('The approved context no longer matches the displayed preview.', 'CONTEXT_MISMATCH');
+  if (
+    options.approvedContextSha256 !== context.sha256 ||
+    previewDigest(context) !== context.sha256
+  ) {
+    throw new OrbitAIError(
+      'The approved context no longer matches the displayed preview.',
+      'CONTEXT_MISMATCH',
+    );
   }
   if (options.provider !== context.provider || options.model !== context.model) {
     throw new OrbitAIError('Provider or model changed after preview approval.', 'CONTEXT_MISMATCH');
@@ -321,7 +349,10 @@ export async function runOrbitAnalysis(
     );
   }
   if (destination(options.provider, options.baseUrl) !== context.destination) {
-    throw new OrbitAIError('Provider destination changed after preview approval.', 'CONTEXT_MISMATCH');
+    throw new OrbitAIError(
+      'Provider destination changed after preview approval.',
+      'CONTEXT_MISMATCH',
+    );
   }
   if (options.provider !== 'ollama' && (!options.apiKey || options.apiKey.length > 4096)) {
     throw new OrbitAIError('A provider API key is required.', 'INVALID_INPUT');
@@ -329,6 +360,7 @@ export async function runOrbitAnalysis(
   if (options.apiKey && options.apiKey.length > 4096) {
     throw new OrbitAIError('Provider API key exceeds the maximum length.', 'INVALID_INPUT');
   }
+
   const fetchImpl = options.fetchImpl ?? fetch;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 120_000) {
@@ -345,7 +377,8 @@ export async function runOrbitAnalysis(
     body = {
       model: options.model,
       max_output_tokens: 2048,
-      instructions: 'Analyse only the supplied context. Do not use tools. Cite evidence IDs. State uncertainty and missing evidence.',
+      instructions:
+        'Analyse only the supplied context. Do not use tools. Cite evidence IDs. State uncertainty and missing evidence.',
       input: context.text,
       store: false,
     };
@@ -355,7 +388,8 @@ export async function runOrbitAnalysis(
     body = {
       model: options.model,
       max_tokens: 2048,
-      system: 'Analyse only the supplied context. Do not use tools. Cite evidence IDs. State uncertainty and missing evidence.',
+      system:
+        'Analyse only the supplied context. Do not use tools. Cite evidence IDs. State uncertainty and missing evidence.',
       messages: [{ role: 'user', content: context.text }],
     };
   } else {
@@ -371,7 +405,8 @@ export async function runOrbitAnalysis(
       messages: [
         {
           role: 'system',
-          content: 'Analyse only the supplied context. Do not use tools. Cite evidence IDs. State uncertainty and missing evidence.',
+          content:
+            'Analyse only the supplied context. Do not use tools. Cite evidence IDs. State uncertainty and missing evidence.',
         },
         { role: 'user', content: context.text },
       ],
@@ -390,17 +425,26 @@ export async function runOrbitAnalysis(
     try {
       payload = JSON.parse(raw);
     } catch {
-      throw new OrbitAIError('AI provider returned malformed JSON.', 'INVALID_RESPONSE', response.status);
+      throw new OrbitAIError(
+        'AI provider returned malformed JSON.',
+        'INVALID_RESPONSE',
+        response.status,
+      );
     }
     const text = extractText(options.provider, payload);
     const maxOutput = options.maxOutputChars ?? DEFAULT_MAX_OUTPUT_CHARS;
     if (!Number.isInteger(maxOutput) || maxOutput < 1 || maxOutput > 100_000) {
-      throw new OrbitAIError('Maximum output length must be from 1 to 100000 characters.', 'INVALID_INPUT');
+      throw new OrbitAIError(
+        'Maximum output length must be from 1 to 100000 characters.',
+        'INVALID_INPUT',
+      );
     }
     if (text.length > maxOutput) {
       throw new OrbitAIError('AI output exceeds the configured character limit.', 'RESPONSE_TOO_LARGE');
     }
-    const cited = context.evidenceIds.length > 0 && context.evidenceIds.some((id) => text.includes('[' + id + ']'));
+    const cited =
+      context.evidenceIds.length > 0 &&
+      context.evidenceIds.some((id) => text.includes('[' + id + ']'));
     return {
       provider: options.provider,
       model: options.model,
@@ -410,7 +454,11 @@ export async function runOrbitAnalysis(
       citationStatus: cited ? 'CITED' : 'MISSING_CITATIONS',
       limitations: [
         ...context.limitations,
-        ...(cited ? [] : ['The response did not cite any selected evidence ID; treat repository-specific claims as unverified.']),
+        ...(cited
+          ? []
+          : [
+              'The response did not cite any selected evidence ID; treat repository-specific claims as unverified.',
+            ]),
       ],
     };
   } catch (error) {
@@ -418,7 +466,10 @@ export async function runOrbitAnalysis(
     if (controller.signal.aborted) {
       throw new OrbitAIError('AI provider request timed out or was cancelled.', 'PROVIDER_ERROR');
     }
-    throw new OrbitAIError('AI provider request failed before a valid response was received.', 'PROVIDER_ERROR');
+    throw new OrbitAIError(
+      'AI provider request failed before a valid response was received.',
+      'PROVIDER_ERROR',
+    );
   } finally {
     clearTimeout(timeout);
   }
