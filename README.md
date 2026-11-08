@@ -8,19 +8,20 @@ Its central artifact is the **Change Passport**: a content-hashed record of a ch
 
 ## Current status
 
-The public `main` branch contains the monorepo foundation, immutable evidence graph and ATLAS repository scanner. A cross-engine prototype is being developed on `feat/orbit-evidence-engines`. This is an early engineering build, not yet a complete release.
+The public `main` branch contains the monorepo foundation, immutable evidence graph and ATLAS repository scanner. Prompt 5 (ATLAS memory and read-only MCP) plus the WITNESS, FLARE and CAPSULE Prompt 6–8 extensions are pushed on `feat/prompts-6-8-completion` and consolidated in draft PR #5. Its full CI matrix has passed on Ubuntu, macOS and Windows; the branch is not yet merged or release-complete.
 
 | Capability | Current implementation |
 | --- | --- |
 | Monorepo, TypeScript, lint, tests and CI foundation | Implemented on `main` |
 | ORBIT Core graph, versioned records and hash-chained ledger | Implemented on `main` |
 | ATLAS repository scanner and architecture reports | Implemented on `main` |
-| WITNESS changed-line coverage, baseline comparison, filename findings, Markdown/SARIF | Extended prototype on `feat/prompts-6-8-completion`; CI pending |
+| ATLAS persistent decision memory and read-only stdio MCP | Implemented on the Prompt 5–8 feature branch; CI passed; PR #5 draft, not merged |
+| WITNESS changed-line coverage, baseline comparison, filename findings, Markdown/SARIF | Extended prototype on `feat/prompts-6-8-completion`; CI passed, PR #5 draft |
 | FLARE JUnit, pytest, Jest and Go JSON reports; failure clusters and duration summaries | Extended prototype on `feat/prompts-6-8-completion`; no durable history store yet |
 | CAPSULE polyglot toolchain, dependency, container and workspace manifest inspection | Extended prototype on `feat/prompts-6-8-completion`; no build replay yet |
 | FLIGHT RECORDER recorded telemetry parser/replay | Prototype; no physical serial connection yet |
 | Change Passport assembly | Prototype; no graph correlation or Replay Room UI yet |
-| MCP, specialist AI agents, GitHub Action, full dashboard | Not implemented |
+| Specialist AI agents, GitHub Action and full dashboard | Not implemented (MCP stdio server is on the feature branch) |
 
 See [ORBIT_BUILD_STATE.md](ORBIT_BUILD_STATE.md) for phase-by-phase implementation details, branch status, known limitations and verified test results.
 
