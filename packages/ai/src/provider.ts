@@ -260,7 +260,7 @@ function extractText(provider: AIProvider, payload: unknown): string {
               : [],
           );
         })
-        .join('\\n');
+        .join('\n');
       if (text) return text;
     }
     throw new OrbitAIError('OpenAI Responses payload did not contain text output.', 'INVALID_RESPONSE');
