@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -79,7 +79,7 @@ test('reports NOT_MEASURED when no coverage file is supplied', (t) => {
   const output = readFileSync(f.output, 'utf8');
   assert.match(output, /verification-status=NOT_MEASURED/);
   assert.match(readFileSync(f.summary, 'utf8'), /NOT_MEASURED/);
-  assert.match(readFileSync(join(f.workspace, '.orbit-action-report.md'), 'utf8'), /filename-only/);
+  assert.match(readFileSync(join(f.workspace, '.orbit-action-report.md'), 'utf8'), /path-name check only/);
 });
 
 test('writes Markdown, SARIF and measured status when coverage is supplied', (t) => {
