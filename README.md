@@ -125,7 +125,8 @@ node apps/cli/dist/index.js capsule inspect-extended .
 - Telemetry replay parses recorded files and does not connect to hardware or send device commands.
 - A measured coverage hit does not prove correctness.
 - A flaky-test estimate is not reliable without sufficient repeated observations.
-- A Change Passport is an evidence record, not a security certification or correctness guarantee.
+- A Change Passport uses evidence scoped to the exact commit and reports missing/partial dimensions; it is not a security certification or correctness guarantee.
+- Synthetic ESP32/STM32 logs are labelled DEMO; physical USB/serial capture is unavailable.
 - No telemetry is sent externally by default.
 
 See [the threat model](docs/THREAT_MODEL.md), [technical design](docs/architecture/TECHNICAL_DESIGN.md), [data model](docs/DATA_MODEL.md) and [build state](ORBIT_BUILD_STATE.md).
