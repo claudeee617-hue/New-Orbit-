@@ -198,4 +198,4 @@ The current Prompt 12 implementation and its limitations are tracked in [docs/PR
 
 ## Optional AI analysis
 
-ORBIT includes an experimental opt-in AI adapter and local preview/approval workflow on a draft branch. AI is disabled by default; provider keys remain in the local API process environment. See [docs/AI_PROVIDER_POLICY.md](docs/AI_PROVIDER_POLICY.md).
+ORBIT includes an experimental opt-in AI adapter and local preview/approval workflow on a draft branch. AI is disabled by default; provider keys remain in the local API process environment. See [docs/AI_PROVIDER_POLICY.md](docs/AI_PROVIDER_POLICY.md) and [docs/PROMPT_14_AI.md](docs/PROMPT_14_AI.md).
