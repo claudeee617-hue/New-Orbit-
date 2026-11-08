@@ -73,8 +73,8 @@ const DEFAULT_MAX_OUTPUT_CHARS = 20_000;
 
 const SECRET_PATTERNS: RegExp[] = [
   /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----[\s\S]*?-----END (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/g,
-  /\b(?:sk-[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16})\b/g,
   /\b(?:api[_-]?key|access[_-]?token|password|client[_-]?secret)\s*[:=]\s*[^\s,;]+/gi,
+  /\b(?:sk-[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16})\b/g,
   /\bBearer\s+[A-Za-z0-9._~+/-]{20,}/gi,
 ];
 
@@ -92,6 +92,19 @@ function redact(value: string): { text: string; count: number } {
 
 function digest(value: string): string {
   return createHash('sha256').update(value, 'utf8').digest('hex');
+}
+
+function previewDigest(
+  context: Pick<PreparedContext, 'provider' | 'model' | 'destination' | 'text'>,
+): string {
+  return digest(
+    JSON.stringify({
+      provider: context.provider,
+      model: context.model,
+      destination: context.destination,
+      text: context.text,
+    }),
+  );
 }
 
 function destination(provider: AIProvider, baseUrl?: string): string {
@@ -206,7 +219,7 @@ export function prepareAIContext(input: {
     model: input.model,
     destination: target,
     text,
-    sha256: digest(text),
+    sha256: previewDigest({ provider: input.provider, model: input.model, destination: target, text }),
     bytes,
     evidenceIds: [...ids],
     redactions,
@@ -295,7 +308,7 @@ export async function runOrbitAnalysis(
   if (!options.userApproved) {
     throw new OrbitAIError('Explicit user approval is required before sending context.', 'APPROVAL_REQUIRED');
   }
-  if (options.approvedContextSha256 !== context.sha256 || digest(context.text) !== context.sha256) {
+  if (options.approvedContextSha256 !== context.sha256 || previewDigest(context) !== context.sha256) {
     throw new OrbitAIError('The approved context no longer matches the displayed preview.', 'CONTEXT_MISMATCH');
   }
   if (options.provider !== context.provider || options.model !== context.model) {
@@ -312,6 +325,9 @@ export async function runOrbitAnalysis(
   }
   if (options.provider !== 'ollama' && (!options.apiKey || options.apiKey.length > 4096)) {
     throw new OrbitAIError('A provider API key is required.', 'INVALID_INPUT');
+  }
+  if (options.apiKey && options.apiKey.length > 4096) {
+    throw new OrbitAIError('Provider API key exceeds the maximum length.', 'INVALID_INPUT');
   }
   const fetchImpl = options.fetchImpl ?? fetch;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
