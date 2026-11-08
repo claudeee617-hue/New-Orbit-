@@ -236,12 +236,12 @@ export function BusinessIntelligence() {
           <MetricCard
             label="Actual profit"
             value={money(metrics.actual.profit)}
-            detail={\`Margin ${formatBusinessPercent(metrics.actual.marginPercent)}\`}
+            detail={`Margin ${formatBusinessPercent(metrics.actual.marginPercent)}`}
           />
           <MetricCard
             label="Forecast profit"
             value={money(metrics.forecast.profit)}
-            detail={\`Margin ${formatBusinessPercent(metrics.forecast.marginPercent)}\`}
+            detail={`Margin ${formatBusinessPercent(metrics.forecast.marginPercent)}`}
           />
           <MetricCard
             label="Revenue change"
@@ -275,12 +275,12 @@ export function BusinessIntelligence() {
               </div>
               <div
                 role="img"
-                aria-label={\`Actual revenue is ${actualBar.toFixed(1)} percent of the comparison maximum\`}
+                aria-label={`Actual revenue is ${actualBar.toFixed(1)} percent of the comparison maximum`}
                 className="h-2 overflow-hidden rounded-full bg-void"
               >
                 <div
                   className="h-full rounded-full bg-cyan"
-                  style={{ width: \`${actualBar}%\` }}
+                  style={{ width: `${actualBar}%` }}
                 />
               </div>
             </div>
@@ -291,12 +291,12 @@ export function BusinessIntelligence() {
               </div>
               <div
                 role="img"
-                aria-label={\`Forecast revenue is ${forecastBar.toFixed(1)} percent of the comparison maximum\`}
+                aria-label={`Forecast revenue is ${forecastBar.toFixed(1)} percent of the comparison maximum`}
                 className="h-2 overflow-hidden rounded-full bg-void"
               >
                 <div
                   className="h-full rounded-full bg-violet"
-                  style={{ width: \`${forecastBar}%\` }}
+                  style={{ width: `${forecastBar}%` }}
                 />
               </div>
             </div>
