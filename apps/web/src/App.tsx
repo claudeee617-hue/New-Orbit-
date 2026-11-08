@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ORBIT_TAGLINE } from '@orbit/shared/health';
 import { BusinessModule } from './BusinessModule.js';
+import { CommandCenter } from './CommandCenter.js';
 import { loadHealth, type HealthState } from './health.js';
 
 const ENGINES = [
@@ -133,32 +134,7 @@ export function App() {
             </button>
           </section>
 
-          <section
-            aria-labelledby="engines-heading"
-            className="rounded-lg border border-edge bg-panel p-5"
-          >
-            <h2
-              id="engines-heading"
-              className="mb-1 text-sm font-medium uppercase tracking-wider text-mute"
-            >
-              Engines
-            </h2>
-            <p className="mb-4 text-sm text-mute">
-              This main-branch foundation view lists the engine roadmap. Feature-branch prototypes
-              are not represented as merged or released capabilities.
-            </p>
-            <ul className="divide-y divide-edge">
-              {ENGINES.map((engine) => (
-                <li key={engine.name} className="flex items-baseline justify-between gap-4 py-2">
-                  <div>
-                    <span className="font-mono text-sm text-ink">{engine.name}</span>
-                    <span className="ml-3 text-sm text-mute">{engine.purpose}</span>
-                  </div>
-                  <span className="shrink-0 font-mono text-xs text-violet">ROADMAP</span>
-                </li>
-              ))}
-            </ul>
-          </section>
+          <CommandCenter />
         </main>
       )}
     </div>
