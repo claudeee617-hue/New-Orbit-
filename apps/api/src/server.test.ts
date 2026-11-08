@@ -17,7 +17,7 @@ function setup(): {
   const database = openDatabase({ path: IN_MEMORY });
   databases.push(database);
   const store = createGraphStore(database);
-  const repository = store.repositories.register({ key: 'local/example', displayName: 'Example' }).record;
+  const repository = store.repositories.register({ key: 'example', displayName: 'Example' }).record;
   const sink = new Writable({ write: (_chunk, _enc, cb) => cb() });
   const logger = createLogger({ name: 'test', level: 'silent', destination: sink });
   const server = buildServer({ database, logger, apiToken: API_TOKEN });
@@ -99,7 +99,7 @@ describe('authenticated local API', () => {
     });
     expect(response.statusCode).toBe(200);
     expect(response.json()).toMatchObject({
-      repositories: [{ key: 'local/example', displayName: 'Example' }],
+      repositories: [{ key: 'example', displayName: 'Example' }],
     });
     const session = await server.inject({
       method: 'GET',
@@ -108,7 +108,7 @@ describe('authenticated local API', () => {
     });
     expect(session.statusCode).toBe(200);
     expect(session.body).not.toContain(API_TOKEN);
-    expect(session.json()).toMatchObject({ authenticated: true, tokenSource: 'in-memory-test' });
+    expect(session.json()).toMatchObject({ authenticated: true, tokenSource: 'environment' });
   });
 
   it('stores CI evidence and returns the same evidence through the repository endpoint', async () => {
@@ -116,7 +116,7 @@ describe('authenticated local API', () => {
     const commitSha = 'a'.repeat(40);
     const ingested = await server.inject({
       method: 'POST',
-      url: '/api/v1/repositories/local%2Fexample/ingest/ci',
+      url: '/api/v1/repositories/example/ingest/ci',
       headers: { host: 'localhost', ...auth },
       payload: {
         status: 'failure',
@@ -133,7 +133,7 @@ describe('authenticated local API', () => {
 
     const evidence = await server.inject({
       method: 'GET',
-      url: `/api/v1/repositories/local%2Fexample/evidence?commitSha=${commitSha}`,
+      url: `/api/v1/repositories/example/evidence?commitSha=${commitSha}`,
       headers: { host: 'localhost', ...auth },
     });
     expect(evidence.statusCode).toBe(200);
@@ -148,7 +148,7 @@ describe('authenticated local API', () => {
     const report = '<testsuite name="unit"><testcase classname="api" name="ok"/><testcase classname="api" name="bad"><failure message="boom"/></testcase></testsuite>';
     const response = await server.inject({
       method: 'POST',
-      url: '/api/v1/repositories/local%2Fexample/ingest/test-report',
+      url: '/api/v1/repositories/example/ingest/test-report',
       headers: { host: 'localhost', ...auth },
       payload: { format: 'junit', content: report, source: 'ci:junit' },
     });
@@ -165,7 +165,7 @@ describe('authenticated local API', () => {
     const { server } = setup();
     const response = await server.inject({
       method: 'POST',
-      url: '/api/v1/repositories/local%2Fexample/ingest/environment',
+      url: '/api/v1/repositories/example/ingest/environment',
       headers: { host: 'localhost', ...auth },
       payload: { snapshot: { runtimes: { node: '>=22' }, packageManager: 'pnpm' } },
     });
@@ -176,11 +176,40 @@ describe('authenticated local API', () => {
     });
   });
 
+  it('rejects arbitrary environment fields that could carry secrets', async () => {
+    const { server } = setup();
+    const response = await server.inject({
+      method: 'POST',
+      url: '/api/v1/repositories/example/ingest/environment',
+      headers: { host: 'localhost', ...auth },
+      payload: { snapshot: { runtimes: { node: '>=22' }, apiToken: 'must-not-be-stored' } },
+    });
+    expect(response.statusCode).toBe(400);
+    expect(response.body).not.toContain('must-not-be-stored');
+  });
+
+  it('stores only explicitly allowed CI summary fields', async () => {
+    const { server, repositoryId } = setup();
+    const response = await server.inject({
+      method: 'POST',
+      url: '/api/v1/repositories/example/ingest/ci',
+      headers: { host: 'localhost', ...auth },
+      payload: {
+        status: 'success',
+        summary: { passed: 10, failed: 0, apiToken: 'must-not-be-stored' },
+      },
+    });
+    expect(response.statusCode).toBe(400);
+    const store = createGraphStore(databases[databases.length - 1]!);
+    const ciNodes = store.nodes.find(repositoryId, { type: 'CIWorkflow', limit: 10 });
+    expect(ciNodes).toHaveLength(0);
+  });
+
   it('parses recorded telemetry and marks its evidence as observational', async () => {
     const { server } = setup();
     const response = await server.inject({
       method: 'POST',
-      url: '/api/v1/repositories/local%2Fexample/ingest/telemetry',
+      url: '/api/v1/repositories/example/ingest/telemetry',
       headers: { host: 'localhost', ...auth },
       payload: {
         format: 'ndjson',
@@ -200,13 +229,13 @@ describe('authenticated local API', () => {
     const { server } = setup();
     const badCi = await server.inject({
       method: 'POST',
-      url: '/api/v1/repositories/local%2Fexample/ingest/ci',
+      url: '/api/v1/repositories/example/ingest/ci',
       headers: { host: 'localhost', ...auth },
       payload: { status: { nested: 'invalid' } },
     });
     const badGraph = await server.inject({
       method: 'GET',
-      url: '/api/v1/repositories/local%2Fexample/graph?limit=1000000',
+      url: '/api/v1/repositories/example/graph?limit=1000000',
       headers: { host: 'localhost', ...auth },
     });
     expect(badCi.statusCode).toBe(400);
