@@ -52,7 +52,7 @@ The example assumes a trusted ORBIT release has been merged to `main`. For a Cob
 | `fail-on-uncovered` | `false` | Fail only when supplied coverage produces PARTIAL changed-line status |
 | `comment` | `true` | Upsert one marked PR comment |
 | `upload-sarif` | `false` | Upload SARIF (requires `security-events: write`) |
-| `github-token` | empty | Optional token for PR comment |\n| `runtime-ref` | PR base SHA | Trusted base commit used to build ORBIT; do not point it at an untrusted PR head |
+| `github-token` | empty | Optional token for PR comment 
 | `runtime-ref` | PR base SHA | Trusted base commit from which ORBIT is installed and built |
 
 ## Outputs
