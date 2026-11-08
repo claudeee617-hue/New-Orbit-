@@ -22,6 +22,7 @@ export interface TestHistorySummary {
 }
 
 const MAX_XML_BYTES = 10 * 1024 * 1024;
+const MAX_TEST_CASES = 100_000;
 
 function attributes(source: string): Record<string, string> {
   const result: Record<string, string> = {};
@@ -127,6 +128,9 @@ export function parseJunitXml(xml: string): TestCaseResult[] {
       const message = failure
         ? (messageAttrs.message ?? failure[3] ?? '').replace(/<[^>]*>/g, '').slice(0, 2000)
         : undefined;
+      if (results.length >= MAX_TEST_CASES) {
+        throw new Error('JUnit XML exceeds the 100000 test-case limit');
+      }
       results.push({
         id: `${className}::${name}`,
         name,
