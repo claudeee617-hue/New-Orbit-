@@ -244,6 +244,7 @@ export function recordChangePassport(
     'ChangePassport',
     `passport:${suppliedPassport.commitSha}:${suppliedPassport.diffSha256}`,
   );
+  return store.transaction(() => {
   const passportEvidence = store.evidence.append({
     repositoryId: input.repositoryId,
     source: `change-passport:${suppliedPassport.id}`,
@@ -314,7 +315,6 @@ export function recordChangePassport(
     validFromCommit: suppliedPassport.commitSha,
   });
 
-  store.transaction(() => {
     for (const path of impact.changedFiles) {
       const fileId = nodeIdFor(input.repositoryId, 'File', path);
       if (store.nodes.get(input.repositoryId, fileId)) {
@@ -356,16 +356,16 @@ export function recordChangePassport(
         });
       }
     }
-  });
 
-  return {
-    passport: { ...suppliedPassport, completeness: dimensions, impact } as ChangePassport,
-    nodeId: saved.record.id,
-    evidenceId: passportEvidence.record.id,
-    version: saved.record.version,
-    impact,
-    dimensions,
-  };
+    return {
+      passport: { ...suppliedPassport, completeness: dimensions, impact } as ChangePassport,
+      nodeId: saved.record.id,
+      evidenceId: passportEvidence.record.id,
+      version: saved.record.version,
+      impact,
+      dimensions,
+    };
+  });
 }
 
 export interface PassportVersionSummary {
