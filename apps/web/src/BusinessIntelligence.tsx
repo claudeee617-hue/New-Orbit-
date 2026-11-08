@@ -48,7 +48,15 @@ function toNumber(value: string): number {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
 }
 
-function MetricCard({ label, value, detail }: { label: string; value: string; detail: string }) {
+function MetricCard({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+}) {
   return (
     <article className="rounded-lg border border-edge bg-void p-4">
       <p className="text-xs uppercase tracking-wider text-mute">{label}</p>
@@ -78,20 +86,20 @@ function NumberField({
     }
   };
 
+  const isCount = field.key.toLowerCase().includes('customer') || field.key === 'targetSeats';
+
   return (
     <label className="block">
       <span className="flex items-center justify-between gap-2 text-sm font-medium text-ink">
         {field.label}
         <span className="text-[10px] font-normal uppercase tracking-wider text-mute">
-          {field.key.toLowerCase().includes('customer') || field.key === 'targetSeats'
-            ? 'Count'
-            : currency}
+          {isCount ? 'Count' : currency}
         </span>
       </span>
       <input
         type="number"
         min="0"
-        step={field.key.toLowerCase().includes('customer') || field.key === 'targetSeats' ? '1' : '0.01'}
+        step={isCount ? '1' : '0.01'}
         inputMode="decimal"
         value={value}
         onChange={handleChange}
@@ -104,7 +112,15 @@ function NumberField({
   );
 }
 
-function SectionTitle({ eyebrow, title, description }: { eyebrow: string; title: string; description: string }) {
+function SectionTitle({
+  eyebrow,
+  title,
+  description,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+}) {
   return (
     <div className="mb-5">
       <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-cyan">{eyebrow}</p>
@@ -132,8 +148,10 @@ export function BusinessIntelligence() {
   const money = (value: number) => formatBusinessCurrency(value, currency);
 
   const comparisonMaximum = Math.max(metrics.actual.revenue, metrics.forecast.revenue);
-  const actualBar = comparisonMaximum > 0 ? (metrics.actual.revenue / comparisonMaximum) * 100 : 0;
-  const forecastBar = comparisonMaximum > 0 ? (metrics.forecast.revenue / comparisonMaximum) * 100 : 0;
+  const actualBar =
+    comparisonMaximum > 0 ? (metrics.actual.revenue / comparisonMaximum) * 100 : 0;
+  const forecastBar =
+    comparisonMaximum > 0 ? (metrics.forecast.revenue / comparisonMaximum) * 100 : 0;
 
   return (
     <div className="space-y-8">
@@ -143,7 +161,9 @@ export function BusinessIntelligence() {
             <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-cyan">
               Prompt 4 · Business intelligence
             </p>
-            <h3 className="mt-2 text-xl font-semibold text-ink">Turn business assumptions into measurable decisions.</h3>
+            <h3 className="mt-2 text-xl font-semibold text-ink">
+              Turn business assumptions into measurable decisions.
+            </h3>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-mute">
               Enter your own period figures to compare actual performance with a forecast, then test
               unit economics. Values stay in this page's local React state and are not sent to an API
@@ -178,47 +198,113 @@ export function BusinessIntelligence() {
         />
         <div className="grid gap-4 xl:grid-cols-2">
           <div className="rounded-xl border border-edge bg-panel p-5">
-            <h4 className="font-mono text-xs uppercase tracking-wider text-ink">Actual performance</h4>
+            <h4 className="font-mono text-xs uppercase tracking-wider text-ink">
+              Actual performance
+            </h4>
             <p className="mt-1 text-xs text-mute">Figures you have actually recorded</p>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               {ACTUAL_FIELDS.map((field) => (
-                <NumberField key={field.key} field={field} value={values[field.key]} currency={currency} onChange={update} />
+                <NumberField
+                  key={field.key}
+                  field={field}
+                  value={values[field.key]}
+                  currency={currency}
+                  onChange={update}
+                />
               ))}
             </div>
           </div>
           <div className="rounded-xl border border-edge bg-panel p-5">
-            <h4 className="font-mono text-xs uppercase tracking-wider text-ink">Forecast performance</h4>
+            <h4 className="font-mono text-xs uppercase tracking-wider text-ink">
+              Forecast performance
+            </h4>
             <p className="mt-1 text-xs text-mute">Your planned or scenario values</p>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               {FORECAST_FIELDS.map((field) => (
-                <NumberField key={field.key} field={field} value={values[field.key]} currency={currency} onChange={update} />
+                <NumberField
+                  key={field.key}
+                  field={field}
+                  value={values[field.key]}
+                  currency={currency}
+                  onChange={update}
+                />
               ))}
             </div>
           </div>
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <MetricCard label="Actual profit" value={money(metrics.actual.profit)} detail={`Margin ${formatBusinessPercent(metrics.actual.marginPercent)}`} />
-          <MetricCard label="Forecast profit" value={money(metrics.forecast.profit)} detail={`Margin ${formatBusinessPercent(metrics.forecast.marginPercent)}`} />
-          <MetricCard label="Revenue change" value={formatBusinessPercent(metrics.revenueChangePercent)} detail="Forecast compared with actual" />
-          <MetricCard label="Actual revenue / customer" value={metrics.actual.revenuePerCustomer === null ? '—' : money(metrics.actual.revenuePerCustomer)} detail="Unavailable until customer count is entered" />
+          <MetricCard
+            label="Actual profit"
+            value={money(metrics.actual.profit)}
+            detail={\`Margin ${formatBusinessPercent(metrics.actual.marginPercent)}\`}
+          />
+          <MetricCard
+            label="Forecast profit"
+            value={money(metrics.forecast.profit)}
+            detail={\`Margin ${formatBusinessPercent(metrics.forecast.marginPercent)}\`}
+          />
+          <MetricCard
+            label="Revenue change"
+            value={formatBusinessPercent(metrics.revenueChangePercent)}
+            detail="Forecast compared with actual"
+          />
+          <MetricCard
+            label="Actual revenue / customer"
+            value={
+              metrics.actual.revenuePerCustomer === null
+                ? '—'
+                : money(metrics.actual.revenuePerCustomer)
+            }
+            detail="Unavailable until customer count is entered"
+          />
         </div>
         <div className="mt-4 rounded-xl border border-edge bg-panel p-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h4 className="font-mono text-xs uppercase tracking-wider text-ink">Revenue comparison</h4>
-            <span className="text-[10px] uppercase tracking-wider text-mute">Relative scale · user input</span>
+            <h4 className="font-mono text-xs uppercase tracking-wider text-ink">
+              Revenue comparison
+            </h4>
+            <span className="text-[10px] uppercase tracking-wider text-mute">
+              Relative scale · user input
+            </span>
           </div>
           <div className="mt-5 space-y-4">
             <div>
-              <div className="mb-2 flex justify-between gap-3 text-xs"><span className="text-mute">Actual</span><span className="font-mono text-ink">{money(metrics.actual.revenue)}</span></div>
-              <div className="h-2 overflow-hidden rounded-full bg-void"><div className="h-full rounded-full bg-cyan" style={{ width: `${actualBar}%` }} /></div>
+              <div className="mb-2 flex justify-between gap-3 text-xs">
+                <span className="text-mute">Actual</span>
+                <span className="font-mono text-ink">{money(metrics.actual.revenue)}</span>
+              </div>
+              <div
+                role="img"
+                aria-label={\`Actual revenue is ${actualBar.toFixed(1)} percent of the comparison maximum\`}
+                className="h-2 overflow-hidden rounded-full bg-void"
+              >
+                <div
+                  className="h-full rounded-full bg-cyan"
+                  style={{ width: \`${actualBar}%\` }}
+                />
+              </div>
             </div>
             <div>
-              <div className="mb-2 flex justify-between gap-3 text-xs"><span className="text-mute">Forecast</span><span className="font-mono text-ink">{money(metrics.forecast.revenue)}</span></div>
-              <div className="h-2 overflow-hidden rounded-full bg-void"><div className="h-full rounded-full bg-violet" style={{ width: `${forecastBar}%` }} /></div>
+              <div className="mb-2 flex justify-between gap-3 text-xs">
+                <span className="text-mute">Forecast</span>
+                <span className="font-mono text-ink">{money(metrics.forecast.revenue)}</span>
+              </div>
+              <div
+                role="img"
+                aria-label={\`Forecast revenue is ${forecastBar.toFixed(1)} percent of the comparison maximum\`}
+                className="h-2 overflow-hidden rounded-full bg-void"
+              >
+                <div
+                  className="h-full rounded-full bg-violet"
+                  style={{ width: \`${forecastBar}%\` }}
+                />
+              </div>
             </div>
           </div>
           {metrics.actual.revenue === 0 && metrics.forecast.revenue === 0 ? (
-            <p className="mt-4 text-xs text-mute">Add actual or forecast revenue to populate this comparison.</p>
+            <p className="mt-4 text-xs text-mute">
+              Add actual or forecast revenue to populate this comparison.
+            </p>
           ) : null}
         </div>
       </section>
@@ -233,7 +319,13 @@ export function BusinessIntelligence() {
           <div className="rounded-xl border border-edge bg-panel p-5">
             <div className="grid gap-4 sm:grid-cols-2">
               {PRICING_FIELDS.map((field) => (
-                <NumberField key={field.key} field={field} value={values[field.key]} currency={currency} onChange={update} />
+                <NumberField
+                  key={field.key}
+                  field={field}
+                  value={values[field.key]}
+                  currency={currency}
+                  onChange={update}
+                />
               ))}
             </div>
             <button
@@ -255,9 +347,17 @@ export function BusinessIntelligence() {
                 ['Monthly profit / loss', money(metrics.pricing.monthlyProfit)],
                 ['Profit margin', formatBusinessPercent(metrics.pricing.marginPercent)],
                 ['Contribution / seat', money(metrics.pricing.contributionPerSeat)],
-                ['Break-even seats', metrics.pricing.breakEvenSeats === null ? 'Not achievable at this contribution' : String(metrics.pricing.breakEvenSeats)],
+                [
+                  'Break-even seats',
+                  metrics.pricing.breakEvenSeats === null
+                    ? 'Not achievable at this contribution'
+                    : String(metrics.pricing.breakEvenSeats),
+                ],
               ].map(([label, value]) => (
-                <div key={label} className="flex items-start justify-between gap-4 border-b border-edge pb-2 text-sm last:border-0">
+                <div
+                  key={label}
+                  className="flex items-start justify-between gap-4 border-b border-edge pb-2 text-sm last:border-0"
+                >
                   <span className="text-mute">{label}</span>
                   <span className="text-right font-mono text-ink">{value}</span>
                 </div>
@@ -274,14 +374,26 @@ export function BusinessIntelligence() {
           description="ORBIT currently has no customer database, CRM or billing feed. We will not display made-up segments, retention curves, acquisition costs or conversion rates as if they were observed."
         />
         <div className="grid gap-3 sm:grid-cols-3">
-          <MetricCard label="Paying customers · actual" value={String(metrics.actual.customers)} detail="Count entered above; not independently verified" />
-          <MetricCard label="Paying customers · forecast" value={String(metrics.forecast.customers)} detail="Planning assumption entered above" />
-          <MetricCard label="Customer records" value="Not connected" detail="Connect a privacy-reviewed source in a future phase" />
+          <MetricCard
+            label="Paying customers · actual"
+            value={String(metrics.actual.customers)}
+            detail="Count entered above; not independently verified"
+          />
+          <MetricCard
+            label="Paying customers · forecast"
+            value={String(metrics.forecast.customers)}
+            detail="Planning assumption entered above"
+          />
+          <MetricCard
+            label="Customer records"
+            value="Not connected"
+            detail="Connect a privacy-reviewed source in a future phase"
+          />
         </div>
         <p className="mt-4 rounded-md border border-edge bg-void p-3 text-xs leading-5 text-mute">
-          Next data needed for cohort, churn, acquisition and segment analysis: consented customer IDs,
-          plan history, invoice periods, acquisition source and a documented retention policy. Do not
-          paste personal or payment-card data into this local calculator.
+          Next data needed for cohort, churn, acquisition and segment analysis: consented customer
+          IDs, plan history, invoice periods, acquisition source and a documented retention policy.
+          Do not paste personal or payment-card data into this local calculator.
         </p>
       </section>
     </div>
