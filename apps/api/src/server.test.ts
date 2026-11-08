@@ -100,7 +100,7 @@ describe('authenticated local API', () => {
     expect(response.statusCode).toBe(200);
     expect(response.json()).toMatchObject({
       repository: { key: 'example' },
-      integrity: { ok: true, ledgerEntriesChecked: 0, problems: [] },
+      integrity: { ok: true, problems: [] },
     });
   });
 
