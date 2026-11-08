@@ -34,6 +34,7 @@ export function getOrCreateApiToken(
   const filePath = join(directory, 'api.token');
   try {
     mkdirSync(directory, { recursive: true, mode: 0o700 });
+    if (process.platform !== 'win32') chmodSync(directory, 0o700);
     const token = readTokenFile(filePath);
     return { token, filePath, source: 'file' };
   } catch (error) {
