@@ -47,9 +47,39 @@ export async function storeTelemetrySession(
   store: GraphStore,
   input: StoreTelemetrySessionInput,
 ): Promise<StoredTelemetrySession> {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    throw new Error('telemetry persistence input must be an object');
+  }
   const { session } = input;
+  if (!session || typeof session !== 'object' || Array.isArray(session)) {
+    throw new Error('telemetry session is required');
+  }
   if (!/^[0-9a-f]{64}$/i.test(session.rawSha256)) throw new Error('session raw SHA-256 is invalid');
-  if (!input.source.trim()) throw new Error('telemetry source is required');
+  if (typeof input.repositoryId !== 'string' || !input.repositoryId.trim()) {
+    throw new Error('repositoryId is required');
+  }
+  if (typeof input.repositoryRoot !== 'string' || !input.repositoryRoot.trim()) {
+    throw new Error('repository root is required');
+  }
+  if (typeof input.source !== 'string' || !input.source.trim() || input.source.length > 2048) {
+    throw new Error('telemetry source must be a non-empty string up to 2048 characters');
+  }
+  if (typeof input.artifactRelativePath !== 'string') {
+    throw new Error('telemetry artifact path must be a string');
+  }
+  if (typeof input.isDemo !== 'boolean') throw new Error('isDemo must be boolean');
+  if (input.deviceLabel !== undefined && (typeof input.deviceLabel !== 'string' || input.deviceLabel.length > 512)) {
+    throw new Error('device label must be a string up to 512 characters');
+  }
+  if (input.firmwareBuildId !== undefined && (typeof input.firmwareBuildId !== 'string' || input.firmwareBuildId.length > 512)) {
+    throw new Error('firmware build ID must be a string up to 512 characters');
+  }
+  if (input.commitSha !== undefined && typeof input.commitSha !== 'string') {
+    throw new Error('commit SHA must be a string');
+  }
+  if (input.startedAt !== undefined && typeof input.startedAt !== 'string') {
+    throw new Error('startedAt must be a string');
+  }
   if (!store.repositories.get(input.repositoryId)) throw new Error('repository is not registered');
   const relativeArtifact = normalizeRepoPath(input.artifactRelativePath);
   const root = await realpath(resolve(input.repositoryRoot));
@@ -83,8 +113,9 @@ export async function storeTelemetrySession(
     input.startedAt ??
     verifiedSession.points.find((point) => point.timestamp)?.timestamp ??
     new Date().toISOString();
-  if (!Number.isFinite(Date.parse(timestamp)))
-    throw new Error('telemetry session timestamp is invalid');
+  const timestampDate = new Date(timestamp);
+  if (!Number.isFinite(timestampDate.getTime())) throw new Error('telemetry session timestamp is invalid');
+  const canonicalTimestamp = timestampDate.toISOString();
 
   const sessionKey = `telemetry:${verifiedSession.rawSha256}`;
   const sessionNodeId = nodeIdFor(input.repositoryId, 'TelemetrySession', sessionKey);
@@ -107,7 +138,7 @@ export async function storeTelemetrySession(
       repositoryId: input.repositoryId,
       source: input.source.slice(0, 512),
       sourceType: 'telemetry',
-      timestamp,
+      timestamp: canonicalTimestamp,
       ...(commitSha ? { commitSha } : {}),
       contentHash: verifiedSession.rawSha256,
       status: 'PARTIAL',
@@ -136,7 +167,7 @@ export async function storeTelemetrySession(
         artifactRelativePath: relativeActual.split(sep).join('/'),
         source: input.source.slice(0, 512),
         format: verifiedSession.format,
-        startedAt: timestamp,
+        startedAt: canonicalTimestamp,
         pointCount: verifiedSession.points.length,
         metricNames: verifiedSession.metricNames.slice(0, MAX_STORED_METRICS),
         eventCounts: verifiedSession.eventCounts,
