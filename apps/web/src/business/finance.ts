@@ -45,6 +45,12 @@ function safeCount(value: number): number {
   return Math.min(Math.floor(value), MAX_COUNT);
 }
 
+function safePercent(numerator: number, denominator: number): number | null {
+  if (denominator <= 0) return null;
+  const percentage = (numerator / denominator) * 100;
+  return Number.isFinite(percentage) ? percentage : null;
+}
+
 function periodMetrics(revenueInput: number, expensesInput: number, customersInput: number): PeriodMetrics {
   const revenue = safeAmount(revenueInput);
   const expenses = safeAmount(expensesInput);
@@ -55,7 +61,7 @@ function periodMetrics(revenueInput: number, expensesInput: number, customersInp
     revenue,
     expenses,
     profit,
-    marginPercent: revenue > 0 ? (profit / revenue) * 100 : null,
+    marginPercent: safePercent(profit, revenue),
     customers,
     revenuePerCustomer: customers > 0 ? revenue / customers : null,
   };
@@ -79,8 +85,7 @@ export function calculateBusinessIntelligence(inputs: FinancialInputs) {
   return {
     actual,
     forecast,
-    revenueChangePercent:
-      actual.revenue > 0 ? ((forecast.revenue - actual.revenue) / actual.revenue) * 100 : null,
+    revenueChangePercent: safePercent(forecast.revenue - actual.revenue, actual.revenue),
     pricing,
   };
 }
@@ -106,7 +111,7 @@ export function calculatePricing(input: {
     variableCosts,
     totalCosts,
     monthlyProfit,
-    marginPercent: monthlyRevenue > 0 ? (monthlyProfit / monthlyRevenue) * 100 : null,
+    marginPercent: safePercent(monthlyProfit, monthlyRevenue),
     breakEvenSeats:
       contributionPerSeat > 0 ? Math.ceil(fixedMonthlyCost / contributionPerSeat) : null,
     contributionPerSeat,
