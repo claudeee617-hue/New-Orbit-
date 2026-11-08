@@ -57,14 +57,14 @@ describe('FLIGHT RECORDER typed analysis', () => {
 
   it('requires explicit bounds and unique IDs for threshold rules', () => {
     const session = parseTelemetry('{"temperature":23}');
-    expect(() => analyseTelemetry(session, [{ id: 'empty', metric: 'temperature' }])).toThrow(
+    expect(() => analyseTelemetry(session, { thresholds: [{ id: 'empty', metric: 'temperature' }] })).toThrow(
       /min or max/,
     );
     expect(() =>
-      analyseTelemetry(session, [
+      analyseTelemetry(session, { thresholds: [
         { id: 'same', metric: 'temperature', max: 30 },
         { id: 'same', metric: 'temperature', max: 20 },
-      ]),
+      ] }),
     ).toThrow(/unique/);
   });
 
