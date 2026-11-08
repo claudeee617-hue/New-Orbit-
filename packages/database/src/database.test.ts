@@ -65,6 +65,34 @@ describe('openDatabase', () => {
     expect(database.isHealthy()).toBe(true);
   });
 
+  it('opens an existing file in read-only mode and rejects writes', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'orbit-db-ro-'));
+    tempDirs.push(dir);
+    const path = join(dir, 'orbit.db');
+    const writable = openDatabase({ path });
+    writable.db.insert(schema.meta).values({ key: 'locked', value: 'original' }).run();
+    writable.close();
+
+    const readonly = track(openDatabase({ path, migrate: false, readonly: true }));
+    expect(readonly.isHealthy()).toBe(true);
+    expect(() =>
+      readonly.db.insert(schema.meta).values({ key: 'blocked', value: 'nope' }).run(),
+    ).toThrow();
+    expect(
+      readonly.db.select().from(schema.meta).where(eq(schema.meta.key, 'locked')).get()?.value,
+    ).toBe('original');
+  });
+
+  it('does not create a missing database when opening read-only', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'orbit-db-ro-missing-'));
+    tempDirs.push(dir);
+    const path = join(dir, 'missing', 'orbit.db');
+    expect(() => openDatabase({ path, migrate: false, readonly: true })).toThrowError(
+      /Could not open/,
+    );
+    expect(existsSync(path)).toBe(false);
+  });
+
   it('reports unhealthy after close', () => {
     const database = openDatabase({ path: IN_MEMORY });
     database.close();

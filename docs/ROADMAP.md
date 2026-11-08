@@ -189,3 +189,52 @@ Register a repository → index → generate graph → inspect a change → iden
 ## 6. Out of scope for v1
 
 Device commands, hosted SaaS, GitHub App, mutation testing, per-test coverage tracing, automatic code modification.
+
+
+### WITNESS / FLARE / CAPSULE extension scope (Prompts 6–8)
+
+The first prototype remains in `@orbit/atlas` while the core contracts are stabilising. The following additions are implemented on `feat/prompts-6-8-completion`; they remain prototypes pending integrated acceptance review and the release gates listed below.
+
+| ID | Prompt | Extension | Status |
+|---|---:|---|---|
+| WIT-07 | 6 | Path-name-only sensitive-file findings with explicit non-content-inspection limitation | Implemented; CI validation pending |
+| WIT-08 | 6 | Baseline/candidate coverage comparison with exact-path regression states | Implemented; CI validation pending |
+| WIT-09 | 6 | Changed-symbol / related-test context from caller-supplied ATLAS references | Implemented; CI validation pending |
+| WIT-10 | 6 | Markdown and SARIF 2.1.0 report renderers | Implemented; CI validation pending |
+| FLA-06 | 7 | pytest JSON, Jest JSON and Go test JSON adapters | Implemented; CI validation pending |
+| FLA-07 | 7 | Failure-signature clustering and slow-test duration summaries | Implemented; CI validation pending |
+| FLA-08 | 7 | Multi-report CLI analysis with minimum-sample/flip gates | Implemented; CI validation pending |
+| CAP-06 | 8 | asdf/Rust/Python toolchain and requirements manifest inspection | Implemented; CI validation pending |
+| CAP-07 | 8 | Docker/devcontainer image and workspace signal inspection | Implemented; CI validation pending |
+| CAP-08 | 8 | Extended deterministic manifest fingerprint and bounded inspection CLI | Implemented; CI validation pending |
+
+The FLARE CLI combines report files supplied to one invocation; durable historical persistence remains a separate outstanding task. CAPSULE reads declarations only and never executes tools or represents a manifest snapshot as proof of the running environment. WITNESS path warnings use filenames only and are not a secret-scanning guarantee.
+
+
+### FLIGHT RECORDER scope (Prompt 9)
+
+| ID | Prompt | Capability | Status |
+|---|---:|---|---|
+| FLR-01 | 9 | Bounded JSON / NDJSON / CSV / key-value recorded-log parsers | Implemented |
+| FLR-02 | 9 | Normalized event categories; no raw log-line copying into reports | Implemented |
+| FLR-03 | 9 | Explicit units and caller-defined threshold analysis | Implemented |
+| FLR-04 | 9 | SHA-256-verified repository-local artifact persistence as immutable telemetry evidence | Implemented; CI validation pending |
+| FLR-05 | 9 | Graph links to device, firmware and commit metadata | Implemented; CI validation pending |
+| FLR-06 | 9 | Synthetic ESP32 / STM32 fixtures marked DEMO | Implemented |
+| FLR-07 | 9 | Live serial / USB capture and hardware control | Not implemented; transport reports unavailable |
+
+The parser is bounded to 10 MiB and 100,000 records. Raw artifact bytes remain in the local file; the graph stores the hash, repository-relative path, bounded metrics and normalized events. Persistence re-hashes the file after resolving it under the selected repository root. Physical serial capture is deliberately unavailable.
+
+### Change Passport and Replay Room scope (Prompt 10)
+
+| ID | Prompt | Capability | Status |
+|---|---:|---|---|
+| PAS-01 | 10 | Evidence selection scoped to the exact repository and commit | Implemented; CI validation pending |
+| PAS-02 | 10 | Bounded changed-file impact and related-test graph correlation | Implemented; CI validation pending |
+| PAS-03 | 10 | Per-dimension completeness and explicit evidence outcome | Implemented; CI validation pending |
+| PAS-04 | 10 | Content-hashed graph-backed Passport with immutable version history | Implemented; CI validation pending |
+| PAS-05 | 10 | Passport comparison across evidence, changed files, findings and completeness | Implemented; CI validation pending |
+| PAS-06 | 10 | Human-run reproduction plan with automatic execution disabled | Implemented; CI validation pending |
+| PAS-07 | 10 | Dedicated visual Replay Room UI and policy-configurable completeness rules | Not implemented |
+
+A Passport distinguishes evidence presence from outcome. There is no aggregate quality score. Only exact-commit evidence is auto-correlated. The Replay Room work in this prompt is a backend/CLI vertical slice; no full UI or automatic reproduction is claimed.

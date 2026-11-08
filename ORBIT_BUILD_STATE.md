@@ -5,7 +5,7 @@ Last updated: 2026-11-08
 
 ## Current phase
 
-**Prompts 0–4 complete.** Next: Prompt 5 (ATLAS memory and MCP).
+**Engineering Prompts 0–4 are on `main`; engineering Prompts 5–10 are consolidated on `feat/prompts-6-8-completion` in draft PR #5 and remain unmerged pending a fresh full CI pass. The separate App Business Module Prompts 0–3 are in draft PR #6 and Prompt 4 is in draft PR #7 (stacked on #6); neither business PR is merged.
 
 ## Phase checklist
 
@@ -14,21 +14,60 @@ Last updated: 2026-11-08
 | 0      | Master plan and planning documents             | Done (docs only)                               |
 | 1      | Technical design and architecture finalisation | Done (docs, versions verified)                 |
 | 2      | Monorepo foundation                            | Done (see results below)                       |
-| 3      | ORBIT Core graph                               | Done (see results below; not pushed)           |
+| 3      | ORBIT Core graph                               | Done on `main` (see results below)           |
 | 4      | ATLAS scanning                                 | Done (see results below)                       |
-| 5      | ATLAS memory and MCP                           | Not started                                    |
-| 6      | WITNESS                                        | Not started                                    |
-| 7      | FLARE                                          | Not started                                    |
-| 8      | CAPSULE                                        | Not started                                    |
-| 9      | FLIGHT RECORDER                                | Not started                                    |
-| 10     | Change Passport and Replay Room                | Not started                                    |
-| 11     | API and CLI (full)                             | Not started (shell exists: `/health`, `status`) |
+| 5      | ATLAS memory and MCP                           | Implemented on `feat/prompts-6-8-completion`; PR #5 draft, CI passed on three OSs; not merged |
+| 6      | WITNESS                                        | Base prototype plus extended verification helpers and CLI on `feat/prompts-6-8-completion`; CI passed on three OSs; review pending |
+| 7      | FLARE                                          | Base prototype plus pytest/Jest/Go adapters and reliability analytics/CLI on `feat/prompts-6-8-completion`; CI passed on three OSs; durable history remains outstanding |
+| 8      | CAPSULE                                        | Base prototype plus polyglot manifest inspection and CLI on `feat/prompts-6-8-completion`; CI passed on three OSs; build replay remains out of scope |
+| 9      | FLIGHT RECORDER                                | Recorded-log analysis + hash-verified graph persistence; no physical serial connection |
+| 10     | Change Passport and Replay Room                | Commit-scoped evidence correlation, immutable history, comparison and non-executing reproduction plan; no visual Replay Room UI |
+| 11     | API and CLI (full)                             | Partial: local engine CLI commands on feature branch |
 | 12     | Command Center (full)                          | Not started (shell exists)                     |
 | 13     | GitHub Action                                  | Not started                                    |
 | 14     | ORBIT AI                                       | Not started                                    |
 | 15     | Security review                                | Not started                                    |
 | 16     | Testing and validation                         | Not started                                    |
 | 17     | Release polish                                 | Not started                                    |
+
+
+## Cross-engine prototype on feat/orbit-evidence-engines (not yet merged)
+
+The latest pushed main inspected on 2026-11-08 still records Prompt 5 as not started. The feature branch contains the cross-engine prototypes below plus the Prompt 5 implementation described next; neither is merged into main.
+
+- WITNESS: unified-diff added-line parsing, LCOV and Cobertura line-coverage adapters, changed-line coverage summaries, deterministic finding IDs and explicit status semantics.
+- FLARE: bounded JUnit XML parser and supplied-history test summaries using outcome flips and Wilson 95% intervals. Persistent history and Jest/pytest/Go adapters are not implemented.
+- CAPSULE: inspect supplied manifest files for declared runtimes, package managers, scripts, dependencies, environment variable names, container manifests and lockfile hashes. No build replay.
+- FLIGHT RECORDER: parse recorded JSON, NDJSON, CSV and key-value telemetry files; hash raw input and identify keyword-based watchdog/reset events. No serial-port connection or device commands.
+- Change Passport: deterministic, content-hashed assembly from explicitly supplied evidence, with missing evidence listed. No graph persistence or Replay Room.
+- CLI: orbit verify, orbit flare summarize, orbit capsule inspect/compare, orbit device replay and orbit passport create.
+- CLI and engine tests have been added. Consolidated PR #5 passed `pnpm run check` on Ubuntu, macOS and Windows (run `42477639701`, 2026-11-08): 316 tests passed, with formatting, lint, typecheck and builds successful.
+
+Known prototype limitations:
+
+- Engine modules are temporarily colocated in @orbit/atlas rather than split into independent packages.
+- Verification currently analyses added lines in unified-diff hunks and supports LCOV/Cobertura only.
+- Test reliability requires multiple historical CI runs; a single JUnit report cannot establish flaky behaviour.
+- Environment snapshots describe supplied manifests, not the actual OS image or installed dependency tree.
+- Telemetry analysis works on recorded files only; physical ESP32/STM32 serial capture is unimplemented.
+- Change Passport requires a user-supplied evidence JSON bundle; graph correlation and replay UI remain future work.
+
+## Prompt 5 summary (ATLAS persistent memory + read-only MCP)
+
+- `packages/atlas/src/memory.ts`: validated memory records stored as versioned `Decision` / `Documentation` graph nodes with deterministic SHA-256 evidence; lexical search; append-only updates; tombstone invalidation; Markdown/ADR import; explicit `Supersedes` edges and declared-conflict notices; source freshness only when callers provide current hashes.
+- Memory is deliberately contextual (`NOT_MEASURED`), not a correctness or test signal. Missing source hashes produce `unknown`; changed hashes produce `stale`. Contradictions are not inferred by an AI model: only source-authored `Conflicts with` metadata is flagged. Supersedes edges are added only when the referenced memory node has the same graph type.
+- `packages/mcp`: stdio MCP server with 12 read-only tools for repository map, symbol search/detail, callers/callees, impact, related tests, indexed history, memory search, architecture, change context and evidence retrieval. Responses are capped at 48 KiB; list/search inputs are bounded.
+- SQLite `openDatabase({ readonly: true })` uses the driver's read-only + file-exists flags, skips directory creation and migrations, and rejects writes at the database connection layer. MCP has no graph mutation, shell, file-write, network-fetch or device-control tool.
+- CLI entry point: `orbit mcp start --db <existing-db> [--repo <repository-key>]`. ADR-0012 documents the boundary and trade-offs.
+- Local validation on Linux / Node 22: `pnpm run check` passed (format, lint, all workspace typechecks, tests and builds). Counts: shared 36, core 66, database 41, graph 14, atlas 104, api 12, cli 19, web 6 and MCP 2 = **300 tests**. A clean standalone MCP build and source test run also passed (2/2 tests).
+
+Known Prompt 5 limitations:
+
+- Memory ranking is deterministic lexical matching, not embeddings, semantic retrieval or an LLM assistant.
+- Staleness is evaluated against a caller-supplied hash manifest; ORBIT does not yet run a background document watcher.
+- Conflict detection is limited to explicit document metadata. Semantic contradictions and unreferenced decisions require human review.
+- MCP reads only data already present in the local ORBIT database. The server does not index the repository or create/migrate a database when launched.
+- MCP transport currently supports stdio only; remote HTTP transport, authentication and hosted multi-tenant operation are not included.
 
 ## Prompt 3 summary (ORBIT Core: Living Engineering Graph)
 
@@ -72,7 +111,7 @@ Limitations specific to Prompt 4:
 - Manifests other than `package.json` are read with text patterns.
 - Hotspots and ownership use only the last 500 non-merge commits by default, do not follow renames, and ownership is commit share, not surviving lines. Author names are stored; emails are not.
 - Graph writes dominate scan time (seconds at 3000 files); not tested above 3000 files here.
-- Windows and macOS were not tested (paths are normalised to POSIX; git and symlink behaviour unconfirmed until CI runs).
+- The consolidated PR #5 CI matrix now passes on Windows and macOS as well as Linux. Real-world scanner performance and filesystem-specific behaviour have not been separately benchmarked on those operating systems.
 - Vendor and generated files are classified but not parsed.
 - Impact analysis follows file-level imports; imports of a whole workspace package are reported separately as coarser package-level importers.
 
@@ -114,13 +153,13 @@ Manual end-to-end checks that passed: API `/health` returned `ok` with schema ve
 ## Not verified / known limitations
 
 1. **The React UI has not been viewed in a real browser.** Verified: it type-checks, builds, the served HTML and the API proxy work, and the health-state logic is unit-tested. Component rendering itself has no automated test yet (Playwright planned in Prompt 16).
-2. **GitHub Actions CI has not run yet.** The workflow uses `actions/checkout@v4`, `pnpm/action-setup@v4`, `actions/setup-node@v4`; newer majors may exist and could not be checked from this environment. Windows and macOS behaviour (including better-sqlite3 prebuilds and the directory-as-database test) is unconfirmed until CI runs.
+2. **Consolidated branch CI has passed.** GitHub Actions run `42477639701` passed the repository's full check workflow on Ubuntu, macOS and Windows. This validates the feature branch's format, lint, typecheck, tests and builds; it does not mean the branch is merged or release-ready.
 3. A fresh-clone install was tested locally only (see below).
 4. Competitor claims for CodeGraph, CodeCortex, Chisel and PatchProof remain unverified (`docs/COMPETITIVE_ANALYSIS.md`).
 5. Project name availability (GitHub, npm, domains, trademarks) not checked.
 6. No `LICENSE` file yet (Apache-2.0 targeted).
 7. Repository moved/renamed: GitHub reports the canonical URL as `claudeee617-hue/New-Orbit-`; the session's remote uses the lowercase form, which redirects.
-8. MCP SDK not installed yet; registry latest at check time was 1.32.2.
+8. MCP SDK 1.32.2 is now installed and used by the Prompt 5 stdio server on the feature branch; this is not yet merged into main.
 
 ## Commands
 
@@ -136,4 +175,74 @@ node apps/cli/dist/index.js atlas impact packages/core/src/index.ts --db .orbit/
 
 ## Next step
 
-Prompt 5: ATLAS memory and MCP (persistent architectural memory; MCP server exposing the graph read-only).
+Prompt 9: define the next FLIGHT RECORDER integration slice, keeping recorded-file parsing distinct from any future physical serial/device connection.
+
+
+## Prompt 6–8 extension work on feat/prompts-6-8-completion (CI passed; review pending)
+
+This branch is based on `feat/orbit-evidence-engines` at `bbb6626`, which contains the Prompt 5 implementation and the initial cross-engine prototypes. It does not change `main` directly.
+
+### Prompt 6 — WITNESS extensions
+
+- Added `packages/atlas/src/witness-extended.ts`:
+  - path-name-only sensitive-file findings for common credential-bearing filenames (no content inspection);
+  - exact-path baseline/candidate coverage comparison with REGRESSION / IMPROVED / UNCHANGED / NOT_COMPARABLE;
+  - caller-supplied changed-symbol and related-test mapping with explicit limitations;
+  - Markdown and SARIF 2.1.0 renderers with stable finding fingerprints.
+- Existing added-line unified-diff parser, LCOV/Cobertura adapters and changed-line coverage summary remain the first verification layer.
+- CLI adds `orbit witness coverage-compare` and `orbit witness sensitive-paths`.
+
+### Prompt 7 — FLARE extensions
+
+- Added `packages/atlas/src/flare-extended.ts`:
+  - bounded JSON adapters for pytest-json-report, Jest JSON and Go `go test -json` event streams;
+  - failure-message clustering using normalized signatures;
+  - slow-test mean, p95 and maximum durations;
+  - test reliability history with existing minimum-sample / pass-fail-flip / Wilson-interval classification.
+- CLI adds `orbit flare analyse <reports...> --format junit|pytest-json|jest-json|go-json`.
+- The CLI combines the report files supplied in one invocation. A durable, multi-run database history store and historical run ingestion remain outstanding.
+
+### Prompt 8 — CAPSULE extensions
+
+- Added `packages/atlas/src/capsule-extended.ts`:
+  - asdf `.tool-versions`, Rust toolchain, Python requirements, common pyproject dependency declarations;
+  - Dockerfile image references, devcontainer images/features and workspace signals (pnpm, Turbo, Nx, Lerna, Cargo and Go workspaces);
+  - deterministic extended fingerprint and explicit parser limitations.
+- CLI adds `orbit capsule inspect-extended <repository>`; it inspects a bounded set of manifest files, never executes package managers or build commands, never reads `.env` secret files, and reports its manifest-only mode.
+
+### Tests added and verified by CI
+
+- `packages/atlas/src/engines-extended.test.ts`: WITNESS regression/SARIF/sensitive paths, FLARE adapters/analytics, CAPSULE polyglot manifests and limits.
+- `apps/cli/src/advanced-engines.test.ts`: regression comparison, path findings, multi-report reliability analysis, and manifest-only environment inspection.
+- Existing baseline engine tests remain in place.
+
+### Remaining limitations / release gates
+
+- Extended modules currently live in `@orbit/atlas` for compatibility with the in-progress prototype; a later refactor may split WITNESS, FLARE and CAPSULE into independent packages once contracts stabilise.
+- Sensitive-path findings are name-based warnings only; no secret scanning of file contents is claimed.
+- Coverage regression compares supplied coverage maps for exact paths; it does not attribute coverage to individual tests.
+- pytest/Jest/Go adapters cover common JSON report forms, not every framework/version variation.
+- Failure clustering is heuristic text normalization; duration comparisons do not normalize runner hardware.
+- Capsule fingerprints represent supplied manifest declarations, not actual installed dependencies, container digests or the running OS.
+- CI verification: GitHub Actions run `42477639701` passed on Ubuntu, macOS and Windows. The workflow's `pnpm run check` completed format, lint, typecheck, all 316 tests and builds successfully. This does not substitute for product acceptance review or the remaining roadmap gates.
+
+
+## Prompt 9 summary (FLIGHT RECORDER — recorded telemetry)
+
+- packages/atlas/src/flight-recorder.ts: bounded JSON, NDJSON, CSV and key-value parsing; normalized event categories; SHA-256 of exact input bytes; raw lines are not copied into parsed output.
+- packages/atlas/src/flight-recorder-extended.ts: typed metric analysis, explicit units, explicit threshold rules, stable watchdog/reset/threshold findings and aggregate min/max/mean statistics.
+- packages/atlas/src/telemetry-store.ts: re-reads a repository-local artifact, resolves its real path under the selected root, checks the raw SHA-256 and writes immutable TelemetrySession evidence/node plus optional device/firmware/commit graph links atomically.
+- CLI: orbit device replay accepts units/thresholds; optional persistence requires the DB, repo root and repo-relative artifact path. orbit device serial-status reports that physical serial transport is unavailable.
+- Synthetic ESP32 and STM32 fixtures are clearly labelled DEMO.
+- Boundaries: 10 MiB, at most 100,000 records, at most 200 threshold rules; no USB serial connection, live stream or hardware command support.
+
+## Prompt 10 summary (Change Passport + Replay Room backend)
+
+- packages/atlas/src/passport.ts: strict input validation, canonical content hash, rule-based completeness dimensions, explicit verificationStatus and no aggregate score.
+- packages/atlas/src/passport-engine.ts: only exact-commit immutable evidence is correlated; bounded import-impact/related-test graph context; graph-backed versioned ChangePassport node; atomic evidence/node/edge transaction; history and comparisons; human-run reproduction plan.
+- CLI: orbit passport create --db --repo, history, compare and plan. Plans mark all steps automaticExecution false.
+- Remaining work: visual Replay Room, user-configurable completeness policy, richer UI timeline and live hardware transport; these are not claimed as implemented.
+
+## Prompt 9–10 CI status
+
+Verified by GitHub Actions run `42481493312` (2026-11-08): Ubuntu, macOS and Windows all passed the repository `pnpm run check` workflow. Ubuntu recorded 331 passing tests across 9 workspace test suites; formatting, lint, typecheck and build also passed. This validates the current feature branch, not the merged `main` branch.

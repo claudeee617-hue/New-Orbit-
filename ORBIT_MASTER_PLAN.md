@@ -3,7 +3,7 @@
 **ORBIT — Engineering Intelligence Platform**
 Tagline: *Understand Everything. Trace Every Change. Prove What Works.*
 Philosophy: **Evidence before confidence.**
-Status: Planning (Prompt 0). No application code exists yet.
+Status: Active master plan. Prompt 0 established this plan; implementation now exists through Prompt 8 on a feature branch, with Prompts 9–10 in progress. See ORBIT_BUILD_STATE.md for verified branch and CI status.
 Date: 2026-11-07
 
 > "ORBIT" is a working codename, not a cleared brand. Before any public release, check GitHub, npm, domains and trademarks (task REL-01).
@@ -51,8 +51,8 @@ Ship a working vertical slice early instead of five half-built prototypes.
 | M1 | Monorepo, Core graph, ATLAS (TS/JS first) | 2, 3, 4 |
 | M2 | WITNESS, first Change Passport (git + coverage only) | 6, 10 (partial) |
 | M3 | FLARE, CAPSULE | 7, 8 |
-| M4 | FLIGHT RECORDER (serial + replay) | 9 |
-| M5 | Full cross-engine correlation, Replay Room | 10 |
+| M4 | FLIGHT RECORDER (verified recorded-file replay; serial deferred) | 9 |
+| M5 | Commit-scoped cross-engine correlation and Replay Room backend | 10 |
 | M6 | ATLAS memory, MCP, ORBIT AI | 5, 14 |
 | M7 | API, CLI, Command Center, GitHub Action | 11, 12, 13 |
 | M8 | Security pass, validation, public release | 15, 16, 17 |
@@ -68,6 +68,8 @@ Rule: do not start a milestone while the previous one has unresolved critical fa
 | `docs/ARCHITECTURE.md` | Modules, interfaces, technology choices, diagrams |
 | `docs/DATA_MODEL.md` | Graph schema, evidence record, passport schema |
 | `docs/ROADMAP.md` | 50–80 task breakdown, phases, demo storyline |
+| `docs/BUSINESS_MODEL.md` | Hybrid monetisation, product tiers, customer segments and pricing hypotheses |
+| `docs/COMMERCIAL_ROADMAP.md` | Commercial release gates, design-partner pilots and go-to-market sequence |
 | `docs/COMPETITIVE_ANALYSIS.md` | Researched competitors and honest differentiation |
 | `docs/THREAT_MODEL.md` | Assets, threats, mitigations |
 | `docs/UX_SPECIFICATION.md` | Command Center design and states |

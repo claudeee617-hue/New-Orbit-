@@ -61,3 +61,16 @@ Index time vs. repo size; graph traversal depth vs. latency; report generation t
 ## 7. CI
 
 Matrix over Windows, macOS, Linux; jobs for lint, typecheck, unit, integration, security, e2e, dependency audit. Coverage of ORBIT itself reported but not treated as proof of quality.
+
+
+## 8. Prompt 9–10 acceptance tests
+
+- Telemetry inputs: empty file, malformed JSON, non-object JSON records, overlong input, excess row count, unterminated CSV quoting, duplicate/empty CSV headers and mismatched CSV row widths.
+- Telemetry privacy: raw source lines and arbitrary event text do not appear in parsed output or graph attributes; exact source bytes are represented by SHA-256.
+- Telemetry analysis: units are explicit; thresholds require unique IDs and finite bounds; combined watchdog/reset events create separate, stable findings.
+- Telemetry persistence: reject traversal and symlinks that resolve outside the repository; reject an artifact whose bytes do not match the parsed session; persist with DEMO label where applicable.
+- Telemetry graph: verify session/device/firmware/commit links, evidence integrity and transaction rollback on a failure.
+- Passport evidence: exact repository and commit scoping; reject evidence IDs from another repository or commit; preserve FAIL evidence rather than hiding it.
+- Passport completeness: missing, partial and not-applicable dimensions are distinct; no aggregate score exists.
+- Passport lifecycle: same content is stable; changed evidence appends an immutable version; history, comparison and integrity verification work.
+- Replay Room plan: every step is marked automaticExecution false; no process, package manager, test or device command is invoked.

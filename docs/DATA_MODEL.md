@@ -130,7 +130,7 @@ Authoritative sources: `packages/core/src` (vocabulary, rules, schemas, hashing)
 - **Views:** `node_current`, `edge_current` (latest non-deleted version).
 - **Node types (23)** and **edge types (14):** see `NODE_TYPES` / `EDGE_TYPES`; allowed endpoint pairs in `EDGE_RULES`.
 - **Evidence fields:** repository, source, source type, timestamp, commit SHA, location (path + line range), content hash, status, limitations, related entity IDs, supersedes. Each evidence record can be superseded at most once.
-- **Not yet implemented:** Finding, Change Passport and engine-specific domain tables (later prompts).
+- **Not yet implemented:** a dedicated normalized Finding table and separate engine-specific SQL domain tables. Change Passport and telemetry are represented by immutable typed graph nodes with evidence records, not separate relational tables.
 
 
 ## 12. ATLAS facts (Prompt 4)
@@ -148,3 +148,32 @@ See ADR-0011 for the full mapping, confidence model and analysis definitions.
 | Commit | commit SHA | author name, date, subject |
 
 Edges carry `confidence`, `locations`, `resolution` (how it was resolved) and `occurrences`.
+
+
+## 13. FLIGHT RECORDER telemetry facts (Prompt 9)
+
+The Prompt 9 prototype uses the existing graph vocabulary rather than adding a new mutable telemetry table.
+
+| Graph entity | Natural key | Stored attributes |
+|---|---|---|
+| TelemetrySession | telemetry:<rawSha256> | artifact-relative path, exact raw SHA-256, format, timestamp, point count, normalized metric names/event counts, bounded anomaly summaries, isDemo, device/build/commit references |
+| HardwareDevice | caller-supplied device label | label and metadata source |
+| Firmware | build:<firmwareBuildId> | build identifier and linkage source |
+
+- Telemetry is recorded as sourceType telemetry evidence with PARTIAL status and explicit limitations.
+- OBSERVED_ON links sessions to HardwareDevice and Firmware nodes. VERIFIED_BY links an explicitly commit-associated session to its Commit.
+- Raw log lines are not copied into parsed reports or graph attributes. The original file remains local; the graph stores its SHA-256 digest and repository-relative path.
+- The CLI persistence path verifies the real path remains under the selected repository root and re-hashes the file before creating evidence.
+- Event labels are normalized; metric units and thresholds are supplied by the caller. No universal device thresholds are inferred.
+- Physical serial transport is unavailable in this build. Fixtures are synthetic and must be labelled DEMO.
+
+## 14. Change Passport facts (Prompt 10)
+
+A graph-backed Passport is a versioned ChangePassport node with a content-hash-backed manual evidence record.
+
+- The natural key identifies a repository, commit SHA and diff SHA-256. Updates append node versions; they do not overwrite historical versions.
+- Evidence records are taken from the same repository and exact commit. A changed-file evidence reference from another commit is excluded; explicit evidence IDs must also match the selected commit.
+- Completeness dimensions are diff, coverage, tests, CI, environment, build and hardware, each with a rule, state and evidence references. There is no aggregate percentage.
+- The overall measurement state is separate: PASS, FAIL, PARTIAL or NOT_MEASURED.
+- AFFECTS connects the Passport to changed files and ATLAS-related tests; VERIFIED_BY connects it to a linked telemetry session.
+- Replay Room backend operations expose immutable history, comparison and a human-run reproduction plan. The plan is non-executing; a dedicated UI is not included in this prompt.
