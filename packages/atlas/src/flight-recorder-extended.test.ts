@@ -106,7 +106,7 @@ describe('FLIGHT RECORDER immutable persistence', () => {
       source: 'fixtures/hardware-telemetry/esp32-demo.ndjson',
       artifactRelativePath: 'logs/esp32-demo.ndjson',
       session,
-      analysis,
+      analysisOptions: { units: { voltage: 'V' } },
       isDemo: true,
       deviceLabel: 'ESP32 demo board',
       firmwareBuildId: 'demo-fw-001',
@@ -138,7 +138,7 @@ describe('FLIGHT RECORDER immutable persistence', () => {
         source: 'test',
         artifactRelativePath: '../outside.ndjson',
         session,
-        analysis,
+        analysisOptions: {},
         isDemo: false,
       }),
     ).rejects.toThrow(/Unsafe repository path/);
