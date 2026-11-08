@@ -25,12 +25,7 @@ import {
   parseTelemetry,
   type PassportRecordInput,
 } from '@orbit/atlas';
-import {
-  createGraphStore,
-  openDatabase,
-  type GraphStore,
-  type OrbitDatabase,
-} from '@orbit/database';
+import { createGraphStore, type GraphStore, type OrbitDatabase } from '@orbit/database';
 import { ORBIT_VERSION, OrbitError, type HealthResponse, type Logger } from '@orbit/shared';
 import { getOrCreateApiToken } from './session-token.js';
 
