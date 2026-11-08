@@ -101,7 +101,7 @@ describe('ORBIT AI privacy and approval boundary', () => {
     );
     const [url, init] = fetchImpl.mock.calls[0] ?? [];
     expect(url).toBe('https://api.openai.com/v1/responses');
-    expect(init?.headers).toMatchObject({ authorization: '***' });
+    expect(init?.headers).toMatchObject({ authorization: 'Bearer test-secret' });
     const payload = JSON.parse(String(init?.body));
     expect(payload.store).toBe(false);
     expect(payload.tools).toBeUndefined();
