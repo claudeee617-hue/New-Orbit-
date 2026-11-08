@@ -242,7 +242,25 @@ function extractText(provider: AIProvider, payload: unknown): string {
   const data = payload as Record<string, unknown>;
   if (provider === 'openai') {
     if (typeof data.output_text === 'string') return data.output_text;
-    throw new OrbitAIError('OpenAI Responses payload did not contain output_text.', 'INVALID_RESPONSE');
+    if (Array.isArray(data.output)) {
+      const text = data.output
+        .flatMap((item) => {
+          if (!item || typeof item !== 'object') return [];
+          const content = (item as Record<string, unknown>).content;
+          if (!Array.isArray(content)) return [];
+          return content.flatMap((block) =>
+            block &&
+            typeof block === 'object' &&
+            ['output_text', 'text'].includes(String((block as Record<string, unknown>).type)) &&
+            typeof (block as Record<string, unknown>).text === 'string'
+              ? [(block as Record<string, unknown>).text as string]
+              : [],
+          );
+        })
+        .join('\\n');
+      if (text) return text;
+    }
+    throw new OrbitAIError('OpenAI Responses payload did not contain text output.', 'INVALID_RESPONSE');
   }
   if (provider === 'anthropic') {
     if (!Array.isArray(data.content)) {
@@ -280,7 +298,16 @@ export async function runOrbitAnalysis(
   if (options.provider !== context.provider || options.model !== context.model) {
     throw new OrbitAIError('Provider or model changed after preview approval.', 'CONTEXT_MISMATCH');
   }
-  if (options.provider !== 'ollama' && !options.apiKey) {
+  if (options.provider === 'ollama') {
+    assertLocalOllama(
+      options.baseUrl ?? 'http://127.0.0.1:11434',
+      options.allowRemoteOllama === true,
+    );
+  }
+  if (destination(options.provider, options.baseUrl) !== context.destination) {
+    throw new OrbitAIError('Provider destination changed after preview approval.', 'CONTEXT_MISMATCH');
+  }
+  if (options.provider !== 'ollama' && (!options.apiKey || options.apiKey.length > 4096)) {
     throw new OrbitAIError('A provider API key is required.', 'INVALID_INPUT');
   }
   const fetchImpl = options.fetchImpl ?? fetch;
@@ -347,6 +374,9 @@ export async function runOrbitAnalysis(
     }
     const text = extractText(options.provider, payload);
     const maxOutput = options.maxOutputChars ?? DEFAULT_MAX_OUTPUT_CHARS;
+    if (!Number.isInteger(maxOutput) || maxOutput < 1 || maxOutput > 100_000) {
+      throw new OrbitAIError('Maximum output length must be from 1 to 100000 characters.', 'INVALID_INPUT');
+    }
     if (text.length > maxOutput) {
       throw new OrbitAIError('AI output exceeds the configured character limit.', 'RESPONSE_TOO_LARGE');
     }
