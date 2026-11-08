@@ -144,8 +144,3 @@ describe('ORBIT AI privacy and approval boundary', () => {
     expect(result.provider).toBe('ollama');
   });
 });
-##[group]Run pnpm run check
-pnpm run check
-shell: /usr/bin/bash -e {0}
-env:
-  PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
