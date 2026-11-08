@@ -113,7 +113,7 @@ export async function storeTelemetrySession(
       status: 'PARTIAL',
       limitations: [
         ...verifiedSession.limitations,
-        ...input.analysis.limitations,
+        ...analysis.limitations,
         'Evidence status PARTIAL describes bounded parser output; it is not a judgement that the device passed or failed.',
         ...(input.isDemo
           ? [
@@ -142,7 +142,7 @@ export async function storeTelemetrySession(
         eventCounts: verifiedSession.eventCounts,
         watchdogEvents: verifiedSession.watchdogEvents,
         resetEvents: verifiedSession.resetEvents,
-        anomalies: input.analysis.anomalies.slice(0, MAX_STORED_ANOMALIES).map((item) => ({
+        anomalies: analysis.anomalies.slice(0, MAX_STORED_ANOMALIES).map((item) => ({
           id: item.id,
           ruleId: item.ruleId,
           kind: item.kind,
@@ -151,9 +151,9 @@ export async function storeTelemetrySession(
           timestamp: item.timestamp,
           message: item.message.slice(0, 300),
         })),
-        anomalyCount: input.analysis.anomalies.length,
+        anomalyCount: analysis.anomalies.length,
         metricStats: Object.fromEntries(
-          Object.entries(input.analysis.metricStats).slice(0, MAX_STORED_METRICS),
+          Object.entries(analysis.metricStats).slice(0, MAX_STORED_METRICS),
         ),
         isDemo: input.isDemo,
         deviceLabel: deviceKey ?? null,
@@ -235,7 +235,7 @@ export async function storeTelemetrySession(
       rawSha256: verifiedSession.rawSha256,
       artifactRelativePath: relativeActual.split(sep).join('/'),
       isDemo: input.isDemo,
-      pointCount: session.points.length,
+      pointCount: verifiedSession.points.length,
       anomalyCount: input.analysis.anomalies.length,
     };
   });
