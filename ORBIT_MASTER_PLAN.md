@@ -68,6 +68,8 @@ Rule: do not start a milestone while the previous one has unresolved critical fa
 | `docs/ARCHITECTURE.md` | Modules, interfaces, technology choices, diagrams |
 | `docs/DATA_MODEL.md` | Graph schema, evidence record, passport schema |
 | `docs/ROADMAP.md` | 50–80 task breakdown, phases, demo storyline |
+| `docs/BUSINESS_MODEL.md` | Hybrid monetisation, product tiers, customer segments and pricing hypotheses |
+| `docs/COMMERCIAL_ROADMAP.md` | Commercial release gates, design-partner pilots and go-to-market sequence |
 | `docs/COMPETITIVE_ANALYSIS.md` | Researched competitors and honest differentiation |
 | `docs/THREAT_MODEL.md` | Assets, threats, mitigations |
 | `docs/UX_SPECIFICATION.md` | Command Center design and states |
