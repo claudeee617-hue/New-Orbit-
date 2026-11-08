@@ -5,7 +5,7 @@ Last updated: 2026-11-08
 
 ## Current phase
 
-**Engineering Prompts 0–11 and App Business Module sub-prompts 0–4 are merged into `main` (PRs #5, #9 and #11). Prompt 11 CI passed on Ubuntu, macOS and Windows before merge. Prompt 12 is an incomplete draft in PR #13; Prompt 13 is an incomplete draft in PR #14; Prompt 14's opt-in AI integration is in stacked draft PR #21 and its latest recorded CI run failed on the web typecheck (the optional-signal fix has since been pushed and fresh CI is pending). Security/privacy/release groundwork PR #15 is merged, but the independent security review and release gates remain open.**
+**Engineering Prompts 0–11 and App Business Module sub-prompts 0–4 are merged into `main` (PRs #5, #9 and #11). Prompt 11 CI passed on Ubuntu, macOS and Windows before merge. Prompt 12 is a partial Command Center implementation in draft PR #13; Prompt 13 is a partial GitHub Action in draft PR #14; Prompt 14 is an experimental provider/API/UI integration in stacked draft PR #21. The optional-signal typecheck fix passed the full Ubuntu/macOS/Windows CI matrix in run #218. Subsequent hardening commits add bounded provider-response streaming and remove a duplicate API test; these latest commits still need a fresh CI run. Security/privacy/release groundwork PR #15 is merged, but independent security review and release gates remain open.**
 
 ## Phase checklist
 
