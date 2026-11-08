@@ -67,7 +67,7 @@ export function createOrbitApiClient(options: ApiClientOptions) {
     init: {
       method?: 'GET' | 'POST';
       body?: unknown;
-      signal?: AbortSignal;
+      signal?: AbortSignal | undefined;
     } = {},
   ): Promise<T> {
     const response = await fetchImpl(`${basePath}${path}`, {
