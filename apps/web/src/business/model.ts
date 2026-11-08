@@ -1,3 +1,4 @@
+/** Static, source-linked business strategy data; intentionally separate from live financial reporting. */
 export type OfferStatus = 'Core promise' | 'Pricing hypothesis' | 'Future offer';
 
 export interface BusinessOffer {
