@@ -12,9 +12,7 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 describe('local ORBIT API client', () => {
   it('sends the bearer token in a header and never in the URL', async () => {
-    const fetchImpl = vi
-      .fn<typeof fetch>()
-      .mockResolvedValue(jsonResponse({ repositories: [] }));
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ repositories: [] }));
     const client = createOrbitApiClient({ token: TOKEN, fetchImpl });
 
     await client.listRepositories();
@@ -46,11 +44,9 @@ describe('local ORBIT API client', () => {
   });
 
   it('turns authentication failures into a safe actionable error', async () => {
-    const fetchImpl = vi
-      .fn<typeof fetch>()
-      .mockResolvedValue(
-        jsonResponse({ error: 'UNAUTHENTICATED', message: 'Sensitive server detail' }, 401),
-      );
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({ error: 'UNAUTHENTICATED', message: 'Sensitive server detail' }, 401),
+    );
     const client = createOrbitApiClient({ token: TOKEN, fetchImpl });
 
     await expect(client.listRepositories()).rejects.toMatchObject({
