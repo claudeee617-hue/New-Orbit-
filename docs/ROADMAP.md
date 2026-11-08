@@ -189,3 +189,23 @@ Register a repository → index → generate graph → inspect a change → iden
 ## 6. Out of scope for v1
 
 Device commands, hosted SaaS, GitHub App, mutation testing, per-test coverage tracing, automatic code modification.
+
+
+### WITNESS / FLARE / CAPSULE extension scope (Prompts 6–8)
+
+The first prototype remains in `@orbit/atlas` while the core contracts are stabilising. The following additions are implemented on `feat/prompts-6-8-completion`; they are not considered release-complete until the branch CI and integrated acceptance tests pass.
+
+| ID | Prompt | Extension | Status |
+|---|---:|---|---|
+| WIT-07 | 6 | Path-name-only sensitive-file findings with explicit non-content-inspection limitation | Implemented; CI pending |
+| WIT-08 | 6 | Baseline/candidate coverage comparison with exact-path regression states | Implemented; CI pending |
+| WIT-09 | 6 | Changed-symbol / related-test context from caller-supplied ATLAS references | Implemented; CI pending |
+| WIT-10 | 6 | Markdown and SARIF 2.1.0 report renderers | Implemented; CI pending |
+| FLA-06 | 7 | pytest JSON, Jest JSON and Go test JSON adapters | Implemented; CI pending |
+| FLA-07 | 7 | Failure-signature clustering and slow-test duration summaries | Implemented; CI pending |
+| FLA-08 | 7 | Multi-report CLI analysis with minimum-sample/flip gates | Implemented; CI pending |
+| CAP-06 | 8 | asdf/Rust/Python toolchain and requirements manifest inspection | Implemented; CI pending |
+| CAP-07 | 8 | Docker/devcontainer image and workspace signal inspection | Implemented; CI pending |
+| CAP-08 | 8 | Extended deterministic manifest fingerprint and bounded inspection CLI | Implemented; CI pending |
+
+The FLARE CLI combines report files supplied to one invocation; durable historical persistence remains a separate outstanding task. CAPSULE reads declarations only and never executes tools or represents a manifest snapshot as proof of the running environment. WITNESS path warnings use filenames only and are not a secret-scanning guarantee.
