@@ -257,19 +257,20 @@ export function recordChangePassport(
     throw new Error('passport repository must match the selected graph repository key or ID');
   }
   if (!/^[0-9a-f]{7,64}$/i.test(input.commitSha)) throw new Error('commit SHA is invalid');
+  const canonicalInput = { ...input, commitSha: input.commitSha.toLowerCase() };
   const changedFiles = [...new Set(input.changedFiles.map(normalizeRepoPath))].sort();
   const impact = computeImpact(store, input.repositoryId, changedFiles);
   const evidence = collectEvidence(
     store,
     input.repositoryId,
-    input,
+    canonicalInput,
     impact.nodeIds.filter((id) => store.nodes.get(input.repositoryId, id)?.type === 'File'),
   );
   const dimensions = completeness(evidence);
   const missing = dimensions.filter((item) => item.status === 'MISSING');
   const suppliedPassport = createChangePassport(
     {
-      ...input,
+      ...canonicalInput,
       repository: repository.key,
       evidence,
       changedFiles,
@@ -284,21 +285,10 @@ export function recordChangePassport(
       },
       completeness: dimensions,
     },
-    options,
+    { ...options, evidenceVerification: 'GRAPH_VALIDATED' },
   );
 
-  const verificationStatus = evidence.some((item) => item.status === 'FAIL')
-    ? 'FAIL'
-    : missing.length > 0
-      ? 'NOT_MEASURED'
-      : evidence.some(
-            (item) =>
-              item.status === 'PARTIAL' ||
-              item.status === 'INCOMPLETE' ||
-              item.status === 'NOT_MEASURED',
-          )
-        ? 'PARTIAL'
-        : 'PASS';
+  const verificationStatus = suppliedPassport.verificationStatus;
   const passportNodeId = nodeIdFor(
     input.repositoryId,
     'ChangePassport',
