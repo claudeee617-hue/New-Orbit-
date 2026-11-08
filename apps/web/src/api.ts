@@ -141,6 +141,12 @@ export function createOrbitApiClient(options: ApiClientOptions) {
         { signal },
       );
     },
+    getIntegrity(repositoryKey: string, signal?: AbortSignal) {
+      return request<{ repository: ApiRepository; integrity: { ok: boolean; ledgerEntriesChecked: number; problems: unknown[] } }>(
+        `/repositories/${encodeURIComponent(repositoryKey)}/integrity`,
+        { signal },
+      );
+    },
     getAtlasReport(repositoryKey: string, signal?: AbortSignal) {
       return request<{ repository: ApiRepository; report: unknown }>(
         `/repositories/${encodeURIComponent(repositoryKey)}/reports/atlas`,
