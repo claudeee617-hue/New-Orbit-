@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import {
   createOrbitApiClient,
   OrbitApiError,
@@ -117,7 +117,7 @@ export function CommandCenter() {
     return [...counts.entries()].sort((a, b) => b[1] - a[1]);
   }, [nodes]);
 
-  function connect(event: React.FormEvent<HTMLFormElement>) {
+  function connect(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
     setNotice('');
