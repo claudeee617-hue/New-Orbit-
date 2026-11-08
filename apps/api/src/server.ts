@@ -99,6 +99,10 @@ function hashablePayload(value: unknown): string {
 }
 
 function httpStatus(error: unknown): number {
+  if (error && typeof error === 'object' && 'statusCode' in error) {
+    const status = Number((error as { statusCode?: unknown }).statusCode);
+    if (status >= 400 && status <= 599) return status;
+  }
   if (error instanceof OrbitError) {
     if (error.code === 'NOT_FOUND') return 404;
     if (error.code === 'INVALID_INPUT' || error.code === 'CONFIG_INVALID') return 400;
@@ -308,6 +312,22 @@ export function buildServer(options: BuildServerOptions) {
     async (request) => {
       const repository = repositoryByKey(store, request.params.key);
       return { repository, history: getPassportHistory(store, repository.id, request.params.id) };
+    },
+  );
+
+  server.get<{ Params: { key: string; before: string; after: string } }>(
+    '/api/v1/repositories/:key/passports/:before/compare/:after',
+    async (request) => {
+      const repository = repositoryByKey(store, request.params.key);
+      return {
+        repository,
+        comparison: compareChangePassports(
+          store,
+          repository.id,
+          request.params.before,
+          request.params.after,
+        ),
+      };
     },
   );
 
