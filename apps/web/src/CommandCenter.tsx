@@ -2,12 +2,16 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import {
   createOrbitApiClient,
   OrbitApiError,
+  type ApiAIAnalysis,
+  type ApiAIPreview,
+  type ApiAIProvider,
+  type ApiAIRequest,
   type ApiEvidencePage,
   type ApiGraphPage,
   type ApiRepository,
 } from './api.js';
 
-type Panel = 'overview' | 'graph' | 'evidence' | 'passports';
+type Panel = 'overview' | 'graph' | 'evidence' | 'passports' | 'ai';
 
 function messageOf(error: unknown): string {
   if (error instanceof OrbitApiError) return error.message;
@@ -71,6 +75,18 @@ export function CommandCenter() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [aiProvider, setAiProvider] = useState<ApiAIProvider>('ollama');
+  const [aiModel, setAiModel] = useState('');
+  const [aiPrompt, setAiPrompt] = useState(
+    'Summarise the selected evidence, state what it proves and what remains unknown.',
+  );
+  const [selectedEvidenceIds, setSelectedEvidenceIds] = useState<string[]>([]);
+  const [aiRequest, setAiRequest] = useState<ApiAIRequest | null>(null);
+  const [aiPreview, setAiPreview] = useState<ApiAIPreview | null>(null);
+  const [aiPreviewNotice, setAiPreviewNotice] = useState('');
+  const [aiConfirmed, setAiConfirmed] = useState(false);
+  const [aiResult, setAiResult] = useState<ApiAIAnalysis | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   const client = useMemo(() => (token ? createOrbitApiClient({ token }) : null), [token]);
 
@@ -135,6 +151,60 @@ export function CommandCenter() {
     return [...counts.entries()].sort((a, b) => b[1] - a[1]);
   }, [nodes]);
 
+  function invalidateAiPreview() {
+    setAiRequest(null);
+    setAiPreview(null);
+    setAiPreviewNotice('');
+    setAiConfirmed(false);
+    setAiResult(null);
+  }
+
+  async function previewAI() {
+    if (!selectedRepository) return;
+    if (!aiModel.trim() || !aiPrompt.trim() || selectedEvidenceIds.length === 0) {
+      setError('Choose at least one evidence record and enter a model and analysis question.');
+      return;
+    }
+    const input: ApiAIRequest = {
+      provider: aiProvider,
+      model: aiModel.trim(),
+      prompt: aiPrompt.trim(),
+      evidenceIds: selectedEvidenceIds,
+    };
+    setAiLoading(true);
+    setError('');
+    try {
+      const result = await client.previewAI(selectedRepository.key, input);
+      setAiRequest(input);
+      setAiPreview(result.preview);
+      setAiPreviewNotice(result.notice);
+      setAiConfirmed(false);
+      setAiResult(null);
+    } catch (cause) {
+      setError(messageOf(cause));
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
+  async function analyseAI() {
+    if (!selectedRepository || !aiRequest || !aiPreview || !aiConfirmed) return;
+    setAiLoading(true);
+    setError('');
+    try {
+      const result = await client.analyseAI(selectedRepository.key, {
+        ...aiRequest,
+        approvedContextSha256: aiPreview.sha256,
+        confirmed: true,
+      });
+      setAiResult(result.analysis);
+    } catch (cause) {
+      setError(messageOf(cause));
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
   function connect(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
@@ -158,6 +228,8 @@ export function CommandCenter() {
     setEvidence(null);
     setPassports([]);
     setIntegrity(null);
+    setSelectedEvidenceIds([]);
+    invalidateAiPreview();
     setError('');
     setNotice('Disconnected. The token was held only in page memory.');
   }
@@ -168,6 +240,8 @@ export function CommandCenter() {
     setEvidence(null);
     setPassports([]);
     setIntegrity(null);
+    setSelectedEvidenceIds([]);
+    invalidateAiPreview();
     // A fresh render triggers a new request through the selected key.
   }
 
@@ -291,7 +365,7 @@ export function CommandCenter() {
       </section>
 
       <nav aria-label="Engineering dashboard views" className="flex flex-wrap gap-2">
-        {(['overview', 'graph', 'evidence', 'passports'] as const).map((item) => (
+        {(['overview', 'graph', 'evidence', 'passports', 'ai'] as const).map((item) => (
           <button
             key={item}
             type="button"
@@ -299,7 +373,7 @@ export function CommandCenter() {
             onClick={() => setPanel(item)}
             className={`rounded-md border px-3 py-2 text-xs font-medium uppercase tracking-wider ${panel === item ? 'border-cyan bg-cyan/10 text-cyan' : 'border-edge text-mute hover:border-cyan hover:text-ink'}`}
           >
-            {item === 'passports' ? 'Change Passports' : item}
+            {item === 'passports' ? 'Change Passports' : item === 'ai' ? 'AI Analysis' : item}
           </button>
         ))}
       </nav>
@@ -499,7 +573,7 @@ export function CommandCenter() {
             </div>
           )}
         </section>
-      ) : (
+      ) : panel === 'passports' ? (
         <section className="rounded-lg border border-edge bg-panel p-5">
           <h3 className="font-mono text-xs uppercase tracking-wider text-mute">Change Passports</h3>
           {passports.length ? (
@@ -528,6 +602,211 @@ export function CommandCenter() {
                 detail="Create a passport from commit-scoped evidence with the ORBIT CLI or authenticated local API. Missing verification should remain visible, not guessed."
               />
             </div>
+          )}
+        </section>
+      ) : (
+        <section className="space-y-5 rounded-lg border border-edge bg-panel p-5">
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-cyan">
+              Optional · evidence-cited · no automatic actions
+            </p>
+            <h3 className="mt-2 text-lg font-semibold text-ink">ORBIT AI Analysis</h3>
+            <p className="mt-2 text-sm leading-6 text-mute">
+              This sends only selected evidence metadata to the local API preview endpoint. No
+              source files are read here. The provider request is not sent until you inspect the
+              exact preview and explicitly approve it. Provider keys stay on the local API server.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="space-y-2 text-xs text-mute">
+              Provider
+              <select
+                value={aiProvider}
+                onChange={(event) => {
+                  setAiProvider(event.target.value as ApiAIProvider);
+                  invalidateAiPreview();
+                }}
+                className="w-full rounded-md border border-edge bg-void px-3 py-2 text-sm text-ink"
+              >
+                <option value="ollama">Ollama · local by default</option>
+                <option value="openai">OpenAI · remote</option>
+                <option value="anthropic">Anthropic · remote</option>
+              </select>
+            </label>
+            <label className="space-y-2 text-xs text-mute">
+              Model identifier
+              <input
+                value={aiModel}
+                onChange={(event) => {
+                  setAiModel(event.target.value);
+                  invalidateAiPreview();
+                }}
+                placeholder="Enter a model available to your provider"
+                className="w-full rounded-md border border-edge bg-void px-3 py-2 font-mono text-sm text-ink"
+              />
+            </label>
+          </div>
+
+          <label className="block space-y-2 text-xs text-mute">
+            Analysis question
+            <textarea
+              value={aiPrompt}
+              onChange={(event) => {
+                setAiPrompt(event.target.value);
+                invalidateAiPreview();
+              }}
+              rows={3}
+              className="w-full rounded-md border border-edge bg-void px-3 py-2 text-sm leading-6 text-ink"
+            />
+          </label>
+
+          <div>
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs font-medium uppercase tracking-wider text-mute">
+                Select evidence records
+              </p>
+              <span className="font-mono text-xs text-mute">
+                {selectedEvidenceIds.length} selected · metadata only
+              </span>
+            </div>
+            {evidenceItems.length ? (
+              <div className="max-h-64 space-y-2 overflow-y-auto rounded-md border border-edge p-3">
+                {evidenceItems.map((item, index) => {
+                  const entry = objectValue(item);
+                  const id = display(entry.id);
+                  if (id === '—') return null;
+                  const checked = selectedEvidenceIds.includes(id);
+                  return (
+                    <label
+                      key={id || index}
+                      className="flex cursor-pointer items-start gap-3 rounded-md border border-edge p-3"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => {
+                          setSelectedEvidenceIds((current) =>
+                            checked ? current.filter((value) => value !== id) : [...current, id],
+                          );
+                          invalidateAiPreview();
+                        }}
+                        className="mt-1 accent-cyan"
+                      />
+                      <span className="min-w-0">
+                        <span className="block break-all font-mono text-xs text-ink">
+                          {display(entry.source)}
+                        </span>
+                        <span className="mt-1 block text-[11px] text-mute">
+                          {display(entry.sourceType)} · {display(entry.status)} · {id}
+                        </span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            ) : (
+              <Empty
+                title="No evidence to analyse"
+                detail="Ingest CI, test, environment or telemetry evidence first. ORBIT AI does not invent evidence."
+              />
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void previewAI()}
+              disabled={aiLoading || !selectedRepository || selectedEvidenceIds.length === 0}
+              className="rounded-md border border-cyan bg-cyan/10 px-4 py-2 text-sm font-medium text-cyan hover:bg-cyan/15 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {aiLoading ? 'Working…' : 'Preview exact context'}
+            </button>
+            <button
+              type="button"
+              onClick={invalidateAiPreview}
+              disabled={!aiPreview && !aiResult}
+              className="rounded-md border border-edge px-4 py-2 text-sm text-mute hover:text-ink disabled:opacity-40"
+            >
+              Clear preview
+            </button>
+          </div>
+
+          {aiPreview && (
+            <section className="space-y-3 rounded-md border border-edge bg-void p-4">
+              <h4 className="font-mono text-xs uppercase tracking-wider text-cyan">
+                Exact provider-bound preview
+              </h4>
+              <dl className="grid gap-2 text-xs sm:grid-cols-2">
+                <div>
+                  <dt className="text-mute">Destination</dt>
+                  <dd className="mt-1 break-all font-mono text-ink">{aiPreview.destination}</dd>
+                </div>
+                <div>
+                  <dt className="text-mute">Model</dt>
+                  <dd className="mt-1 font-mono text-ink">{aiPreview.model}</dd>
+                </div>
+                <div>
+                  <dt className="text-mute">Context size</dt>
+                  <dd className="mt-1 text-ink">{aiPreview.bytes} bytes</dd>
+                </div>
+                <div>
+                  <dt className="text-mute">Redactions</dt>
+                  <dd className="mt-1 text-ink">{aiPreview.redactions}</dd>
+                </div>
+              </dl>
+              <p className="break-all font-mono text-[10px] text-mute">
+                Preview SHA-256: {aiPreview.sha256}
+              </p>
+              <p className="text-xs text-mute">
+                Evidence IDs: {aiPreview.evidenceIds.join(', ') || 'None'}
+              </p>
+              <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-md border border-edge bg-panel p-3 text-[11px] leading-5 text-ink">
+                {aiPreview.text}
+              </pre>
+              <p className="text-xs leading-5 text-mute">{aiPreviewNotice}</p>
+              <label className="flex items-start gap-3 text-xs leading-5 text-ink">
+                <input
+                  type="checkbox"
+                  checked={aiConfirmed}
+                  onChange={(event) => setAiConfirmed(event.target.checked)}
+                  className="mt-1 accent-cyan"
+                />
+                I reviewed this exact preview and approve sending it to the displayed provider
+                destination. I understand that provider data-retention terms may apply.
+              </label>
+              <button
+                type="button"
+                onClick={() => void analyseAI()}
+                disabled={aiLoading || !aiConfirmed}
+                className="rounded-md border border-cyan bg-cyan/10 px-4 py-2 text-sm font-medium text-cyan hover:bg-cyan/15 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {aiLoading ? 'Sending…' : 'Send approved context to provider'}
+              </button>
+            </section>
+          )}
+
+          {aiResult && (
+            <section className="space-y-3 rounded-md border border-edge p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h4 className="font-mono text-xs uppercase tracking-wider text-mute">
+                  Advisory analysis
+                </h4>
+                <span className="rounded-full border border-edge px-2 py-1 font-mono text-[10px] text-cyan">
+                  {aiResult.citationStatus}
+                </span>
+              </div>
+              <p className="whitespace-pre-wrap text-sm leading-6 text-ink">{aiResult.text}</p>
+              <ul className="list-disc space-y-1 pl-5 text-xs leading-5 text-mute">
+                {aiResult.limitations.map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
+              </ul>
+              <p className="text-[10px] text-mute">
+                This output is not verification evidence, does not alter the graph and cannot apply
+                code changes.
+              </p>
+            </section>
           )}
         </section>
       )}
