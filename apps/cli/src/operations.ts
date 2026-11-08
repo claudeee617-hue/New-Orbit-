@@ -124,7 +124,7 @@ export function runDoctor(
       privatePermissions = false;
     }
   }
-  const tokenSource = tokenFromEnvironment
+  const tokenSource = tokenFromEnvironment !== undefined
     ? 'environment'
     : tokenFileExists
       ? 'file'
@@ -269,8 +269,8 @@ export async function ingestCiReport(
 ) {
   const body = input as Record<string, unknown>;
   if (!body || typeof body !== 'object' || Array.isArray(body)) throw new OrbitError('INVALID_INPUT', 'CI report must be a JSON object');
-  if (typeof body.status !== 'string' || body.status.length > 32) throw new OrbitError('INVALID_INPUT', 'CI report status is required');
-  const statusText = body.status.toLowerCase();
+  if (typeof body.status !== 'string' || body.status.trim().length === 0 || body.status.length > 32) throw new OrbitError('INVALID_INPUT', 'CI report status is required');
+  const statusText = body.status.trim().toLowerCase();
   const status: EvidenceStatus = ['success', 'pass', 'passed'].includes(statusText)
     ? 'PASS'
     : ['failure', 'fail', 'failed'].includes(statusText)
