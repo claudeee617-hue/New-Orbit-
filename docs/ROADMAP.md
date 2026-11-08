@@ -109,11 +109,11 @@ The first public version should contain a genuinely working scanner, evidence gr
 
 | ID | Task | Pri | Prompt |
 |---|---|---|---|
-| API-01 | Fastify local API bound to loopback with session token | P0 | 11 |
-| API-02 | Endpoints: repos, indexing, graph, evidence, passports, reports | P0 | 11 |
-| API-03 | Ingestion endpoints: CI results, environment snapshots, device sessions | P1 | 11 |
-| CLI-01 | Commander CLI: init, scan, status, graph, impact, verify, passport | P0 | 11 |
-| CLI-02 | Remaining commands (ci ingest, tests history, capsule, device, mcp start, doctor); JSON mode; exit codes | P1 | 11 |
+| API-01 | Fastify local API bound to loopback with local Bearer session token | P0 | 11 |
+| API-02 | Authenticated endpoints: repos, local indexing, graph, evidence, passports, reports | P0 | 11 |
+| API-03 | Bounded ingestion: CI results, allowlisted environment metadata, recorded device sessions | P1 | 11 |
+| CLI-01 | Commander CLI: init, scan, status, doctor, graph, impact, verify, passport | P0 | 11 |
+| CLI-02 | CI ingest, test-report ingestion/history, capsule, device, MCP; JSON mode and stable exit codes | P1 | 11 |
 
 ### Dashboard
 
@@ -238,3 +238,8 @@ The parser is bounded to 10 MiB and 100,000 records. Raw artifact bytes remain i
 | PAS-07 | 10 | Dedicated visual Replay Room UI and policy-configurable completeness rules | Not implemented |
 
 A Passport distinguishes evidence presence from outcome. There is no aggregate quality score. Only exact-commit evidence is auto-correlated. The Replay Room work in this prompt is a backend/CLI vertical slice; no full UI or automatic reproduction is claimed.
+
+
+### Prompt 11 implementation note
+
+The current local API/CLI implementation and exact security/data boundaries are documented in [`docs/PROMPT_11_API_CLI.md`](PROMPT_11_API_CLI.md). It is under cross-platform validation on `feat/prompt-11-api-cli` and is not merged until CI and review pass.
