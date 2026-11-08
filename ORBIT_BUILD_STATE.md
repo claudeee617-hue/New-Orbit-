@@ -5,7 +5,7 @@ Last updated: 2026-11-08
 
 ## Current phase
 
-**Prompts 0–4 are on main. Prompt 5 is implemented on `feat/orbit-evidence-engines` and included in draft PR #1; it has not been merged to main.** Full local workspace check passes on 2026-11-08. GitHub Actions for the Prompt 5 commit must still confirm the branch CI result.
+**Prompts 0–4 are on `main`. Prompt 5 plus the WITNESS / FLARE / CAPSULE prototypes are on `feat/orbit-evidence-engines` (PR #1 was closed unmerged). The extended Prompt 6–8 work is on `feat/prompts-6-8-completion`.** The latest branch changes have not yet passed GitHub Actions; do not treat Prompts 6–8 as release-complete.
 
 ## Phase checklist
 
@@ -17,9 +17,9 @@ Last updated: 2026-11-08
 | 3      | ORBIT Core graph                               | Done (see results below; not pushed)           |
 | 4      | ATLAS scanning                                 | Done (see results below)                       |
 | 5      | ATLAS memory and MCP                           | Implemented on feature branch; draft PR, CI pending |
-| 6      | WITNESS                                        | Partial prototype on feature branch; CI pending |
-| 7      | FLARE                                          | Partial prototype on feature branch; CI pending |
-| 8      | CAPSULE                                        | Partial prototype on feature branch; CI pending |
+| 6      | WITNESS                                        | Base prototype plus extended verification helpers and CLI on `feat/prompts-6-8-completion`; CI pending |
+| 7      | FLARE                                          | Base prototype plus pytest/Jest/Go adapters and reliability analytics/CLI on `feat/prompts-6-8-completion`; CI pending |
+| 8      | CAPSULE                                        | Base prototype plus polyglot manifest inspection and CLI on `feat/prompts-6-8-completion`; CI pending |
 | 9      | FLIGHT RECORDER                                | Recorded-file replay only; no hardware connection |
 | 10     | Change Passport and Replay Room                | Passport assembly prototype; no Replay Room yet |
 | 11     | API and CLI (full)                             | Partial: local engine CLI commands on feature branch |
@@ -176,3 +176,52 @@ node apps/cli/dist/index.js atlas impact packages/core/src/index.ts --db .orbit/
 ## Next step
 
 Prompt 6: continue WITNESS from the feature branch prototype, harden evidence normalization and integrate the engine against CI-produced reports.
+
+
+## Prompt 6–8 extension work on feat/prompts-6-8-completion (CI pending)
+
+This branch is based on `feat/orbit-evidence-engines` at `bbb6626`, which contains the Prompt 5 implementation and the initial cross-engine prototypes. It does not change `main` directly.
+
+### Prompt 6 — WITNESS extensions
+
+- Added `packages/atlas/src/witness-extended.ts`:
+  - path-name-only sensitive-file findings for common credential-bearing filenames (no content inspection);
+  - exact-path baseline/candidate coverage comparison with REGRESSION / IMPROVED / UNCHANGED / NOT_COMPARABLE;
+  - caller-supplied changed-symbol and related-test mapping with explicit limitations;
+  - Markdown and SARIF 2.1.0 renderers with stable finding fingerprints.
+- Existing added-line unified-diff parser, LCOV/Cobertura adapters and changed-line coverage summary remain the first verification layer.
+- CLI adds `orbit witness coverage-compare` and `orbit witness sensitive-paths`.
+
+### Prompt 7 — FLARE extensions
+
+- Added `packages/atlas/src/flare-extended.ts`:
+  - bounded JSON adapters for pytest-json-report, Jest JSON and Go `go test -json` event streams;
+  - failure-message clustering using normalized signatures;
+  - slow-test mean, p95 and maximum durations;
+  - test reliability history with existing minimum-sample / pass-fail-flip / Wilson-interval classification.
+- CLI adds `orbit flare analyse <reports...> --format junit|pytest-json|jest-json|go-json`.
+- The CLI combines the report files supplied in one invocation. A durable, multi-run database history store and historical run ingestion remain outstanding.
+
+### Prompt 8 — CAPSULE extensions
+
+- Added `packages/atlas/src/capsule-extended.ts`:
+  - asdf `.tool-versions`, Rust toolchain, Python requirements, common pyproject dependency declarations;
+  - Dockerfile image references, devcontainer images/features and workspace signals (pnpm, Turbo, Nx, Lerna, Cargo and Go workspaces);
+  - deterministic extended fingerprint and explicit parser limitations.
+- CLI adds `orbit capsule inspect-extended <repository>`; it inspects a bounded set of manifest files, never executes package managers or build commands, never reads `.env` secret files, and reports its manifest-only mode.
+
+### Tests added (not yet run by CI)
+
+- `packages/atlas/src/engines-extended.test.ts`: WITNESS regression/SARIF/sensitive paths, FLARE adapters/analytics, CAPSULE polyglot manifests and limits.
+- `apps/cli/src/advanced-engines.test.ts`: regression comparison, path findings, multi-report reliability analysis, and manifest-only environment inspection.
+- Existing baseline engine tests remain in place.
+
+### Remaining limitations / release gates
+
+- Extended modules currently live in `@orbit/atlas` for compatibility with the in-progress prototype; a later refactor may split WITNESS, FLARE and CAPSULE into independent packages once contracts stabilise.
+- Sensitive-path findings are name-based warnings only; no secret scanning of file contents is claimed.
+- Coverage regression compares supplied coverage maps for exact paths; it does not attribute coverage to individual tests.
+- pytest/Jest/Go adapters cover common JSON report forms, not every framework/version variation.
+- Failure clustering is heuristic text normalization; duration comparisons do not normalize runner hardware.
+- Capsule fingerprints represent supplied manifest declarations, not actual installed dependencies, container digests or the running OS.
+- No CI result is claimed until the new branch's workflow run is inspected.
