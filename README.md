@@ -8,19 +8,20 @@ Its central artifact is the **Change Passport**: a content-hashed record of a ch
 
 ## Current status
 
-The public `main` branch contains the monorepo foundation, immutable evidence graph and ATLAS repository scanner. Engineering Prompts 5–10 are consolidated on `feat/prompts-6-8-completion` in draft PR #5 and remain unmerged pending a fresh full CI pass. App Business Module Prompts 0–4 are in separate draft PRs #6 and #7. None of these feature PRs is merged or release-complete.
+The public `main` branch contains the engineering foundation through Prompt 4. Engineering roadmap Prompts 5–10 and the separate App Business Module sub-prompts 0–4 are consolidated on `feat/orbit-prompts-0-10-business-consolidated`. The combined implementation is being validated as one cross-platform merge candidate; it is not yet merged or release-complete.
 
 | Capability | Current implementation |
 | --- | --- |
 | Monorepo, TypeScript, lint, tests and CI foundation | Implemented on `main` |
 | ORBIT Core graph, versioned records and hash-chained ledger | Implemented on `main` |
 | ATLAS repository scanner and architecture reports | Implemented on `main` |
-| ATLAS persistent decision memory and read-only stdio MCP | Implemented on the Prompt 5–8 feature branch; CI passed; PR #5 draft, not merged |
-| WITNESS changed-line coverage, baseline comparison, filename findings, Markdown/SARIF | Extended prototype on `feat/prompts-6-8-completion`; CI passed, PR #5 draft |
-| FLARE JUnit, pytest, Jest and Go JSON reports; failure clusters and duration summaries | Extended prototype on `feat/prompts-6-8-completion`; no durable history store yet |
-| CAPSULE polyglot toolchain, dependency, container and workspace manifest inspection | Extended prototype on `feat/prompts-6-8-completion`; no build replay yet |
+| ATLAS persistent decision memory and read-only stdio MCP | Implemented on the consolidated engineering branch; Prompt 5–8 baseline checks passed, full combined CI pending |
+| WITNESS changed-line coverage, baseline comparison, filename findings, Markdown/SARIF | Extended prototype on the consolidated engineering branch; full combined CI pending |
+| FLARE JUnit, pytest, Jest and Go JSON reports; failure clusters and duration summaries | Extended prototype on the consolidated engineering branch; no durable history store yet |
+| CAPSULE polyglot toolchain, dependency, container and workspace manifest inspection | Extended prototype on the consolidated engineering branch; no build replay yet |
 | FLIGHT RECORDER recorded telemetry parser, caller-defined analysis and hash-verified graph persistence | Prompt 9 prototype; serial/USB capture unavailable |
 | Change Passport graph correlation, versioned history, comparisons and non-executing reproduction plan | Prompt 10 backend/CLI prototype; visual Replay Room UI not implemented |
+| App Business Module | Strategy, market references, local actual-vs-forecast calculator and pricing simulator on the consolidated branch; no live accounting/CRM/billing data |
 | Specialist AI agents, GitHub Action and full dashboard | Not implemented (MCP stdio server is on the feature branch) |
 
 See [ORBIT_BUILD_STATE.md](ORBIT_BUILD_STATE.md) for phase-by-phase implementation details, branch status, known limitations and verified test results.
@@ -96,7 +97,7 @@ node apps/cli/dist/index.js passport create passport-input.json
 
 All `--out` paths are created without overwriting an existing file.
 
-Extended commands on `feat/prompts-6-8-completion` (branch CI pending):
+Extended commands on `feat/orbit-prompts-0-10-business-consolidated` (combined CI pending):
 
 ```bash
 node apps/cli/dist/index.js witness coverage-compare before.info after.info --format lcov
@@ -136,7 +137,7 @@ See [the threat model](docs/THREAT_MODEL.md), [technical design](docs/architectu
 - [Master plan](ORBIT_MASTER_PLAN.md) and [build state](ORBIT_BUILD_STATE.md)
 - [PRD](docs/PRD.md), [architecture](docs/ARCHITECTURE.md), [technical design](docs/architecture/TECHNICAL_DESIGN.md), [data model](docs/DATA_MODEL.md)
 - [Technical roadmap](docs/ROADMAP.md), [competitive analysis](docs/COMPETITIVE_ANALYSIS.md), [test strategy](docs/TEST_STRATEGY.md), [UX specification](docs/UX_SPECIFICATION.md)
-- [Business model & monetization architecture](docs/BUSINESS_MODEL.md), [commercial product roadmap](docs/COMMERCIAL_ROADMAP.md)
+- [Business model & monetization architecture](docs/BUSINESS_MODEL.md), [commercial product roadmap](docs/COMMERCIAL_ROADMAP.md), [App Business Module](docs/APP_BUSINESS_MODULE.md)
 - [Architecture decision records](docs/DECISIONS/)
 
 ## Contributing
