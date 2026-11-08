@@ -245,8 +245,15 @@ This implementation was consolidated from the `feat/orbit-evidence-engines` base
 
 ## Prompt 9–10 CI status
 
-Verified by GitHub Actions run #109 (2026-11-08): Ubuntu, macOS and Windows all passed the repository `pnpm run check` workflow. The change was then merged into `main` through PR #5.
+Verified by GitHub Actions run `42481493312` on Ubuntu, macOS and Windows; the engineering branch recorded 331 passing tests plus format, lint, typecheck and build. The changes were merged into `main` through PR #5.
 
+## Final Prompt 0–10 integrated state
+
+- Engineering Prompts 0–10 are merged into `main` through the engineering implementation and verification path.
+- The separate App Business Module Prompts 0–4 are also merged into `main` through PR #9.
+- Final main-head validation is performed by the latest `main` push-CI after the Business Module merge. All three OS jobs passed in run `42482443566`.
+- Business and engineering layers remain separated: business UI uses local planning state and does not add billing, hosted customer data, CRM, payment processing or live accounting.
+- The repository still has no `LICENSE` file, so the project should not be described as currently licensed open source until that file is added.
 
 ## App Business Module sub-prompts 0–4 (separate from engineering roadmap)
 
