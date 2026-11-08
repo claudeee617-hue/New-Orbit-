@@ -4,11 +4,13 @@ import type { Command } from 'commander';
 import {
   compareEnvironments,
   createChangePassport,
+  findSensitivePathFindings,
   inspectEnvironment,
   parseCobertura,
   parseJunitXml,
   parseLcov,
   parseTelemetry,
+  renderWitnessSarif,
   summarizeTestHistory,
   verifyChangedLineCoverage,
   type TelemetrySession,
@@ -136,7 +138,7 @@ export function attachEngineCommands(program: Command, io: CliIo): void {
     .description('verify added diff lines against an LCOV or Cobertura coverage report')
     .option('--lcov <file>', 'LCOV coverage report')
     .option('--cobertura <file>', 'Cobertura XML report')
-    .option('--format <format>', 'json or markdown', 'json')
+    .option('--format <format>', 'json, markdown or sarif', 'json')
     .option('--out <file>', 'write report to a new file (refuses to overwrite)')
     .action(
       async (
@@ -146,16 +148,18 @@ export function attachEngineCommands(program: Command, io: CliIo): void {
         if (Boolean(options.lcov) === Boolean(options.cobertura)) {
           throw new Error('provide exactly one of --lcov or --cobertura');
         }
-        if (options.format !== 'json' && options.format !== 'markdown')
-          throw new Error('--format must be json or markdown');
+        if (!['json', 'markdown', 'sarif'].includes(options.format))
+          throw new Error('--format must be json, markdown or sarif');
         const diff = await readText(diffFile);
         const coverageText = await readText(options.lcov ?? options.cobertura!);
         const coverage = options.lcov ? parseLcov(coverageText) : parseCobertura(coverageText);
         const report = verifyChangedLineCoverage(diff, coverage);
-        const output =
-          options.format === 'markdown'
-            ? markdownVerification(report)
-            : `${JSON.stringify(report, null, 2)}\n`;
+        const sensitivePathFindings = findSensitivePathFindings(diff);
+        const output = options.format === 'markdown'
+          ? markdownVerification(report)
+          : options.format === 'sarif'
+            ? renderWitnessSarif(report, sensitivePathFindings)
+            : `${JSON.stringify({ ...report, sensitivePathFindings }, null, 2)}\n`;
         await writeOutput(options.out, output);
         if (options.out)
           io.stdout(`Wrote ${options.format} verification report to ${options.out}\n`);
