@@ -89,10 +89,23 @@ function stableJson(value: unknown): string {
 /** Assemble a passport from supplied facts. Missing evidence is explicit; no test result is inferred. */
 export function createChangePassport(
   input: ChangePassportInput,
-  options: {
-    now?: () => string;
-    evidenceVerification?: 'GRAPH_VALIDATED' | 'UNVERIFIED_INPUT';
-  } = {},
+  options: { now?: () => string } = {},
+): ChangePassport {
+  return assembleChangePassport(input, options, 'UNVERIFIED_INPUT');
+}
+
+/** Internal graph-backed variant. This is not re-exported from the public package entry point. */
+export function createGraphValidatedChangePassport(
+  input: ChangePassportInput,
+  options: { now?: () => string } = {},
+): ChangePassport {
+  return assembleChangePassport(input, options, 'GRAPH_VALIDATED');
+}
+
+function assembleChangePassport(
+  input: ChangePassportInput,
+  options: { now?: () => string },
+  evidenceVerification: 'GRAPH_VALIDATED' | 'UNVERIFIED_INPUT',
 ): ChangePassport {
   if (!input.repository.trim()) throw new Error('repository is required');
   if (!/^[0-9a-f]{7,64}$/i.test(input.commitSha)) throw new Error('commitSha must be a Git SHA');
@@ -206,7 +219,6 @@ export function createChangePassport(
   )
     ? ('PARTIAL' as const)
     : ('COMPLETE' as const);
-  const evidenceVerification = options.evidenceVerification ?? 'UNVERIFIED_INPUT';
   const verificationStatus = evidence.some((item) => item.status === 'FAIL')
     ? ('FAIL' as const)
     : evidenceVerification !== 'GRAPH_VALIDATED' || missingEvidence.length > 0
