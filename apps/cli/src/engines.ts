@@ -356,7 +356,7 @@ export function attachEngineCommands(program: Command, io: CliIo): void {
               source: `file:${options.artifactPath}`,
               artifactRelativePath: options.artifactPath!,
               session,
-              analysis,
+              analysisOptions: { units, thresholds },
               isDemo: options.demo === true,
               ...(options.device ? { deviceLabel: options.device } : {}),
               ...(options.buildId ? { firmwareBuildId: options.buildId } : {}),
