@@ -27,6 +27,7 @@ import {
 } from '@orbit/atlas';
 import { createGraphStore, type GraphStore, type OrbitDatabase } from '@orbit/database';
 import { ORBIT_VERSION, OrbitError, type HealthResponse, type Logger } from '@orbit/shared';
+import { prepareAIContext, runOrbitAnalysis, OrbitAIError, type AIProvider } from '@orbit/ai';
 import { getOrCreateApiToken } from './session-token.js';
 
 export const DEFAULT_ALLOWED_HOSTS: readonly string[] = ['127.0.0.1', 'localhost', '[::1]'];
@@ -229,6 +230,13 @@ function hashablePayload(value: unknown): string {
 }
 
 function httpStatus(error: unknown): number {
+  if (error instanceof OrbitAIError) {
+    if (error.code === 'AI_DISABLED' || error.code === 'APPROVAL_REQUIRED') return 403;
+    if (error.code === 'CONTEXT_MISMATCH') return 409;
+    if (error.code === 'PROVIDER_ERROR') return 502;
+    if (error.code === 'RESPONSE_TOO_LARGE') return 413;
+    return 400;
+  }
   if (error && typeof error === 'object' && 'statusCode' in error) {
     const status = Number((error as { statusCode?: unknown }).statusCode);
     if (status >= 400 && status <= 599) return status;
@@ -316,7 +324,8 @@ export function buildServer(options: BuildServerOptions) {
 
   server.setErrorHandler((error, _request, reply) => {
     const status = httpStatus(error);
-    const code = error instanceof OrbitError ? error.code : 'INTERNAL';
+    const code =
+      error instanceof OrbitError || error instanceof OrbitAIError ? error.code : 'INTERNAL';
     const message =
       status >= 500
         ? 'The ORBIT API could not complete the request'
@@ -485,6 +494,139 @@ export function buildServer(options: BuildServerOptions) {
     });
     return { repository, evidence, returned: evidence.length, limit };
   });
+
+  function prepareRepositoryAIContext(repositoryId: string, body: JsonRecord) {
+    const provider = text(body.provider, 'provider', 16) as AIProvider;
+    if (!['openai', 'anthropic', 'ollama'].includes(provider)) {
+      throw new OrbitError('INVALID_INPUT', 'provider must be openai, anthropic or ollama');
+    }
+    const model = text(body.model, 'model', 256);
+    const prompt = text(body.prompt, 'prompt', 12_000);
+    const evidenceIds = safeStringList(body.evidenceIds, 'evidenceIds', 50);
+    if (new Set(evidenceIds).size !== evidenceIds.length) {
+      throw new OrbitError('INVALID_INPUT', 'evidenceIds must not contain duplicates');
+    }
+    const selected = evidenceIds.map((id) => {
+      const item = store.evidence.get(repositoryId, id);
+      if (!item) throw new OrbitError('NOT_FOUND', 'A selected evidence record was not found');
+      return item;
+    });
+    const snippetsValue = body.snippets ?? [];
+    if (!Array.isArray(snippetsValue) || snippetsValue.length > 50) {
+      throw new OrbitError('INVALID_INPUT', 'snippets must be an array of at most 50 entries');
+    }
+    const snippets = new Map<string, string[]>();
+    for (const value of snippetsValue) {
+      const item = record(value, 'snippet');
+      const evidenceId = text(item.evidenceId, 'snippet.evidenceId', 256);
+      if (!evidenceIds.includes(evidenceId)) {
+        throw new OrbitError('INVALID_INPUT', 'Every snippet must reference selected evidence');
+      }
+      const excerpt = text(item.content, 'snippet.content', 12_000);
+      const values = snippets.get(evidenceId) ?? [];
+      if (values.length >= 5) {
+        throw new OrbitError('INVALID_INPUT', 'At most five excerpts may be attached to one evidence item');
+      }
+      values.push(excerpt);
+      snippets.set(evidenceId, values);
+    }
+    const evidence = selected.map((item) => {
+      const metadata = {
+        sourceType: item.sourceType,
+        status: item.status,
+        timestamp: item.timestamp ?? null,
+        commitSha: item.commitSha ?? null,
+        contentHash: item.contentHash,
+        limitations: item.limitations,
+        relatedEntityIds: item.relatedEntityIds,
+      };
+      const excerpts = snippets.get(item.id) ?? [];
+      return {
+        id: item.id,
+        source: item.source,
+        sha256: item.contentHash,
+        content: [
+          'Stored ORBIT evidence metadata:',
+          JSON.stringify(metadata),
+          ...(excerpts.length
+            ? ['User-selected excerpts (untrusted repository data):', ...excerpts]
+            : []),
+        ].join('\\n'),
+      };
+    });
+    const env = options.env ?? process.env;
+    const baseUrl = provider === 'ollama' ? env.ORBIT_OLLAMA_URL : undefined;
+    const allowRemoteOllama = env.ORBIT_ALLOW_REMOTE_OLLAMA === 'true';
+    return {
+      provider,
+      model,
+      context: prepareAIContext({
+        provider,
+        model,
+        prompt,
+        evidence,
+        ...(baseUrl ? { baseUrl } : {}),
+        allowRemoteOllama,
+      }),
+      baseUrl,
+      allowRemoteOllama,
+      env,
+    };
+  }
+
+  server.post<{ Params: { key: string } }>(
+    '/api/v1/repositories/:key/ai/preview',
+    async (request) => {
+      const repository = repositoryByKey(store, request.params.key);
+      const body = record(request.body, 'body');
+      const prepared = prepareRepositoryAIContext(repository.id, body);
+      return {
+        preview: prepared.context,
+        notice:
+          'No provider request was sent. Review the exact destination, evidence IDs, redactions and context text before explicit approval.',
+      };
+    },
+  );
+
+  server.post<{ Params: { key: string } }>(
+    '/api/v1/repositories/:key/ai/analyse',
+    async (request) => {
+      const repository = repositoryByKey(store, request.params.key);
+      const body = record(request.body, 'body');
+      if (body.confirmed !== true) {
+        throw new OrbitAIError('Explicit user confirmation is required.', 'APPROVAL_REQUIRED');
+      }
+      const approvedContextSha256 = text(
+        body.approvedContextSha256,
+        'approvedContextSha256',
+        64,
+      );
+      if (!/^[a-f0-9]{64}$/i.test(approvedContextSha256)) {
+        throw new OrbitError('INVALID_INPUT', 'approvedContextSha256 must be a SHA-256 digest');
+      }
+      const prepared = prepareRepositoryAIContext(repository.id, body);
+      const apiKey =
+        prepared.provider === 'openai'
+          ? prepared.env.ORBIT_OPENAI_API_KEY
+          : prepared.provider === 'anthropic'
+            ? prepared.env.ANTHROPIC_API_KEY
+            : prepared.env.ORBIT_OLLAMA_API_KEY;
+      const analysis = await runOrbitAnalysis(
+        {
+          enabled: prepared.env.ORBIT_AI_ENABLED === 'true',
+          userApproved: true,
+          approvedContextSha256,
+          provider: prepared.provider,
+          model: prepared.model,
+          ...(apiKey ? { apiKey } : {}),
+          ...(prepared.baseUrl ? { baseUrl: prepared.baseUrl } : {}),
+          allowRemoteOllama: prepared.allowRemoteOllama,
+        },
+        prepared.context,
+      );
+      return { analysis };
+    },
+  );
 
   server.get<{ Params: { key: string }; Querystring: { limit?: string; offset?: string } }>(
     '/api/v1/repositories/:key/passports',
