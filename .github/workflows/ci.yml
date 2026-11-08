@@ -35,6 +35,9 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      - name: Test composite GitHub Action harness
+        run: node --test .github/scripts/orbit-action.test.mjs
+
       # format:check, lint, typecheck, test, build
       - name: Check
         run: pnpm run check
