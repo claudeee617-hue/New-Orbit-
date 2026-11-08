@@ -167,43 +167,45 @@ export function rememberMemory(store: GraphStore, input: MemoryInput): MemoryRec
   } satisfies Record<string, JsonValue>;
   const canonical = canonicalJson(attrs);
   const sourceType = sourceRefs.length > 0 ? 'parser' : 'manual';
-  const evidence = store.evidence.append({
-    repositoryId: parsed.repositoryId,
-    source: `atlas-memory:${parsed.key}`,
-    sourceType,
-    ...(parsed.commitSha ? { commitSha: parsed.commitSha } : {}),
-    ...(sourceRefs[0] ? { location: { path: sourceRefs[0].path } } : {}),
-    contentHash: hashArtifact(canonical),
-    status: 'NOT_MEASURED',
-    limitations: [
-      'Architectural memory is contextual information, not test or correctness evidence.',
-      'Source freshness is unknown until current source hashes are supplied.',
-    ],
-    relatedEntityIds: [nodeId],
-  });
-  const node = store.nodes.upsert({
-    repositoryId: parsed.repositoryId,
-    type,
-    key: parsed.key,
-    attrs,
-    sourceEvidenceId: evidence.record.id,
-    ...(parsed.commitSha ? { validFromCommit: parsed.commitSha } : {}),
-  }).record;
+  return store.transaction(() => {
+    const evidence = store.evidence.append({
+      repositoryId: parsed.repositoryId,
+      source: `atlas-memory:${parsed.key}`,
+      sourceType,
+      ...(parsed.commitSha ? { commitSha: parsed.commitSha } : {}),
+      ...(sourceRefs[0] ? { location: { path: sourceRefs[0].path } } : {}),
+      contentHash: hashArtifact(canonical),
+      status: 'NOT_MEASURED',
+      limitations: [
+        'Architectural memory is contextual information, not test or correctness evidence.',
+        'Source freshness is unknown until current source hashes are supplied.',
+      ],
+      relatedEntityIds: [nodeId],
+    });
+    const node = store.nodes.upsert({
+      repositoryId: parsed.repositoryId,
+      type,
+      key: parsed.key,
+      attrs,
+      sourceEvidenceId: evidence.record.id,
+      ...(parsed.commitSha ? { validFromCommit: parsed.commitSha } : {}),
+    }).record;
 
-  for (const key of supersedes) {
-    const previous = findMemoryReference(store, parsed.repositoryId, key);
-    if (previous && previous.id !== node.id && previous.type === node.type) {
-      store.edges.upsert({
-        repositoryId: parsed.repositoryId,
-        type: 'SUPERSEDES',
-        fromId: node.id,
-        toId: previous.id,
-        attrs: { producer: 'atlas-memory', reason: 'explicit document metadata' },
-        sourceEvidenceId: evidence.record.id,
-      });
+    for (const key of supersedes) {
+      const previous = findMemoryReference(store, parsed.repositoryId, key);
+      if (previous && previous.id !== node.id && previous.type === node.type) {
+        store.edges.upsert({
+          repositoryId: parsed.repositoryId,
+          type: 'SUPERSEDES',
+          fromId: node.id,
+          toId: previous.id,
+          attrs: { producer: 'atlas-memory', reason: 'explicit document metadata' },
+          sourceEvidenceId: evidence.record.id,
+        });
+      }
     }
-  }
-  return toMemory(node);
+    return toMemory(node);
+  });
 }
 
 function findMemoryReference(
@@ -314,19 +316,21 @@ export function invalidateMemory(
   if (!reason.trim()) throw new Error('reason is required');
   const node = findMemoryByKey(store, repositoryId, key);
   if (!node) return false;
-  const evidence = store.evidence.append({
-    repositoryId,
-    source: `atlas-memory-invalidation:${key}`,
-    sourceType: 'manual',
-    contentHash: hashArtifact(canonicalJson({ key, reason: reason.trim(), nodeId: node.id })),
-    status: 'NOT_MEASURED',
-    limitations: [
-      'Invalidation is an administrative memory lifecycle event, not verification evidence.',
-    ],
-    relatedEntityIds: [node.id],
+  return store.transaction(() => {
+    const evidence = store.evidence.append({
+      repositoryId,
+      source: `atlas-memory-invalidation:${key}`,
+      sourceType: 'manual',
+      contentHash: hashArtifact(canonicalJson({ key, reason: reason.trim(), nodeId: node.id })),
+      status: 'NOT_MEASURED',
+      limitations: [
+        'Invalidation is an administrative memory lifecycle event, not verification evidence.',
+      ],
+      relatedEntityIds: [node.id],
+    });
+    store.nodes.retire({ repositoryId, nodeId: node.id, sourceEvidenceId: evidence.record.id });
+    return true;
   });
-  store.nodes.retire({ repositoryId, nodeId: node.id, sourceEvidenceId: evidence.record.id });
-  return true;
 }
 
 function extractFirstHeading(markdown: string, fallback: string): string {
