@@ -367,7 +367,7 @@ export function attachOperationsCommands(program: Command, io: CliIo): void {
     .action((options: { db?: string; repo?: string; name?: string }) => {
       const config = loadConfig(io.env);
       const result = runInit(options.db ?? config.dbPath, options.repo, options.name);
-      io.stdout(`${JSON.stringify(result, null, 2)}\\n`);
+      io.stdout(`${JSON.stringify(result, null, 2)}\n`);
     });
 
   program
@@ -378,7 +378,7 @@ export function attachOperationsCommands(program: Command, io: CliIo): void {
     .action((options: { db?: string; json?: boolean }) => {
       const config = loadConfig(io.env);
       const report = runDoctor(options.db ?? config.dbPath, io.env);
-      if (options.json) io.stdout(`${JSON.stringify(report, null, 2)}\\n`);
+      if (options.json) io.stdout(`${JSON.stringify(report, null, 2)}\n`);
       else {
         const lines = [
           `ORBIT doctor: ${report.ok ? 'OK' : 'ATTENTION REQUIRED'}`,
@@ -388,7 +388,7 @@ export function attachOperationsCommands(program: Command, io: CliIo): void {
           ...report.integrity.map((item) => `Ledger ${item.repositoryKey}: ${item.ok ? 'OK' : `FAILED (${item.problems} problems)`}`),
           ...report.warnings.map((warning) => `Warning: ${warning}`),
         ];
-        io.stdout(`${lines.join('\\n')}\\n`);
+        io.stdout(`${lines.join('\n')}\n`);
       }
     });
 
@@ -402,7 +402,7 @@ export function attachOperationsCommands(program: Command, io: CliIo): void {
     .action((options: { db?: string; repo?: string; json?: boolean }) => {
       const config = loadConfig(io.env);
       const result = runGraphSummary(options.db ?? config.dbPath, options.repo);
-      if (options.json) io.stdout(`${JSON.stringify(result, null, 2)}\\n`);
+      if (options.json) io.stdout(`${JSON.stringify(result, null, 2)}\n`);
       else {
         const lines = [
           `Repository: ${result.repository.key}`,
@@ -412,7 +412,7 @@ export function attachOperationsCommands(program: Command, io: CliIo): void {
           ...Object.entries(result.edges).map(([type, count]) => `  ${type}: ${count}`),
           `Ledger: ${result.ledger.entries} entries — ${result.integrity.ok ? 'integrity OK' : `integrity failed (${result.integrity.problems} problems)`}`,
         ];
-        io.stdout(`${lines.join('\\n')}\\n`);
+        io.stdout(`${lines.join('\n')}\n`);
       }
     });
   graph
@@ -432,7 +432,7 @@ export function attachOperationsCommands(program: Command, io: CliIo): void {
       const offset = Number(options.offset);
       if (!Number.isInteger(offset) || offset < 0 || offset > 1_000_000) throw new Error('--offset must be from 0 to 1000000');
       const result = runGraphNodes(options.db ?? config.dbPath, options.repo, type, limit, offset);
-      io.stdout(options.json ? `${JSON.stringify(result, null, 2)}\\n` : `${result.nodes.map((item) => `${item.type} ${item.key} [${item.id}]`).join('\\n')}\\n`);
+      io.stdout(options.json ? `${JSON.stringify(result, null, 2)}\n` : `${result.nodes.map((item) => `${item.type} ${item.key} [${item.id}]`).join('\n')}\n`);
     });
 
   const ci = program.command('ci').description('ingest and inspect CI evidence');
@@ -445,7 +445,7 @@ export function attachOperationsCommands(program: Command, io: CliIo): void {
       const config = loadConfig(io.env);
       const parsed = JSON.parse(await readBounded(file)) as unknown;
       const result = await ingestCiReport(options.db ?? config.dbPath, options.repo, parsed);
-      io.stdout(`${JSON.stringify(result, null, 2)}\\n`);
+      io.stdout(`${JSON.stringify(result, null, 2)}\n`);
     });
 
   const tests = program.command('tests').description('ingest and inspect test-report evidence');
@@ -458,7 +458,7 @@ export function attachOperationsCommands(program: Command, io: CliIo): void {
     .action(async (file: string, options: { db?: string; repo: string; format: string }) => {
       const config = loadConfig(io.env);
       const result = await ingestTestReport(options.db ?? config.dbPath, options.repo, file, options.format);
-      io.stdout(`${JSON.stringify(result, null, 2)}\\n`);
+      io.stdout(`${JSON.stringify(result, null, 2)}\n`);
     });
   tests
     .command('history')
@@ -474,6 +474,6 @@ export function attachOperationsCommands(program: Command, io: CliIo): void {
       const offset = Number(options.offset);
       if (!Number.isInteger(offset) || offset < 0 || offset > 1_000_000) throw new Error('--offset must be from 0 to 1000000');
       const result = runTestHistory(options.db ?? config.dbPath, options.repo, limit, offset);
-      io.stdout(options.json ? `${JSON.stringify(result, null, 2)}\\n` : `${result.runs.map((item) => `${item.key} — ${String(item.attrs['passed'] ?? 0)} passed / ${String(item.attrs['failed'] ?? 0)} failed`).join('\\n')}\\n`);
+      io.stdout(options.json ? `${JSON.stringify(result, null, 2)}\n` : `${result.runs.map((item) => `${item.key} — ${String(item.attrs['passed'] ?? 0)} passed / ${String(item.attrs['failed'] ?? 0)} failed`).join('\n')}\n`);
     });
 }
