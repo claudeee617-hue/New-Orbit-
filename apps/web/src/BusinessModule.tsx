@@ -1,3 +1,4 @@
+import { BusinessIntelligence } from './BusinessIntelligence.js';
 import {
   BUSINESS_KPIS,
   BUSINESS_OFFERS,
@@ -79,6 +80,8 @@ export function BusinessModule() {
           </div>
         </div>
       </section>
+
+      <BusinessIntelligence />
 
       <section aria-labelledby="offers-heading">
         <SectionHeading
