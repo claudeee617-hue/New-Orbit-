@@ -30,8 +30,16 @@ const ACTUAL_FIELDS: { key: InputKey; label: string; hint: string }[] = [
 ];
 
 const FORECAST_FIELDS: { key: InputKey; label: string; hint: string }[] = [
-  { key: 'forecastRevenue', label: 'Forecast revenue', hint: 'Your planned revenue for the period' },
-  { key: 'forecastExpenses', label: 'Forecast expenses', hint: 'Your planned expenses for the period' },
+  {
+    key: 'forecastRevenue',
+    label: 'Forecast revenue',
+    hint: 'Your planned revenue for the period',
+  },
+  {
+    key: 'forecastExpenses',
+    label: 'Forecast expenses',
+    hint: 'Your planned expenses for the period',
+  },
   { key: 'forecastCustomers', label: 'Forecast customers', hint: 'Expected paying-customer count' },
 ];
 
@@ -48,15 +56,7 @@ function toNumber(value: string): number {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
 }
 
-function MetricCard({
-  label,
-  value,
-  detail,
-}: {
-  label: string;
-  value: string;
-  detail: string;
-}) {
+function MetricCard({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
     <article className="rounded-lg border border-edge bg-void p-4">
       <p className="text-xs uppercase tracking-wider text-mute">{label}</p>
@@ -148,8 +148,7 @@ export function BusinessIntelligence() {
   const money = (value: number) => formatBusinessCurrency(value, currency);
 
   const comparisonMaximum = Math.max(metrics.actual.revenue, metrics.forecast.revenue);
-  const actualBar =
-    comparisonMaximum > 0 ? (metrics.actual.revenue / comparisonMaximum) * 100 : 0;
+  const actualBar = comparisonMaximum > 0 ? (metrics.actual.revenue / comparisonMaximum) * 100 : 0;
   const forecastBar =
     comparisonMaximum > 0 ? (metrics.forecast.revenue / comparisonMaximum) * 100 : 0;
 
@@ -166,8 +165,8 @@ export function BusinessIntelligence() {
             </h3>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-mute">
               Enter your own period figures to compare actual performance with a forecast, then test
-              unit economics. Values stay in this page's local React state and are not sent to an API
-              or saved after refresh.
+              unit economics. Values stay in this page's local React state and are not sent to an
+              API or saved after refresh.
             </p>
           </div>
           <label className="text-xs text-mute">
@@ -278,10 +277,7 @@ export function BusinessIntelligence() {
                 aria-label={`Actual revenue is ${actualBar.toFixed(1)} percent of the comparison maximum`}
                 className="h-2 overflow-hidden rounded-full bg-void"
               >
-                <div
-                  className="h-full rounded-full bg-cyan"
-                  style={{ width: `${actualBar}%` }}
-                />
+                <div className="h-full rounded-full bg-cyan" style={{ width: `${actualBar}%` }} />
               </div>
             </div>
             <div>
