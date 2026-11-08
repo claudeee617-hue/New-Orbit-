@@ -99,7 +99,6 @@ describe('FLIGHT RECORDER immutable persistence', () => {
     ].join('\n');
     writeFileSync(join(root, 'logs', 'esp32-demo.ndjson'), raw);
     const session = parseTelemetry(raw);
-    const analysis = analyseTelemetry(session, { units: { voltage: 'V' } });
     const stored = await storeTelemetrySession(store, {
       repositoryId: repository.id,
       repositoryRoot: root,
@@ -130,7 +129,6 @@ describe('FLIGHT RECORDER immutable persistence', () => {
     writeFileSync(join(root, 'record.ndjson'), '{"voltage":3.3}');
     const raw = '{"voltage":3.2}';
     const session = parseTelemetry(raw);
-    const analysis = analyseTelemetry(session);
     await expect(
       storeTelemetrySession(store, {
         repositoryId: repository.id,
@@ -149,7 +147,7 @@ describe('FLIGHT RECORDER immutable persistence', () => {
         source: 'test',
         artifactRelativePath: 'record.ndjson',
         session,
-        analysis,
+        analysisOptions: {},
         isDemo: false,
       }),
     ).rejects.toThrow(/does not match/);
