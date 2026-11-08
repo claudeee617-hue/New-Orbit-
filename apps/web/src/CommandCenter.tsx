@@ -53,7 +53,7 @@ export function CommandCenter() {
   const [repositoryKey, setRepositoryKey] = useState('');
   const [graph, setGraph] = useState<ApiGraphPage | null>(null);
   const [evidence, setEvidence] = useState<ApiEvidencePage | null>(null);
-  const [passports, setPassports] = useState<unknown[]>([]);
+  const [passports, setPassports] = useState<unknown[]>([]);\n  const [integrity, setIntegrity] = useState<{ ok: boolean; ledgerEntriesChecked: number; problems: unknown[] } | null>(null);
   const [panel, setPanel] = useState<Panel>('overview');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -77,19 +77,19 @@ export function CommandCenter() {
         setRepositoryKey('');
         setGraph(null);
         setEvidence(null);
-        setPassports([]);
+        setPassports([]);\n        setIntegrity(null);
         setNotice('No repository is registered yet. Scan a local repository with the ORBIT CLI or API.');
         return;
       }
       setRepositoryKey(selected.key);
-      const [graphResult, evidenceResult, passportResult] = await Promise.all([
+      const [graphResult, evidenceResult, passportResult, integrityResult] = await Promise.all([
         client.getGraph(selected.key, { limit: 100, signal }),
         client.getEvidence(selected.key, { limit: 100, signal }),
         client.getPassports(selected.key, { limit: 100, signal }),
       ]);
       setGraph(graphResult);
       setEvidence(evidenceResult);
-      setPassports(passportResult.passports);
+      setPassports(passportResult.passports);\n      setIntegrity(integrityResult.integrity);
       setNotice('');
     } catch (cause) {
       if (!signal?.aborted) setError(messageOf(cause));
@@ -270,6 +270,24 @@ export function CommandCenter() {
             <Metric label="Evidence records" value={evidenceItems.length} detail="Latest bounded evidence page" />
             <Metric label="Change Passports" value={passports.length} detail="Recorded passport nodes" />
           </div>
+          <section className="rounded-lg border border-edge bg-panel p-5" aria-label="Evidence ledger integrity">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="font-mono text-xs uppercase tracking-wider text-mute">Ledger integrity</h3>
+                <p className="mt-2 text-sm text-ink">{integrity ? (integrity.ok ? 'Hash-chain verification passed' : 'Integrity issues detected') : 'Integrity not measured'}</p>
+                <p className="mt-1 text-xs text-mute">{integrity ? `${integrity.ledgerEntriesChecked} ledger entries checked · ${integrity.problems.length} findings` : 'Waiting for repository integrity report'}</p>
+              </div>
+              <span className={`rounded-full border px-3 py-1 font-mono text-[10px] ${integrity?.ok ? 'border-ok/40 text-ok' : integrity ? 'border-bad/40 text-bad' : 'border-edge text-mute'}`}>{integrity?.ok ? 'VERIFIED' : integrity ? 'ISSUES' : 'UNKNOWN'}</span>
+            </div>
+            {integrity && integrity.problems.length > 0 && (
+              <ul className="mt-4 space-y-2 border-t border-edge pt-3">
+                {integrity.problems.slice(0, 5).map((problem, index) => {
+                  const item = objectValue(problem);
+                  return <li key={index} className="text-xs text-bad">{display(item.code)} · {display(item.message)}</li>;
+                })}
+              </ul>
+            )}
+          </section>
           <div className="grid gap-4 lg:grid-cols-2">
             <section className="rounded-lg border border-edge bg-panel p-5">
               <h3 className="font-mono text-xs uppercase tracking-wider text-mute">Graph composition</h3>
