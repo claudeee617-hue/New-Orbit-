@@ -3,6 +3,7 @@ import { summarizeTestHistory, type TestCaseResult, type TestHistorySummary } fr
 
 const MAX_JSON_BYTES = 10 * 1024 * 1024;
 const MAX_TESTS = 100_000;
+const MAX_HISTORY = 100_000;
 
 function parseBoundedJson(content: string, label: string): unknown {
   if (Buffer.byteLength(content, 'utf8') > MAX_JSON_BYTES)
@@ -244,7 +245,45 @@ export function analyseTestHistory(
   history: readonly TestCaseResult[],
   options: { minSamples?: number; minFlips?: number; slowLimit?: number } = {},
 ): TestReliabilityReport {
-  const summaries = summarizeTestHistory(history, options);
+  if (!Array.isArray(history) || history.length > MAX_HISTORY) {
+    throw new Error(`FLARE history must contain at most ${MAX_HISTORY} executions`);
+  }
+  if (!options || typeof options !== 'object' || Array.isArray(options)) {
+    throw new Error('FLARE analysis options must be an object');
+  }
+  const minSamples = options.minSamples ?? 8;
+  const minFlips = options.minFlips ?? 3;
+  const slowLimit = options.slowLimit ?? 20;
+  if (!Number.isInteger(minSamples) || minSamples < 2 || minSamples > MAX_HISTORY) {
+    throw new Error('minSamples must be an integer between 2 and 100000');
+  }
+  if (!Number.isInteger(minFlips) || minFlips < 1 || minFlips > MAX_HISTORY) {
+    throw new Error('minFlips must be an integer between 1 and 100000');
+  }
+  if (!Number.isInteger(slowLimit) || slowLimit < 1 || slowLimit > 100) {
+    throw new Error('slowLimit must be an integer between 1 and 100');
+  }
+  for (const item of history) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      throw new Error('FLARE history entries must be objects');
+    }
+    if (
+      typeof item.id !== 'string' || !item.id || item.id.length > 1000 ||
+      typeof item.name !== 'string' || item.name.length > 500 ||
+      typeof item.suite !== 'string' || item.suite.length > 500 ||
+      !['passed', 'failed', 'skipped'].includes(item.outcome) ||
+      (item.durationSeconds !== null && (
+        typeof item.durationSeconds !== 'number' || !Number.isFinite(item.durationSeconds) ||
+        item.durationSeconds < 0 || item.durationSeconds > 1_000_000_000
+      )) ||
+      (item.message !== undefined && (
+        typeof item.message !== 'string' || item.message.length > 10_000
+      ))
+    ) {
+      throw new Error('FLARE history entry fields are invalid or exceed their limits');
+    }
+  }
+  const summaries = summarizeTestHistory(history, { minSamples, minFlips });
   const clusters = new Map<string, { occurrences: number; tests: Set<string> }>();
   const durations = new Map<string, { name: string; suite: string; values: number[] }>();
   for (const result of history) {
@@ -279,7 +318,7 @@ export function analyseTestHistory(
       affectedTests: [...value.tests].sort(),
     }))
     .sort((a, b) => b.occurrences - a.occurrences || a.id.localeCompare(b.id));
-  const limit = Math.min(100, Math.max(1, options.slowLimit ?? 20));
+  const limit = slowLimit;
   const slowTests = [...durations.entries()]
     .map(([testId, item]) => {
       const values = item.values;
@@ -292,7 +331,7 @@ export function analyseTestHistory(
           Math.round((values.reduce((sum, value) => sum + value, 0) / values.length) * 10000) /
           10000,
         p95Seconds: Math.round((percentile(values, 0.95) ?? 0) * 10000) / 10000,
-        maxSeconds: Math.max(...values),
+        maxSeconds: values.reduce((maximum, value) => Math.max(maximum, value), Number.NEGATIVE_INFINITY),
       };
     })
     .sort((a, b) => b.p95Seconds - a.p95Seconds || a.testId.localeCompare(b.testId))
