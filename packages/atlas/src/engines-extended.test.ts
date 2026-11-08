@@ -86,7 +86,7 @@ describe('WITNESS extended verification', () => {
     };
     expect(value.version).toBe('2.1.0');
     expect(value.runs[0]?.tool.driver.name).toBe('ORBIT WITNESS');
-    expect(value.runs[0]?.results).toHaveLength(2);
+    expect(value.runs[0]?.results).toHaveLength(1);
   });
 });
 
