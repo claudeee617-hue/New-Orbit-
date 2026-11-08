@@ -91,6 +91,102 @@ function boundedInteger(value: unknown, fallback: number, min: number, max: numb
   return parsed;
 }
 
+
+const ENVIRONMENT_KEYS = new Set([
+  'schemaVersion',
+  'runtimes',
+  'toolchains',
+  'packageManager',
+  'fingerprint',
+  'lockfiles',
+  'manifestFiles',
+  'workspaceSignals',
+  'dependencyCount',
+]);
+
+function safeStringMap(value: unknown, label: string): Record<string, string> {
+  const source = record(value, label);
+  const output: Record<string, string> = {};
+  const safeKey = /^[A-Za-z][A-Za-z0-9_.+-]{0,63}$/;
+  for (const [key, item] of Object.entries(source).slice(0, 100)) {
+    if (!safeKey.test(key) || typeof item !== 'string' || item.length > 128) {
+      throw new OrbitError('INVALID_INPUT', `${label} must contain short named string values only`);
+    }
+    if (/secret|token|password|credential|cookie|private.?key|api.?key/i.test(key)) {
+      throw new OrbitError('INVALID_INPUT', `${label} cannot contain credential-like field names`);
+    }
+    output[key] = item;
+  }
+  return output;
+}
+
+function safeStringList(value: unknown, label: string, maxItems = 100): string[] {
+  if (!Array.isArray(value) || value.length > maxItems) {
+    throw new OrbitError('INVALID_INPUT', `${label} must be an array of at most ${maxItems} entries`);
+  }
+  return value.map((item) => {
+    if (typeof item !== 'string' || item.length === 0 || item.length > 256) {
+      throw new OrbitError('INVALID_INPUT', `${label} entries must be non-empty strings of at most 256 characters`);
+    }
+    if (/secret|token|password|credential|cookie|private.?key|api.?key/i.test(item)) {
+      throw new OrbitError('INVALID_INPUT', `${label} cannot contain credential-like text`);
+    }
+    return item;
+  });
+}
+
+function sanitizeEnvironmentSnapshot(value: unknown): JsonRecord {
+  const source = record(value, 'snapshot');
+  const snapshot: JsonRecord = {};
+  for (const key of Object.keys(source)) {
+    if (!ENVIRONMENT_KEYS.has(key)) {
+      throw new OrbitError('INVALID_INPUT', `snapshot field ${key} is not supported; send only declared environment metadata`);
+    }
+  }
+  if (source.schemaVersion !== undefined) {
+    if (source.schemaVersion !== 1) throw new OrbitError('INVALID_INPUT', 'snapshot schemaVersion must be 1');
+    snapshot.schemaVersion = 1;
+  }
+  for (const key of ['runtimes', 'toolchains'] as const) {
+    if (source[key] !== undefined) snapshot[key] = safeStringMap(source[key], key);
+  }
+  if (source.packageManager !== undefined) {
+    snapshot.packageManager = text(source.packageManager, 'packageManager', 64);
+  }
+  if (source.fingerprint !== undefined) {
+    const fingerprint = text(source.fingerprint, 'fingerprint', 64);
+    if (!/^[a-f0-9]{64}$/i.test(fingerprint)) throw new OrbitError('INVALID_INPUT', 'fingerprint must be a SHA-256 digest');
+    snapshot.fingerprint = fingerprint.toLowerCase();
+  }
+  for (const key of ['lockfiles', 'manifestFiles', 'workspaceSignals'] as const) {
+    if (source[key] !== undefined) snapshot[key] = safeStringList(source[key], key);
+  }
+  if (source.dependencyCount !== undefined) {
+    snapshot.dependencyCount = boundedInteger(source.dependencyCount, 0, 0, 100_000, 'dependencyCount');
+  }
+  return snapshot;
+}
+
+function sanitizeCiSummary(value: unknown): JsonRecord {
+  const source = record(value, 'summary');
+  const numericFields = ['passed', 'failed', 'skipped', 'durationSeconds', 'jobCount', 'artifactCount', 'attempt'];
+  const stringFields = ['conclusion', 'event', 'runnerOS', 'workflowName'];
+  const allowed = new Set([...numericFields, ...stringFields]);
+  const summary: JsonRecord = {};
+  for (const [key, item] of Object.entries(source)) {
+    if (!allowed.has(key)) throw new OrbitError('INVALID_INPUT', `summary field ${key} is not supported`);
+    if (numericFields.includes(key)) {
+      if (typeof item !== 'number' || !Number.isFinite(item) || item < 0 || item > 1_000_000_000) {
+        throw new OrbitError('INVALID_INPUT', `summary field ${key} must be a non-negative finite number`);
+      }
+      summary[key] = item;
+    } else {
+      summary[key] = text(item, `summary.${key}`, 128);
+    }
+  }
+  return summary;
+}
+
 function hashablePayload(value: unknown): string {
   const encoded = canonicalJson(value);
   if (Buffer.byteLength(encoded, 'utf8') > MAX_INGEST_BYTES) {
@@ -362,7 +458,7 @@ export function buildServer(options: BuildServerOptions) {
       ...(body.runId !== undefined ? { runId: text(body.runId, 'runId', 256) } : {}),
       ...(body.workflow !== undefined ? { workflow: text(body.workflow, 'workflow', 256) } : {}),
       ...(body.branch !== undefined ? { branch: text(body.branch, 'branch', 256) } : {}),
-      ...(body.summary !== undefined ? { summary: record(body.summary, 'summary') } : {}),
+      ...(body.summary !== undefined ? { summary: sanitizeCiSummary(body.summary) } : {}),
     };
     const encoded = hashablePayload(payload);
     const contentHash = hashArtifact(encoded);
@@ -436,7 +532,7 @@ export function buildServer(options: BuildServerOptions) {
   server.post<{ Params: { key: string } }>('/api/v1/repositories/:key/ingest/environment', async (request) => {
     const repository = repositoryByKey(store, request.params.key);
     const body = record(request.body, 'body');
-    const snapshot = record(body.snapshot, 'snapshot');
+    const snapshot = sanitizeEnvironmentSnapshot(body.snapshot);
     const encoded = hashablePayload(snapshot);
     const contentHash = hashArtifact(encoded);
     const key = `environment:${contentHash}`;
