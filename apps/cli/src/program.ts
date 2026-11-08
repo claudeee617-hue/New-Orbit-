@@ -5,6 +5,7 @@ import { attachAdvancedEngineCommands } from './advanced-engines.js';
 import { renderScan, runExport, runImpact, runScan } from './atlas.js';
 import { collectStatus, renderStatus } from './status.js';
 import { startOrbitMcpServer } from '@orbit/mcp';
+import { attachOperationsCommands } from './operations.js';
 
 export interface CliIo {
   stdout: (text: string) => void;
@@ -150,5 +151,6 @@ export function buildProgram(io: CliIo = defaultIo): Command {
 
   attachEngineCommands(program, io);
   attachAdvancedEngineCommands(program, io);
+  attachOperationsCommands(program, io);
   return program;
 }
