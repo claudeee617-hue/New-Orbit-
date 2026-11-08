@@ -15,14 +15,14 @@ The public `main` branch contains the monorepo foundation, immutable evidence gr
 | Monorepo, TypeScript, lint, tests and CI foundation | Implemented on `main` |
 | ORBIT Core graph, versioned records and hash-chained ledger | Implemented on `main` |
 | ATLAS repository scanner and architecture reports | Implemented on `main` |
-| WITNESS changed-line coverage (LCOV/Cobertura) | Prototype on feature branch |
-| FLARE JUnit parsing and supplied-history statistics | Prototype; no persisted CI history yet |
-| CAPSULE declared-environment fingerprint and comparison | Prototype; no build replay yet |
+| WITNESS changed-line coverage, baseline comparison, filename findings, Markdown/SARIF | Extended prototype on `feat/prompts-6-8-completion`; CI pending |
+| FLARE JUnit, pytest, Jest and Go JSON reports; failure clusters and duration summaries | Extended prototype on `feat/prompts-6-8-completion`; no durable history store yet |
+| CAPSULE polyglot toolchain, dependency, container and workspace manifest inspection | Extended prototype on `feat/prompts-6-8-completion`; no build replay yet |
 | FLIGHT RECORDER recorded telemetry parser/replay | Prototype; no physical serial connection yet |
 | Change Passport assembly | Prototype; no graph correlation or Replay Room UI yet |
 | MCP, specialist AI agents, GitHub Action, full dashboard | Not implemented |
 
-See [ORBIT_BUILD_STATE.md](ORBIT_BUILD_STATE.md) for phase-by-phase implementation details and verified test results.
+See [ORBIT_BUILD_STATE.md](ORBIT_BUILD_STATE.md) for phase-by-phase implementation details, branch status, known limitations and verified test results.
 
 ## Requirements
 
@@ -84,6 +84,16 @@ node apps/cli/dist/index.js passport create passport-input.json
 ```
 
 All `--out` paths are created without overwriting an existing file.
+
+Extended commands on `feat/prompts-6-8-completion` (branch CI pending):
+
+```bash
+node apps/cli/dist/index.js witness coverage-compare before.info after.info --format lcov
+node apps/cli/dist/index.js witness sensitive-paths change.diff
+node apps/cli/dist/index.js flare analyse run-1.xml run-2.xml --format junit
+node apps/cli/dist/index.js flare analyse pytest-1.json pytest-2.json --format pytest-json
+node apps/cli/dist/index.js capsule inspect-extended .
+```
 
 ## Product architecture
 
