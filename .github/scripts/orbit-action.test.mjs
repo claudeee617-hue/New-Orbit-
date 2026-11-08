@@ -9,7 +9,11 @@ import { fileURLToPath } from 'node:url';
 const script = fileURLToPath(new URL('./orbit-action.mjs', import.meta.url));
 
 function git(cwd, ...args) {
-  return execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+  return execFileSync('git', args, {
+    cwd,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  }).trim();
 }
 
 function fixture(t) {
@@ -50,7 +54,10 @@ if (args[0] === 'witness') {
   );
 
   const eventPath = join(root, 'event.json');
-  writeFileSync(eventPath, JSON.stringify({ pull_request: { base: { sha: base }, head: { sha: head } } }));
+  writeFileSync(
+    eventPath,
+    JSON.stringify({ pull_request: { base: { sha: base }, head: { sha: head } } }),
+  );
   const output = join(root, 'github-output.txt');
   const summary = join(root, 'step-summary.md');
   const env = {
@@ -61,7 +68,7 @@ if (args[0] === 'witness') {
     GITHUB_STEP_SUMMARY: summary,
     ORBIT_RUNTIME_DIR: runtime,
   };
-  return { root, workspace, env, output, summary, base, head };
+  return { workspace, env, output, summary };
 }
 
 function run(f, extra = {}) {
@@ -79,17 +86,29 @@ test('reports NOT_MEASURED when no coverage file is supplied', (t) => {
   const output = readFileSync(f.output, 'utf8');
   assert.match(output, /verification-status=NOT_MEASURED/);
   assert.match(readFileSync(f.summary, 'utf8'), /NOT_MEASURED/);
-  assert.match(readFileSync(join(f.workspace, '.orbit-action-report.md'), 'utf8'), /path-name check only/);
+  assert.match(
+    readFileSync(join(f.workspace, '.orbit-action-report.md'), 'utf8'),
+    /path-name check only/,
+  );
 });
 
 test('writes Markdown, SARIF and measured status when coverage is supplied', (t) => {
   const f = fixture(t);
   writeFileSync(join(f.workspace, 'coverage.info'), 'TN:\n');
-  const result = run(f, { INPUT_COVERAGE_FILE: 'coverage.info', INPUT_COVERAGE_FORMAT: 'lcov' });
+  const result = run(f, {
+    INPUT_COVERAGE_FILE: 'coverage.info',
+    INPUT_COVERAGE_FORMAT: 'lcov',
+  });
   assert.equal(result.status, 0, result.stderr);
   assert.match(readFileSync(f.output, 'utf8'), /verification-status=PASS/);
-  assert.equal(readFileSync(join(f.workspace, '.orbit-action-report.sarif'), 'utf8'), JSON.stringify({ version: '2.1.0', runs: [] }));
-  assert.match(readFileSync(join(f.workspace, '.orbit-action-report.md'), 'utf8'), /Fixture verification/);
+  assert.equal(
+    readFileSync(join(f.workspace, '.orbit-action-report.sarif'), 'utf8'),
+    JSON.stringify({ version: '2.1.0', runs: [] }),
+  );
+  assert.match(
+    readFileSync(join(f.workspace, '.orbit-action-report.md'), 'utf8'),
+    /Fixture verification/,
+  );
 });
 
 test('fails when fail-on-uncovered is enabled and status is partial', (t) => {
@@ -108,7 +127,10 @@ test('fails when fail-on-uncovered is enabled and status is partial', (t) => {
 test('rejects an invalid coverage format', (t) => {
   const f = fixture(t);
   writeFileSync(join(f.workspace, 'coverage.info'), 'TN:\n');
-  const result = run(f, { INPUT_COVERAGE_FILE: 'coverage.info', INPUT_COVERAGE_FORMAT: 'unknown' });
+  const result = run(f, {
+    INPUT_COVERAGE_FILE: 'coverage.info',
+    INPUT_COVERAGE_FORMAT: 'unknown',
+  });
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /coverage-format must be lcov or cobertura/);
 });
