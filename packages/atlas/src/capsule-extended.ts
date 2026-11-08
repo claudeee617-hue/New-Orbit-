@@ -15,6 +15,7 @@ export interface ExtendedEnvironmentSnapshot {
 
 const MAX_FILE_BYTES = 2 * 1024 * 1024;
 const MAX_TOTAL_FILES = 1000;
+const MAX_TOTAL_BYTES = 16 * 1024 * 1024;
 
 function sortedRecord(source: Record<string, string>): Record<string, string> {
   return Object.fromEntries(Object.entries(source).sort(([a], [b]) => a.localeCompare(b)));
@@ -81,12 +82,24 @@ function parseDockerImages(path: string, content: string): Array<{ file: string;
 export function inspectExtendedEnvironment(
   files: Readonly<Record<string, string>>,
 ): ExtendedEnvironmentSnapshot {
+  if (!files || typeof files !== 'object' || Array.isArray(files)) {
+    throw new Error('Environment manifest set must be a path-to-text object');
+  }
   const entries = Object.entries(files).sort(([a], [b]) => a.localeCompare(b));
   if (entries.length > MAX_TOTAL_FILES)
     throw new Error(`Environment manifest set exceeds ${MAX_TOTAL_FILES} files`);
+  let totalBytes = 0;
   for (const [path, content] of entries) {
-    if (Buffer.byteLength(content, 'utf8') > MAX_FILE_BYTES) {
+    if (typeof path !== 'string' || !path || typeof content !== 'string') {
+      throw new Error('Environment manifest paths and contents must be strings');
+    }
+    const size = Buffer.byteLength(content, 'utf8');
+    if (size > MAX_FILE_BYTES) {
       throw new Error(`Environment manifest exceeds the 2 MiB limit: ${path}`);
+    }
+    totalBytes += size;
+    if (totalBytes > MAX_TOTAL_BYTES) {
+      throw new Error('Environment manifest set exceeds the 16 MiB total limit');
     }
   }
 
