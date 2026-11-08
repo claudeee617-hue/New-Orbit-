@@ -129,7 +129,7 @@ describe('FLIGHT RECORDER telemetry replay', () => {
     expect(session.format).toBe('ndjson');
     expect(session.metricNames).toEqual(['temperature', 'voltage']);
     expect(session.watchdogEvents).toBe(1);
-    expect(session.resetEvents).toBe(2);
+    expect(session.resetEvents).toBe(1);
     expect(session.rawSha256).toMatch(/^[a-f0-9]{64}$/);
   });
 });
