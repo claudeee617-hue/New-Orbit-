@@ -87,6 +87,16 @@ describe('ORBIT AI privacy and approval boundary', () => {
     ).toThrow(OrbitAIError);
   });
 
+  it('stops reading provider responses once the 256 KiB limit is exceeded', async () => {
+    const { context, options } = approved();
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response('x'.repeat(256 * 1024 + 1), { status: 200 }));
+    await expect(
+      runOrbitAnalysis({ ...options, apiKey: 'test-secret', fetchImpl }, context),
+    ).rejects.toMatchObject({ code: 'RESPONSE_TOO_LARGE' });
+  });
+
   it('uses OpenAI Responses with storage disabled and no tools', async () => {
     const { context, options } = approved();
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
