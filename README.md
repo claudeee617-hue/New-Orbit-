@@ -8,7 +8,7 @@ Its central artifact is the **Change Passport**: a content-hashed record of a ch
 
 ## Current status
 
-The public `main` branch contains engineering roadmap Prompts 0–10 and the separate App Business Module sub-prompts 0–4. Engineering Prompts 5–10 were merged through PR #5; the Business Module was merged through PR #9 on 2026-11-08. Their full CI matrices passed on Ubuntu, macOS and Windows.
+The public `main` branch contains engineering roadmap Prompts 0–10 and the separate App Business Module sub-prompts 0–4. Engineering Prompts 5–10 were merged through PR #5; the Business Module was merged through PR #9 on 2026-11-08. Their full CI matrices passed on Ubuntu, macOS and Windows. Prompt 11 (local API and CLI) is in [PR #11](https://github.com/claudeee617-hue/New-Orbit-/pull/11); its full Ubuntu/macOS/Windows CI passed, and it is awaiting review (not yet merged).
 
 | Capability | Current implementation |
 | --- | --- |
