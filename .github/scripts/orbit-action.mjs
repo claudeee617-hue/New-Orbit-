@@ -4,7 +4,11 @@ import { execFileSync } from 'node:child_process';
 
 function requiredSha(value, label) {
   if (!/^[0-9a-f]{7,64}$/i.test(value || '')) {
-    throw new Error('Missing or invalid ' + label + '. Set the action input or run this action on a pull_request event.');
+    throw new Error(
+      'Missing or invalid ' +
+        label +
+        '. Set the action input or run this action on a pull_request event.',
+    );
   }
   return value;
 }
@@ -30,10 +34,7 @@ function writeSummary(markdown) {
 }
 
 const event = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8'));
-const base = requiredSha(
-  process.env.INPUT_BASE_SHA || event.pull_request?.base?.sha,
-  'base SHA',
-);
+const base = requiredSha(process.env.INPUT_BASE_SHA || event.pull_request?.base?.sha, 'base SHA');
 const head = requiredSha(
   process.env.INPUT_HEAD_SHA || event.pull_request?.head?.sha || process.env.GITHUB_SHA,
   'head SHA',
@@ -68,30 +69,9 @@ if (coverageFile) {
   }
   const option = format === 'lcov' ? '--lcov' : '--cobertura';
   const coveragePath = resolve(workspace, coverageFile);
-  markdown = runCli([
-    'verify',
-    diffPath,
-    option,
-    coveragePath,
-    '--format',
-    'markdown',
-  ]);
-  const sarif = runCli([
-    'verify',
-    diffPath,
-    option,
-    coveragePath,
-    '--format',
-    'sarif',
-  ]);
-  const json = runCli([
-    'verify',
-    diffPath,
-    option,
-    coveragePath,
-    '--format',
-    'json',
-  ]);
+  markdown = runCli(['verify', diffPath, option, coveragePath, '--format', 'markdown']);
+  const sarif = runCli(['verify', diffPath, option, coveragePath, '--format', 'sarif']);
+  const json = runCli(['verify', diffPath, option, coveragePath, '--format', 'json']);
   status = JSON.parse(json).summary.status;
   writeFileSync(sarifPath, sarif, 'utf8');
 }
@@ -129,8 +109,7 @@ writeOutput('report-path', reportPath);
 writeOutput('sarif-path', coverageFile ? sarifPath : '');
 writeOutput('verification-status', status);
 
-if (process.env.INPUT_FAIL_ON_UNCOVERED === 'true' &&
-  ['PARTIAL', 'INCOMPLETE'].includes(status)) {
+if (process.env.INPUT_FAIL_ON_UNCOVERED === 'true' && ['PARTIAL', 'INCOMPLETE'].includes(status)) {
   throw new Error(
     'ORBIT reports uncovered or incompletely measured changed lines (PARTIAL). Review the generated report.',
   );
