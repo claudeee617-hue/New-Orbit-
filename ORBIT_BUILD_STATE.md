@@ -25,10 +25,10 @@ Last updated: 2026-11-08
 | 11     | API and CLI (full)                             | Partial: local engine CLI commands on feature branch |
 | 12     | Command Center (full)                          | Not started (shell exists)                     |
 | 13     | GitHub Action                                  | Not started                                    |
-| 14     | ORBIT AI                                       | Not started                                    |
-| 15     | Security review                                | Not started                                    |
-| 16     | Testing and validation                         | Not started                                    |
-| 17     | Release polish                                 | Not started                                    |
+| 14     | ORBIT AI                                       | Not implemented; provider/privacy design in `docs/AI_PROVIDER_POLICY.md` |
+| 15     | Security review                                | Partial: SECURITY.md, privacy policy, CodeQL workflow and Dependabot config added; independent review and security tests pending |
+| 16     | Testing and validation                         | Partial: existing unit/API/CLI tests plus validation-gap checklist; browser E2E, fuzz, migration and action tests pending |
+| 17     | Release polish                                 | Partial: contributor docs, Apache-2.0 license, citation metadata, issue templates and release checklist added; clean-machine validation and release approval pending |
 
 
 ## Cross-engine implementation merged via PR #5
@@ -275,3 +275,15 @@ Verified by GitHub Actions run `42481493312` on Ubuntu, macOS and Windows; the e
 - Added CLI `init`, `doctor`, `graph summary`, `graph nodes`, `ci ingest`, `tests ingest` and `tests history` commands.
 - Added API token lifecycle, API route/integration and CLI workspace/ingestion tests.
 - **Status:** Implementation pushed in PR #11; full format/lint/typecheck/test/build matrix passed on Ubuntu, macOS and Windows in GitHub Actions run #136. Ubuntu reported 373 passing tests across nine workspace suites; 15/15 typecheck tasks and 9/9 build tasks passed. PR #11 is ready for review and is not merged.
+
+
+## Prompts 14–17 documentation and security groundwork
+
+Branch: `docs/prompt-15-17-security-release`.
+
+- Prompt 14: provider/privacy policy documented in `docs/AI_PROVIDER_POLICY.md`. No provider adapter or AI UI has been implemented; AI remains unavailable and must not be described as shipped.
+- Prompt 15: `SECURITY.md`, `docs/PRIVACY.md`, scheduled CodeQL workflow and Dependabot configuration added. This is groundwork, not an independent security audit. Parser/path/XXE/secret-redaction tests and host/CSRF review remain.
+- Prompt 16: `docs/VALIDATION_GAPS.md` records outstanding E2E, fuzz, migration, action and controlled-scenario tests. Existing CI and unit/API/CLI tests do not close those gaps.
+- Prompt 17: Apache-2.0 license text, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `CITATION.cff`, issue templates and `docs/RELEASE_CHECKLIST.md` added. No package or Marketplace release has been published.
+
+All these changes require CI and owner/legal review before merge. ORBIT's working codename and package/repository names have not been trademark-cleared.
