@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { normalizeRepoPath } from './verification.js';
 
 export interface PassportEvidence {
   id: string;
@@ -74,6 +75,7 @@ export interface ChangePassport {
 }
 
 function stableJson(value: unknown): string {
+  if (value === undefined) return 'null';
   if (value === null || typeof value !== 'object') return JSON.stringify(value);
   if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
   const record = value as Record<string, unknown>;
@@ -99,6 +101,8 @@ export function createChangePassport(
     if (!item.id.trim() || !item.source.trim()) throw new Error('evidence id and source are required');
     if (seenEvidence.has(item.id)) throw new Error(`duplicate evidence ID: ${item.id}`);
     seenEvidence.add(item.id);
+    if (!['git', 'coverage', 'test-report', 'ci', 'environment', 'build', 'telemetry', 'manual'].includes(item.kind)) throw new Error(`evidence ${item.id} has an invalid kind`);
+    if (!['PASS', 'FAIL', 'PARTIAL', 'NOT_MEASURED', 'INCOMPLETE'].includes(item.status)) throw new Error(`evidence ${item.id} has an invalid status`);
     if (item.sha256 && !/^[0-9a-f]{64}$/i.test(item.sha256)) throw new Error(`evidence ${item.id} has an invalid SHA-256 digest`);
   }
   if (input.baseSha && !/^[0-9a-f]{7,64}$/i.test(input.baseSha)) throw new Error('baseSha must be a Git SHA');
@@ -110,16 +114,16 @@ export function createChangePassport(
   }
   const evidence = [...input.evidence].map((item) => ({
     ...item,
-    sha256: item.sha256?.toLowerCase(),
+    ...(item.sha256 ? { sha256: item.sha256.toLowerCase() } : {}),
     source: item.source.slice(0, 512),
     limitations: item.limitations?.slice(0, 10).map((value) => value.slice(0, 500)),
   })).sort((a, b) => a.id.localeCompare(b.id));
-  const changedFiles = [...new Set(input.changedFiles)].sort();
+  const changedFiles = [...new Set(input.changedFiles.map(normalizeRepoPath))].sort();
+  if (changedFiles.some((path) => path.length > 1024)) throw new Error('changed file paths must not exceed 1024 characters');
   const findings = [...(input.findings ?? [])]
     .slice(0, 200)
     .map((item) => ({ ...item, message: item.message.slice(0, 1000) }))
     .sort((a, b) => a.id.localeCompare(b.id));
-  const kinds = new Set(evidence.map((item) => item.kind));
   const completeness = input.completeness ?? ([
     ['diff', 'git', true],
     ['coverage', 'coverage', true],
@@ -138,6 +142,15 @@ export function createChangePassport(
       evidenceIds: matching.map((item) => item.id).sort(),
     };
   });
+  if (completeness.length > 7) throw new Error('at most seven completeness dimensions are allowed');
+  const seenDimensions = new Set<string>();
+  for (const item of completeness) {
+    if (seenDimensions.has(item.dimension)) throw new Error(`duplicate completeness dimension: ${item.dimension}`);
+    seenDimensions.add(item.dimension);
+    if (!['PRESENT', 'PARTIAL', 'MISSING', 'NOT_APPLICABLE'].includes(item.status)) throw new Error(`completeness dimension ${item.dimension} has an invalid status`);
+    if (!item.rule.trim()) throw new Error(`completeness dimension ${item.dimension} requires a rule`);
+    if (item.evidenceIds.length > 500) throw new Error(`completeness dimension ${item.dimension} exceeds the evidence reference limit`);
+  }
   const requiredDimensions = new Set(['diff', 'coverage', 'tests', 'ci']);
   const missingEvidence = completeness
     .filter((item) => requiredDimensions.has(item.dimension) && item.status === 'MISSING')
