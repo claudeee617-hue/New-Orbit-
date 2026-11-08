@@ -77,7 +77,7 @@ describe('ORBIT engine CLI', () => {
       mode: string;
       watchdogEvents: number;
     };
-    expect(report.mode).toBe('read-only-replay');
+    expect(report.mode).toBe('read-only-recorded-file-replay');
     expect(report.watchdogEvents).toBe(1);
   });
 
