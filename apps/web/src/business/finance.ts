@@ -51,7 +51,11 @@ function safePercent(numerator: number, denominator: number): number | null {
   return Number.isFinite(percentage) ? percentage : null;
 }
 
-function periodMetrics(revenueInput: number, expensesInput: number, customersInput: number): PeriodMetrics {
+function periodMetrics(
+  revenueInput: number,
+  expensesInput: number,
+  customersInput: number,
+): PeriodMetrics {
   const revenue = safeAmount(revenueInput);
   const expenses = safeAmount(expensesInput);
   const customers = safeCount(customersInput);
@@ -135,5 +139,9 @@ export function formatBusinessCurrency(value: number, currency: BusinessCurrency
 
 export function formatBusinessPercent(value: number | null): string {
   if (value === null || !Number.isFinite(value)) return '—';
-  return `${new Intl.NumberFormat('en', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(value)}%`;
+  const formatted = new Intl.NumberFormat('en', {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(value);
+  return `${formatted}%`;
 }
