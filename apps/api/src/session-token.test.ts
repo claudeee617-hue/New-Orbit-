@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, symlinkSync, statSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, symlinkSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -53,7 +53,7 @@ describe('API session token', () => {
     const directory = tempDir();
     const secret = join(directory, 'secret');
     const target = join(directory, 'api.token');
-    require('node:fs').writeFileSync(secret, 'x'.repeat(48));
+    writeFileSync(secret, 'x'.repeat(48));
     symlinkSync(secret, target);
     expect(() => readTokenFile(target)).toThrow(/regular file/);
   });
@@ -61,7 +61,7 @@ describe('API session token', () => {
   it('rejects malformed token file contents', () => {
     const directory = tempDir();
     const file = join(directory, 'api.token');
-    require('node:fs').writeFileSync(file, 'not-a-token');
+    writeFileSync(file, 'not-a-token');
     expect(() => readTokenFile(file)).toThrow(/invalid/);
   });
 });
