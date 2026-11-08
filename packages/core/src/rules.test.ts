@@ -24,6 +24,9 @@ describe('edge rules', () => {
     ['OBSERVED_ON', 'TelemetrySession', 'Firmware'],
     ['VERIFIED_BY', 'ChangePassport', 'TelemetrySession'],
     ['SUPERSEDES', 'Decision', 'Decision'],
+    ['DOCUMENTS', 'Decision', 'Commit'],
+    ['DOCUMENTS', 'Decision', 'PullRequest'],
+    ['DOCUMENTS', 'Documentation', 'Issue'],
   ] as const)('allows %s from %s to %s', (type, from, to) => {
     expect(isEdgeAllowed(type, from, to)).toBe(true);
     expect(() => assertEdgeAllowed(type, from, to)).not.toThrow();
@@ -36,6 +39,7 @@ describe('edge rules', () => {
     ['FIXES', 'Commit', 'File'],
     ['OBSERVED_ON', 'Commit', 'HardwareDevice'],
     ['VERIFIED_BY', 'File', 'TestRun'],
+    ['DOCUMENTS', 'Commit', 'Decision'],
   ] as const)('rejects %s from %s to %s', (type, from, to) => {
     expect(isEdgeAllowed(type, from, to)).toBe(false);
     expect(() => assertEdgeAllowed(type, from, to)).toThrowError(/not allowed/);

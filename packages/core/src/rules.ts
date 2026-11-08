@@ -40,7 +40,9 @@ export const EDGE_RULES: Readonly<Record<EdgeType, EdgeRule>> = {
   FIXES: { from: ['Commit', 'PullRequest'], to: ['Issue', 'Finding'] },
   DOCUMENTS: {
     from: ['Documentation', 'Decision'],
-    to: [...CODE, 'Repository', 'Dependency', 'Firmware'],
+    // Commit, PullRequest and Issue: a decision/note links to the change that carried it out or
+    // the issue it concerns (Prompt 5). The edge says "this record documents that change".
+    to: [...CODE, 'Repository', 'Dependency', 'Firmware', 'Commit', 'PullRequest', 'Issue'],
   },
   SUPERSEDES: {
     from: ['Decision', 'Documentation', 'ChangePassport', 'Environment', 'Artifact'],

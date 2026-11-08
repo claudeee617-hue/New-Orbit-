@@ -77,4 +77,29 @@ describe('openDatabase', () => {
     // A directory cannot be opened as a database file.
     expect(() => openDatabase({ path: dir })).toThrowError(/Could not open/);
   });
+
+  it('opens an existing database read-only and refuses writes', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'orbit-db-'));
+    tempDirs.push(dir);
+    const path = join(dir, 'orbit.db');
+    const writable = openDatabase({ path });
+    writable.db.insert(schema.meta).values({ key: 'k', value: 'v' }).run();
+    writable.close();
+
+    const readOnly = track(openDatabase({ path, readOnly: true }));
+    expect(readOnly.isHealthy()).toBe(true);
+    expect(readOnly.db.select().from(schema.meta).all()).toHaveLength(1);
+    expect(() =>
+      readOnly.db.insert(schema.meta).values({ key: 'x', value: 'y' }).run(),
+    ).toThrowError(/readonly/i);
+  });
+
+  it('does not create a missing database when opened read-only', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'orbit-db-'));
+    tempDirs.push(dir);
+    const path = join(dir, 'nested', 'missing.db');
+    expect(() => openDatabase({ path, readOnly: true })).toThrowError(/Could not open/);
+    expect(existsSync(path)).toBe(false);
+    expect(existsSync(join(dir, 'nested'))).toBe(false);
+  });
 });

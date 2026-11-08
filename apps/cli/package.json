@@ -26,6 +26,7 @@
     "@orbit/atlas": "workspace:*",
     "@orbit/core": "workspace:*",
     "@orbit/database": "workspace:*",
+    "@orbit/mcp": "workspace:*",
     "@orbit/shared": "workspace:*",
     "commander": "15.1.0"
   }

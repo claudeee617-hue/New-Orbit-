@@ -35,3 +35,4 @@ export type {
   SymbolEntry,
   SymbolQuery,
 } from './report.js';
+export * from './memory/index.js';

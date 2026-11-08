@@ -5,7 +5,7 @@ Last updated: 2026-11-08
 
 ## Current phase
 
-**Prompts 0–4 complete.** Next: Prompt 5 (ATLAS memory and MCP).
+**Prompts 0–5 complete.** Next: Prompt 6 (WITNESS).
 
 ## Phase checklist
 
@@ -16,7 +16,7 @@ Last updated: 2026-11-08
 | 2      | Monorepo foundation                            | Done (see results below)                       |
 | 3      | ORBIT Core graph                               | Done (see results below; not pushed)           |
 | 4      | ATLAS scanning                                 | Done (see results below)                       |
-| 5      | ATLAS memory and MCP                           | Not started                                    |
+| 5      | ATLAS memory and MCP                           | Done (see results below)                       |
 | 6      | WITNESS                                        | Not started                                    |
 | 7      | FLARE                                          | Not started                                    |
 | 8      | CAPSULE                                        | Not started                                    |
@@ -49,6 +49,25 @@ Limitations specific to Prompt 3:
 - Neighbour order is deterministic (edge type, then node ID) but not alphabetical by key.
 - Traversal reads edges per node through the store; no benchmark on large graphs has been run.
 - Nothing populates the graph yet; ATLAS (Prompt 4) is the first writer. The CLI/API do not expose the graph yet.
+
+## Prompt 5 summary (ATLAS memory and MCP)
+
+- `packages/atlas/src/memory`: memory engine (create, update, invalidate, reinstate, confirm, history, search), staleness detection, conflict detection, ADR and document import, git/PR/issue linking. Memory items are graph nodes (ADR-0012), so they inherit versioning, evidence and the ledger.
+- `packages/mcp` (`@orbit/mcp`, bin `orbit-mcp`): read-only MCP server on the official SDK 1.32.2 (stdio), 12 tools, every result with evidence, limitations, `truncated` and bounded size.
+- CLI: `orbit memory add|search|show|history|update|invalidate|reinstate|confirm|check|import|link` and `orbit mcp`.
+- `packages/database`: `openDatabase({ readOnly: true })`. `packages/core`: `DOCUMENTS` may target `Commit`, `PullRequest`, `Issue`.
+- Docs: `docs/CLAUDE_CODE_MCP.md`, ADR-0012, DATA_MODEL update.
+
+Verified here beyond unit tests: the real Claude Code 2.1.319 added the server with `claude mcp add`, `claude mcp list` showed `Connected`, and a headless `claude -p` call to `orbit_repository_map` answered with the correct repository key and file count.
+
+Limitations specific to Prompt 5:
+- **AI never writes authoritative memory.** There is no AI summarisation in this prompt; the AI-suggested path exists so a client or later prompt can store a suggestion, labelled and non-authoritative until a person confirms it.
+- Conflict detection: exact for structured topic/choice; wording-based detection is heuristic, labelled, misses paraphrases and can false-positive.
+- Staleness only looks at cited files (removed or hash changed). It cannot tell that a memory is wrong, and memory without file sources cannot be judged.
+- Git linking reads commit subjects only. PR and issue nodes are inferred from `(#n)` and `fixes #n` patterns; GitHub is not queried, so numbers could be misclassified (a trailing `(#n)` is assumed to be a PR).
+- ADR parsing handles the common Nygard and MADR layouts; unusual layouts fall back to an excerpt of the document. A superseding ADR is linked only if the target number is unique among imported ADRs.
+- Memory search is an in-process scan (no FTS index). The MCP server is stdio only and was tested with the official client and Claude Code, not other clients. Windows and macOS untested.
+- Memory writes go through the CLI only; MCP cannot write.
 
 ## Prompt 4 summary (ATLAS: repository and architecture intelligence)
 

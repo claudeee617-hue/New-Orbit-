@@ -1,0 +1,33 @@
+{
+  "name": "@orbit/mcp",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Read-only MCP server that exposes the ORBIT graph (ATLAS facts, memory, evidence) to Claude Code and other MCP clients.",
+  "type": "module",
+  "bin": {
+    "orbit-mcp": "./dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "tsc -p tsconfig.build.json && vitest run"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "@orbit/atlas": "workspace:*",
+    "@orbit/core": "workspace:*",
+    "@orbit/database": "workspace:*",
+    "@orbit/graph": "workspace:*",
+    "@orbit/shared": "workspace:*",
+    "zod": "4.6.7"
+  }
+}

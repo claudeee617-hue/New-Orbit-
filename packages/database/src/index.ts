@@ -26,8 +26,14 @@ export interface OrbitDatabase {
 
 export interface OpenDatabaseOptions {
   path: string;
-  /** Apply pending migrations after opening. Defaults to true. */
+  /** Apply pending migrations after opening. Defaults to true. Ignored when `readOnly` is set. */
   migrate?: boolean;
+  /**
+   * Open an existing database read-only. SQLite itself refuses every write, so read-only
+   * consumers (such as the MCP server) cannot change the workspace even by mistake. Never creates
+   * the file or its directories and never migrates.
+   */
+  readOnly?: boolean;
 }
 
 /** Open (and by default migrate) a workspace database. Parent directories are created. */
@@ -37,11 +43,17 @@ export function openDatabase(options: OpenDatabaseOptions): OrbitDatabase {
 
   let sqlite: Database.Database;
   try {
-    if (!isMemory) mkdirSync(dirname(path), { recursive: true });
-    sqlite = new Database(path);
-    sqlite.pragma('journal_mode = WAL');
-    sqlite.pragma('foreign_keys = ON');
-    sqlite.pragma('busy_timeout = 5000');
+    if (options.readOnly) {
+      if (isMemory) throw new Error('An in-memory database cannot be opened read-only');
+      sqlite = new Database(path, { readonly: true, fileMustExist: true });
+      sqlite.pragma('busy_timeout = 5000');
+    } else {
+      if (!isMemory) mkdirSync(dirname(path), { recursive: true });
+      sqlite = new Database(path);
+      sqlite.pragma('journal_mode = WAL');
+      sqlite.pragma('foreign_keys = ON');
+      sqlite.pragma('busy_timeout = 5000');
+    }
   } catch (error) {
     throw new OrbitError('DATABASE_ERROR', `Could not open the ORBIT database at ${path}`, {
       cause: error,
@@ -51,7 +63,7 @@ export function openDatabase(options: OpenDatabaseOptions): OrbitDatabase {
 
   const db = drizzle(sqlite, { schema });
 
-  if (options.migrate ?? true) {
+  if ((options.migrate ?? true) && !options.readOnly) {
     try {
       migrate(db, { migrationsFolder: MIGRATIONS_FOLDER });
     } catch (error) {

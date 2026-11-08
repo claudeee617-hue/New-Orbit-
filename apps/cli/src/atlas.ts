@@ -84,7 +84,7 @@ function openExisting(dbPath: string): { database: OrbitDatabase; store: GraphSt
   return { database, store: createGraphStore(database) };
 }
 
-function pickRepository(store: GraphStore, key: string | undefined): string {
+export function pickRepository(store: GraphStore, key: string | undefined): string {
   const repositories = store.repositories.list();
   if (key !== undefined) {
     const found = repositories.find((r) => r.key === key);
@@ -133,7 +133,7 @@ export function runImpact(dbPath: string, repo: string | undefined, file: string
   }
 }
 
-function openExistingOrFail(dbPath: string): { database: OrbitDatabase; store: GraphStore } {
+export function openExistingOrFail(dbPath: string): { database: OrbitDatabase; store: GraphStore } {
   const path = resolve(dbPath);
   // better-sqlite3 would silently create an empty file; read-only commands must not.
   if (!existsSync(path)) {

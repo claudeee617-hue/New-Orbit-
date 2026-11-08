@@ -75,7 +75,7 @@ Every insert/supersede is written to `ledger(seq, ts, op, entityKind, entityId, 
 | Table | Used by | Key columns |
 |---|---|---|
 | symbols | ATLAS | id, fileId, name, kind, startLine, endLine, parser, confidence |
-| memory_items | ATLAS | id, category, body, sourceRefs[], version, status (active/stale/invalidated) |
+| memory items | ATLAS | Stored as graph nodes (`Decision` / `Documentation`, key `memory/<category>/<slug>`), not a separate table: see ADR-0012. Attributes: category, title, body, tags, authority (human/imported/ai-suggested), status (active/invalidated), sourceRefs[], decisionStatus. Staleness is computed, not stored |
 | diff_hunks | WITNESS | id, commitRange, path, addedLines[], deletedLines[] |
 | coverage_records | WITNESS | evidenceId, path, line, hits, format |
 | test_runs | FLARE | testId, runId, commit, outcome, durationMs, failureSignature, env |
