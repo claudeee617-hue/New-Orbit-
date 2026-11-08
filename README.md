@@ -13,7 +13,7 @@ This repository currently contains the **monorepo foundation only**. Nothing tha
 | Monorepo, TypeScript, lint, tests, CI | Working |
 | Local API (`GET /health`) | Working |
 | CLI (`orbit status`) | Working |
-| Command Center (dashboard shell) | Working shell, no analysis data |
+| Command Center | Overview with API health plus a read-only Business strategy and market research view |
 | SQLite storage and migrations | Working (one `meta` table) |
 | ORBIT Core graph, ATLAS, WITNESS, FLARE, CAPSULE, FLIGHT RECORDER, Change Passport, MCP, AI | **Not implemented yet** — see the [roadmap](docs/ROADMAP.md) |
 
@@ -100,6 +100,7 @@ See [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md). ORBIT is not a security cert
 - [Master plan](ORBIT_MASTER_PLAN.md) and [build state](ORBIT_BUILD_STATE.md)
 - [PRD](docs/PRD.md), [architecture](docs/ARCHITECTURE.md), [technical design](docs/architecture/TECHNICAL_DESIGN.md), [data model](docs/DATA_MODEL.md)
 - [Roadmap](docs/ROADMAP.md), [competitive analysis](docs/COMPETITIVE_ANALYSIS.md), [test strategy](docs/TEST_STRATEGY.md), [UX specification](docs/UX_SPECIFICATION.md)
+- [Business model](docs/BUSINESS_MODEL.md), [commercial roadmap](docs/COMMERCIAL_ROADMAP.md), [app Business module](docs/APP_BUSINESS_MODULE.md)
 - [Architecture decision records](docs/DECISIONS/)
 
 ## Licence
