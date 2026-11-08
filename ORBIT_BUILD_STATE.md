@@ -5,7 +5,7 @@ Last updated: 2026-11-08
 
 ## Current phase
 
-**Engineering Prompts 0–4 are on `main`; engineering Prompts 5–10 are consolidated on `feat/prompts-6-8-completion` in draft PR #5 and remain unmerged pending a fresh full CI pass. The separate App Business Module Prompts 0–3 are in draft PR #6 and Prompt 4 is in draft PR #7 (stacked on #6); neither business PR is merged.
+**Engineering roadmap Prompts 0–10 and App Business Module sub-prompts 0–4 are consolidated on `feat/orbit-prompts-0-10-business-consolidated`; the combined cross-platform CI is pending and the branch is not merged.**
 
 ## Phase checklist
 
@@ -16,8 +16,8 @@ Last updated: 2026-11-08
 | 2      | Monorepo foundation                            | Done (see results below)                       |
 | 3      | ORBIT Core graph                               | Done on `main` (see results below)           |
 | 4      | ATLAS scanning                                 | Done (see results below)                       |
-| 5      | ATLAS memory and MCP                           | Implemented on `feat/prompts-6-8-completion`; PR #5 draft, CI passed on three OSs; not merged |
-| 6      | WITNESS                                        | Base prototype plus extended verification helpers and CLI on `feat/prompts-6-8-completion`; CI passed on three OSs; review pending |
+| 5      | ATLAS memory and MCP                           | Implemented on consolidated branch; earlier Prompt 5–8 CI passed on three OSs; combined Prompt 0–10/business-module CI pending; not merged |
+| 6      | WITNESS                                        | Base prototype plus extended verification helpers and CLI on consolidated branch; combined CI pending; review pending |
 | 7      | FLARE                                          | Base prototype plus pytest/Jest/Go adapters and reliability analytics/CLI on `feat/prompts-6-8-completion`; CI passed on three OSs; durable history remains outstanding |
 | 8      | CAPSULE                                        | Base prototype plus polyglot manifest inspection and CLI on `feat/prompts-6-8-completion`; CI passed on three OSs; build replay remains out of scope |
 | 9      | FLIGHT RECORDER                                | Recorded-log analysis + hash-verified graph persistence; no physical serial connection |
@@ -33,7 +33,7 @@ Last updated: 2026-11-08
 
 ## Cross-engine prototype on feat/orbit-evidence-engines (not yet merged)
 
-The latest pushed main inspected on 2026-11-08 still records Prompt 5 as not started. The feature branch contains the cross-engine prototypes below plus the Prompt 5 implementation described next; neither is merged into main.
+The latest pushed main inspected on 2026-11-08 contains the foundation through engineering Prompt 4. The consolidated feature branch contains the cross-engine prototypes below plus Prompt 5; neither is merged into main yet.
 
 - WITNESS: unified-diff added-line parsing, LCOV and Cobertura line-coverage adapters, changed-line coverage summaries, deterministic finding IDs and explicit status semantics.
 - FLARE: bounded JUnit XML parser and supplied-history test summaries using outcome flips and Wilson 95% intervals. Persistent history and Jest/pytest/Go adapters are not implemented.
@@ -246,3 +246,14 @@ This branch is based on `feat/orbit-evidence-engines` at `bbb6626`, which contai
 ## Prompt 9–10 CI status
 
 Pending. The earlier Prompt 5–8 run 42477639701 is historical evidence only and does not validate the newly added Prompt 9–10 files. Replace this section with the newest run after all fixes and audit.
+
+
+## App Business Module sub-prompts 0–4 (consolidated feature branch)
+
+- **Business Prompt 0 — Research:** official vendor-linked pricing references, customer segments, beachhead and evidence-led assumptions.
+- **Business Prompt 1 — Business model:** hybrid open-core model across Community, Team, Enterprise and Embedded offers; paid-price hypotheses are labelled, not announced prices.
+- **Business Prompt 2 — Data contract:** typed strategy data, market references, customer segments, commercial gates, unmeasured KPI definitions and trust guardrails.
+- **Business Prompt 3 — Command Center:** accessible Overview / Business navigation and strategy, packaging, market and roadmap surfaces.
+- **Business Prompt 4 — Business Intelligence:** local-only actual-versus-forecast inputs; profit, margin and revenue-per-customer calculations; INR/USD display formatting; pricing, unit-economics and break-even simulator; disconnected customer analytics state.
+- The finance calculator uses user-entered React state only. It is not sent to an API or saved after refresh. No accounting, payments, checkout, CRM, customer database, hosted sync or live financial-data source is connected.
+- No revenue, customer, conversion, retention or profitability figures are invented. Currency choice formats values only; it does not convert currencies.
