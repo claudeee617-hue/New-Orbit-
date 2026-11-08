@@ -327,6 +327,7 @@ export function recordChangePassport(
         contentSha256: suppliedPassport.contentSha256,
         state: suppliedPassport.state,
         verificationStatus,
+        evidenceVerification: suppliedPassport.evidenceVerification,
         missingEvidence: suppliedPassport.missingEvidence,
         completeness: dimensions as unknown as JsonValue,
         impact: {
