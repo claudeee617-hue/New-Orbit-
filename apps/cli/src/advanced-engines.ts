@@ -1,5 +1,5 @@
 import { lstat, readFile, readdir, realpath, writeFile } from 'node:fs/promises';
-import { basename, join, relative, resolve, sep } from 'node:path';
+import { join, relative, resolve, sep } from 'node:path';
 import type { Command } from 'commander';
 import {
   analyseTestHistory,
@@ -12,8 +12,6 @@ import {
   parseJunitXml,
   parseLcov,
   parsePytestJsonReport,
-  renderWitnessSarif,
-  verifyChangedLineCoverage,
 } from '@orbit/atlas';
 import type { CliIo } from './program.js';
 
