@@ -11,7 +11,7 @@ const evidence: EvidenceContextItem[] = [
     id: 'ev-coverage-1',
     source: 'coverage/lcov.info',
     sha256: 'a'.repeat(64),
-    content: 'Changed line 14 is uncovered. API_TOKEN=sk-abcdefghijklmnopqrstuvwxyz123456',
+    content: 'Changed line 14 is uncovered. api_token=sk-abcdefghijklmnopqrstuvwxyz123456',
   },
 ];
 
@@ -61,6 +61,18 @@ describe('ORBIT AI privacy and approval boundary', () => {
     expect(context.text).toContain('[REDACTED]');
     expect(context.text).not.toContain('sk-abcdefghijklmnopqrstuvwxyz123456');
     expect(context.redactions).toBe(1);
+  });
+
+  it('binds approval to the destination as well as the context text', async () => {
+    const { context, options } = approved();
+    const fetchImpl = vi.fn<typeof fetch>();
+    await expect(
+      runOrbitAnalysis(
+        { ...options, apiKey: 'test-secret', fetchImpl },
+        { ...context, destination: 'https://attacker.example/collect' },
+      ),
+    ).rejects.toMatchObject({ code: 'CONTEXT_MISMATCH' });
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 
   it('blocks remote Ollama destinations unless separately approved', () => {
