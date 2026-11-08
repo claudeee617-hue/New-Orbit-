@@ -32,6 +32,9 @@ inputs:
     description: Token used for the optional pull-request comment.
     required: false
     default: ""
+  runtime-ref:
+    description: Trusted base commit used to build ORBIT. Defaults to the pull-request base SHA.
+    required: false
 
 outputs:
   report-path:
@@ -47,6 +50,13 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Check out trusted ORBIT runtime
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.runtime-ref || github.event.pull_request.base.sha || github.sha }}
+        path: .orbit-action-runtime
+        persist-credentials: false
+
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
@@ -59,10 +69,12 @@ runs:
 
     - name: Install dependencies
       shell: bash
+      working-directory: .orbit-action-runtime
       run: pnpm install --frozen-lockfile
 
     - name: Build ORBIT
       shell: bash
+      working-directory: .orbit-action-runtime
       run: pnpm run build
 
     - name: Run ORBIT verification
@@ -74,7 +86,8 @@ runs:
         INPUT_COVERAGE_FILE: ${{ inputs.coverage-file }}
         INPUT_COVERAGE_FORMAT: ${{ inputs.coverage-format }}
         INPUT_FAIL_ON_UNCOVERED: ${{ inputs.fail-on-uncovered }}
-      run: node .github/scripts/orbit-action.mjs
+        ORBIT_RUNTIME_DIR: ${{ github.workspace }}/.orbit-action-runtime
+      run: node ${{ github.action_path }}/../../scripts/orbit-action.mjs
 
     - name: Upsert pull-request verification comment
       if: inputs.comment == 'true' && inputs.github-token != '' && github.event_name == 'pull_request'
@@ -96,12 +109,16 @@ runs:
           const existing = comments.find((comment) =>
             comment.user?.type === 'Bot' && comment.body?.includes(marker)
           );
-          if (existing) {
-            await github.rest.issues.updateComment({
-              owner, repo, comment_id: existing.id, body
-            });
-          } else {
-            await github.rest.issues.createComment({ owner, repo, issue_number, body });
+          try {
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner, repo, comment_id: existing.id, body
+              });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
+          } catch (error) {
+            core.warning(`ORBIT report generated, but PR comment could not be written (common for fork PRs with read-only tokens): ${error.message}`);
           }
 
     - name: Upload ORBIT SARIF
