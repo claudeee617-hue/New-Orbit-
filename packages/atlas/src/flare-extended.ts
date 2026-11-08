@@ -308,7 +308,7 @@ export function analyseTestHistory(
       const item = durations.get(result.id) ?? {
         name: result.name,
         suite: result.suite,
-        values: [],
+        values: [] as number[],
       };
       item.values.push(result.durationSeconds);
       durations.set(result.id, item);
