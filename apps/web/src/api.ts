@@ -64,7 +64,11 @@ export function createOrbitApiClient(options: ApiClientOptions) {
 
   async function request<T>(
     path: string,
-    init: { method?: 'GET' | 'POST'; body?: unknown; signal?: AbortSignal } = {},
+    init: {
+      method?: 'GET' | 'POST';
+      body?: unknown;
+      signal?: AbortSignal;
+    } = {},
   ): Promise<T> {
     const response = await fetchImpl(`${basePath}${path}`, {
       method: init.method ?? 'GET',
@@ -108,7 +112,12 @@ export function createOrbitApiClient(options: ApiClientOptions) {
     },
     getGraph(
       repositoryKey: string,
-      options: { limit?: number; offset?: number; type?: string; signal?: AbortSignal } = {},
+      options: {
+        limit?: number;
+        offset?: number;
+        type?: string;
+        signal?: AbortSignal;
+      } = {},
     ) {
       const query = new URLSearchParams();
       if (options.limit !== undefined) query.set('limit', String(options.limit));
@@ -149,11 +158,12 @@ export function createOrbitApiClient(options: ApiClientOptions) {
     getIntegrity(repositoryKey: string, signal?: AbortSignal) {
       return request<{
         repository: ApiRepository;
-        integrity: { ok: boolean; ledgerEntriesChecked: number; problems: unknown[] };
-      }>(
-        `/repositories/${encodeURIComponent(repositoryKey)}/integrity`,
-        { signal },
-      );
+        integrity: {
+          ok: boolean;
+          ledgerEntriesChecked: number;
+          problems: unknown[];
+        };
+      }>(`/repositories/${encodeURIComponent(repositoryKey)}/integrity`, { signal });
     },
     getAtlasReport(repositoryKey: string, signal?: AbortSignal) {
       return request<{ repository: ApiRepository; report: unknown }>(
@@ -163,19 +173,31 @@ export function createOrbitApiClient(options: ApiClientOptions) {
     },
     getPassports(
       repositoryKey: string,
-      options: { limit?: number; offset?: number; signal?: AbortSignal } = {},
+      options: {
+        limit?: number;
+        offset?: number;
+        signal?: AbortSignal;
+      } = {},
     ) {
       const query = new URLSearchParams();
       if (options.limit !== undefined) query.set('limit', String(options.limit));
       if (options.offset !== undefined) query.set('offset', String(options.offset));
       const suffix = query.size ? `?${query.toString()}` : '';
-      return request<{ repository: ApiRepository; passports: unknown[]; page: unknown }>(
-        `/repositories/${encodeURIComponent(repositoryKey)}/passports${suffix}`,
-        { signal: options.signal },
-      );
+      return request<{
+        repository: ApiRepository;
+        passports: unknown[];
+        page: unknown;
+      }>(`/repositories/${encodeURIComponent(repositoryKey)}/passports${suffix}`, {
+        signal: options.signal,
+      });
     },
     scanRepository(
-      input: { rootPath: string; repositoryKey?: string; maxFiles?: number; maxCommits?: number },
+      input: {
+        rootPath: string;
+        repositoryKey?: string;
+        maxFiles?: number;
+        maxCommits?: number;
+      },
       signal?: AbortSignal,
     ) {
       return request<{ result: unknown }>('/repositories/scan', {
