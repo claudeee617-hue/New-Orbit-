@@ -35,13 +35,6 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      - name: Temporary API formatter preview
-        if: matrix.os == 'ubuntu-latest' && github.event.pull_request.head.ref == 'feat/prompt-14-opt-in-ai-full'
-        run: |
-          pnpm exec prettier --write apps/api/src/server.ts
-          echo '--- API SERVER ---'
-          cat apps/api/src/server.ts
-
       # format:check, lint, typecheck, test, build
       - name: Check
         run: pnpm run check
