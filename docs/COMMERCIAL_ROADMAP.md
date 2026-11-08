@@ -9,11 +9,10 @@ This roadmap converts the hybrid business strategy into release gates. It intent
 ## 1. Starting point — honest product status
 
 As of 2026-11-08:
-- The public main branch contains the monorepo foundation, ORBIT Core graph and ATLAS repository scanner.
-- Engineering Prompts 5–10 are consolidated in draft PR #5 (`feat/prompts-6-8-completion`) and remain unmerged. Prompt 9–10 were added after the earlier Prompt 5–8 CI run; a fresh full CI matrix is required before merge.
-- The PR #5 branch includes ATLAS memory/MCP, WITNESS / FLARE / CAPSULE extensions, recorded-file FLIGHT RECORDER, and Change Passport backend/CLI work. Physical serial capture and the visual Replay Room remain unavailable.
-- The separate App Business Module Prompts 0–4 are in draft PRs #6 and #7 and are not merged.
-- No hosted collaboration, billing or customer-data integration is implemented. The current product is an engineering build, not a commercially ready release.
+- The public \`main\` branch contains the monorepo foundation, ORBIT Core graph and ATLAS repository scanner.
+- PR #1 (\`feat/orbit-evidence-engines\`) contains Prompt 5 memory/MCP work and early WITNESS, FLARE, CAPSULE, FLIGHT RECORDER and Change Passport prototypes. It is open and has not been merged.
+- Those prototypes have explicit limitations: no persistent CI history, no environment replay, no physical serial capture, no graph-persisted passport / Replay Room, and no completed hosted collaboration product.
+- The current product is an engineering build, not a commercially ready release.
 
 Update this section as implementation changes. A feature is marketable only after it is merged, tested, documented, packaged and validated in a user workflow.
 
