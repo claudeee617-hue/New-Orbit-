@@ -108,6 +108,10 @@ export function parseTelemetry(
   input: string,
   format?: TelemetrySession['format'],
 ): TelemetrySession {
+  if (typeof input !== 'string') throw new Error('Telemetry input must be text');
+  if (format !== undefined && !['json', 'ndjson', 'csv', 'key-value'].includes(format)) {
+    throw new Error('Telemetry format must be json, ndjson, csv or key-value');
+  }
   if (Buffer.byteLength(input, 'utf8') > MAX_TELEMETRY_BYTES)
     throw new Error('Telemetry exceeds the 10 MiB parser limit');
   const trimmed = input.trim();
