@@ -163,7 +163,7 @@ The architecture and current roadmap are documented in [docs/ROADMAP.md](docs/RO
 
 ## License
 
-The repository targets Apache-2.0, but the `LICENSE` file has not yet been added. Until that is done, the repository does not grant an open-source license.
+The repository includes Apache License 2.0 text in `LICENSE`. Review third-party notices and confirm ownership/legal requirements before publishing or distributing a release.
 
 ### ATLAS memory and MCP (Prompt 5)
 
