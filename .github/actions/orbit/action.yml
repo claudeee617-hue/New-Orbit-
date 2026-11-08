@@ -32,9 +32,6 @@ inputs:
     description: Token used for the optional pull-request comment.
     required: false
     default: ""
-  runtime-ref:
-    description: Trusted base commit used to build ORBIT. Defaults to the pull-request base SHA.
-    required: false
 
 outputs:
   report-path:
@@ -53,7 +50,7 @@ runs:
     - name: Check out trusted ORBIT runtime
       uses: actions/checkout@v4
       with:
-        ref: ${{ inputs.runtime-ref || github.event.pull_request.base.sha || github.sha }}
+        ref: ${{ github.event.pull_request.base.sha }}
         path: .orbit-action-runtime
         persist-credentials: false
 
