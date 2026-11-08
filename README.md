@@ -8,7 +8,7 @@ Its central artifact is the **Change Passport**: a content-hashed record of a ch
 
 ## Current status
 
-The public `main` branch contains engineering roadmap Prompts 0–10, including the Core graph, ATLAS memory/MCP, WITNESS, FLARE, CAPSULE, recorded-file FLIGHT RECORDER and Change Passport backend/CLI (PR #5 merged on 2026-11-08). The separate App Business Module sub-prompts 0–4 are on `feat/business-module-prompts-0-4-main` in draft PR #9 and are pending their own combined CI; they are not merged.
+The public `main` branch contains engineering roadmap Prompts 0–10 and the separate App Business Module sub-prompts 0–4. Engineering Prompts 5–10 were merged through PR #5; the Business Module was merged through PR #9 on 2026-11-08. Their full CI matrices passed on Ubuntu, macOS and Windows.
 
 | Capability | Current implementation |
 | --- | --- |
@@ -21,7 +21,7 @@ The public `main` branch contains engineering roadmap Prompts 0–10, including 
 | CAPSULE polyglot toolchain, dependency, container and workspace manifest inspection | Extended prototype on `main`; build replay is not implemented |
 | FLIGHT RECORDER recorded telemetry parser, caller-defined analysis and hash-verified graph persistence | Implemented on `main` as recorded-file prototype; physical serial/USB capture unavailable |
 | Change Passport graph correlation, versioned history, comparisons and non-executing reproduction plan | Implemented on `main` as backend/CLI prototype; visual Replay Room UI not implemented |
-| App Business Module | Strategy, market references, local actual-vs-forecast calculator and pricing simulator on the Business feature branch; no live accounting/CRM/billing data |
+| App Business Module | Implemented on `main` via PR #9: strategy, market references, local actual-vs-forecast calculator and pricing simulator; no live accounting/CRM/billing data |
 | Specialist AI agents, GitHub Action and full dashboard | Not implemented (MCP stdio server is now on `main`) |
 
 See [ORBIT_BUILD_STATE.md](ORBIT_BUILD_STATE.md) for phase-by-phase implementation details, branch status, known limitations and verified test results.
