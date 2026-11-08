@@ -23,12 +23,12 @@ Last updated: 2026-11-08
 | 9      | FLIGHT RECORDER                                | Merged to `main` via PR #5: recorded-log analysis + hash-verified graph persistence; no physical serial connection |
 | 10     | Change Passport and Replay Room                | Merged to `main` via PR #5: commit-scoped evidence correlation, immutable history, comparison and non-executing reproduction plan; no visual Replay Room UI |
 | 11     | API and CLI (full)                             | Merged to `main` via PR #11; CI run #136 passed Ubuntu, macOS and Windows |
-| 12     | Command Center (full)                          | Partial: authenticated local dashboard, repository selector, graph/evidence/passport views, integrity report; remaining engine screens and UX pending (PR #13) |
-| 13     | GitHub Action                                  | Not started                                    |
-| 14     | ORBIT AI                                       | Not started                                    |
-| 15     | Security review                                | Not started                                    |
-| 16     | Testing and validation                         | Not started                                    |
-| 17     | Release polish                                 | Not started                                    |
+| 12     | Command Center (full)                          | Partial: authenticated dashboard, repository selector, graph/evidence/passport views, ledger integrity and AI preview panel; engine screens, Replay Room and responsive/accessibility work pending (PR #13 / #21) |
+| 13     | GitHub Action                                  | Partial: composite WITNESS diff/coverage action and secure trusted-base runtime; cross-platform action-specific tests and release validation pending (PR #14) |
+| 14     | ORBIT AI                                       | Partial: provider adapters, local API preview/approval endpoints and Command Center preview/approval panel; live-provider and E2E validation pending (PR #21) |
+| 15     | Security review                                | Partial: security/privacy/contributor policies, CodeQL workflow and Dependabot merged via PR #15; independent audit and parser/API threat tests pending |
+| 16     | Testing and validation                         | Partial: unit/API/CLI tests and CodeQL/CI; browser E2E, fuzz, migration, action and real-provider smoke tests pending |
+| 17     | Release polish                                 | Partial: license, citation, contributor docs, issue templates and release checklist merged via PR #15; clean-machine validation and release approval pending |
 
 
 ## Cross-engine implementation merged via PR #5
@@ -305,3 +305,30 @@ Known gaps before Prompt 12 can be called complete:
 - The web app must be tested against a running local API with real fixture repositories.
 
 Validation status: source has been committed to the feature branch. Do not claim Prompt 12 CI passes until the PR's Ubuntu/macOS/Windows workflow completes successfully. Do not merge until CI, integration behavior and review pass.
+
+
+## Prompt 14 — integrated optional AI vertical slice (PR #21)
+
+The new stacked branch `feat/prompt-14-opt-in-ai-full` is based on Prompt 12's Command Center work so the API and UI can be reviewed together.
+
+Implemented in this branch:
+- `@orbit/ai` provider package with OpenAI Responses, Anthropic Messages and Ollama adapters.
+- AI is disabled by default; local API requires `ORBIT_AI_ENABLED=true` before analysis can run.
+- Provider keys are read from the local API process environment only: `ORBIT_OPENAI_API_KEY`, `ANTHROPIC_API_KEY`; optional Ollama endpoint uses `ORBIT_OLLAMA_URL`.
+- Local API `POST /api/v1/repositories/:key/ai/preview` selects repository-owned evidence metadata, validates user-selected excerpts, redacts common secrets, and returns the exact destination/context/hash without contacting the provider.
+- Local API `POST /api/v1/repositories/:key/ai/analyse` requires `confirmed: true` and the exact preview SHA-256; it re-builds the context before sending.
+- Command Center AI Analysis panel supports provider/model/question, evidence selection, exact preview, destination display, redaction count and an explicit approval checkbox before sending.
+- The current UI sends selected evidence metadata only; it does not read or upload source files. Optional source excerpts are supported by the API but not yet exposed in the UI.
+- Results are advisory, citation status is checked, and no graph mutation, shell execution or automatic patching is provided.
+- Ledger integrity API route and dashboard indicator remain included.
+
+Remaining:
+- Full E2E tests for preview/approval and zero-provider-call-before-approval.
+- Live provider smoke tests using user-owned credentials (never commit keys).
+- Cancellation UI, provider usage/cost estimate, user-editable excerpt selection, AI note persistence/clear controls and model discovery.
+- More redaction, prompt-injection, timeout, 401/429/5xx, malformed and oversized response tests.
+- Confirm official provider API version/schema and data retention settings before release.
+
+## Prompt 13 — action status
+
+The action is an advisory composite action with a trusted base-commit runtime and untrusted PR diff as input. Cross-platform action-specific integration tests and Marketplace/tagging remain pending. See `docs/GITHUB_ACTION.md`.
