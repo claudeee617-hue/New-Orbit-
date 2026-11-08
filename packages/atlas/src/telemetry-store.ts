@@ -54,30 +54,47 @@ export async function storeTelemetrySession(
   const root = await realpath(resolve(input.repositoryRoot));
   const filePath = await realpath(resolve(root, relativeArtifact));
   const relativeActual = relative(root, filePath);
-  if (!relativeActual || relativeActual === '..' || relativeActual.startsWith(`..${sep}`) || relativeActual.startsWith(sep)) {
+  if (
+    !relativeActual ||
+    relativeActual === '..' ||
+    relativeActual.startsWith(`..${sep}`) ||
+    relativeActual.startsWith(sep)
+  ) {
     throw new Error('telemetry artifact resolves outside the selected repository');
   }
-  if (!(await lstat(filePath)).isFile()) throw new Error('telemetry artifact must be a regular file');
+  if (!(await lstat(filePath)).isFile())
+    throw new Error('telemetry artifact must be a regular file');
   const raw = await readFile(filePath);
-  if (raw.byteLength > MAX_ARTIFACT_BYTES) throw new Error('telemetry artifact exceeds the 10 MiB limit');
+  if (raw.byteLength > MAX_ARTIFACT_BYTES)
+    throw new Error('telemetry artifact exceeds the 10 MiB limit');
   const actualHash = createHash('sha256').update(raw).digest('hex');
   if (actualHash !== session.rawSha256.toLowerCase()) {
     throw new Error('telemetry artifact SHA-256 does not match the parsed session');
   }
-  if (input.commitSha && !/^[0-9a-f]{7,64}$/i.test(input.commitSha)) throw new Error('commit SHA is invalid');
-  const timestamp = input.startedAt ?? session.points.find((point) => point.timestamp)?.timestamp ?? new Date().toISOString();
-  if (!Number.isFinite(Date.parse(timestamp))) throw new Error('telemetry session timestamp is invalid');
+  if (input.commitSha && !/^[0-9a-f]{7,64}$/i.test(input.commitSha))
+    throw new Error('commit SHA is invalid');
+  const timestamp =
+    input.startedAt ??
+    session.points.find((point) => point.timestamp)?.timestamp ??
+    new Date().toISOString();
+  if (!Number.isFinite(Date.parse(timestamp)))
+    throw new Error('telemetry session timestamp is invalid');
 
   const sessionKey = `telemetry:${session.rawSha256.toLowerCase()}`;
   const sessionNodeId = nodeIdFor(input.repositoryId, 'TelemetrySession', sessionKey);
   const deviceKey = input.deviceLabel?.trim().slice(0, 128) || undefined;
-  const deviceNodeId = deviceKey ? nodeIdFor(input.repositoryId, 'HardwareDevice', deviceKey) : undefined;
+  const deviceNodeId = deviceKey
+    ? nodeIdFor(input.repositoryId, 'HardwareDevice', deviceKey)
+    : undefined;
   const firmwareKey = input.firmwareBuildId?.trim().slice(0, 128) || undefined;
-  const firmwareNodeId = firmwareKey ? nodeIdFor(input.repositoryId, 'Firmware', `build:${firmwareKey}`) : undefined;
+  const firmwareNodeId = firmwareKey
+    ? nodeIdFor(input.repositoryId, 'Firmware', `build:${firmwareKey}`)
+    : undefined;
   const commitSha = input.commitSha?.toLowerCase();
   const commitNodeId = commitSha ? nodeIdFor(input.repositoryId, 'Commit', commitSha) : undefined;
-  const relatedEntityIds = [sessionNodeId, deviceNodeId, firmwareNodeId, commitNodeId]
-    .filter((value): value is string => Boolean(value));
+  const relatedEntityIds = [sessionNodeId, deviceNodeId, firmwareNodeId, commitNodeId].filter(
+    (value): value is string => Boolean(value),
+  );
 
   return store.transaction(() => {
     const evidence = store.evidence.append({
@@ -92,8 +109,14 @@ export async function storeTelemetrySession(
         ...session.limitations,
         ...input.analysis.limitations,
         'Evidence status PARTIAL describes bounded parser output; it is not a judgement that the device passed or failed.',
-        ...(input.isDemo ? ['This recording is synthetic demonstration data (DEMO), not a physical device capture.'] : []),
-      ].slice(0, 50).map((item) => item.slice(0, 1000)),
+        ...(input.isDemo
+          ? [
+              'This recording is synthetic demonstration data (DEMO), not a physical device capture.',
+            ]
+          : []),
+      ]
+        .slice(0, 50)
+        .map((item) => item.slice(0, 1000)),
       relatedEntityIds,
     });
 
@@ -123,7 +146,9 @@ export async function storeTelemetrySession(
           message: item.message.slice(0, 300),
         })),
         anomalyCount: input.analysis.anomalies.length,
-        metricStats: Object.fromEntries(Object.entries(input.analysis.metricStats).slice(0, MAX_STORED_METRICS)),
+        metricStats: Object.fromEntries(
+          Object.entries(input.analysis.metricStats).slice(0, MAX_STORED_METRICS),
+        ),
         isDemo: input.isDemo,
         deviceLabel: deviceKey ?? null,
         firmwareBuildId: firmwareKey ?? null,
@@ -135,13 +160,15 @@ export async function storeTelemetrySession(
 
     if (deviceKey && deviceNodeId) {
       const existing = store.nodes.get(input.repositoryId, deviceNodeId);
-      const device = existing ?? store.nodes.upsert({
-        repositoryId: input.repositoryId,
-        type: 'HardwareDevice',
-        key: deviceKey,
-        attrs: { label: deviceKey, source: 'telemetry-session-metadata' },
-        sourceEvidenceId: evidence.record.id,
-      }).record;
+      const device =
+        existing ??
+        store.nodes.upsert({
+          repositoryId: input.repositoryId,
+          type: 'HardwareDevice',
+          key: deviceKey,
+          attrs: { label: deviceKey, source: 'telemetry-session-metadata' },
+          sourceEvidenceId: evidence.record.id,
+        }).record;
       store.edges.upsert({
         repositoryId: input.repositoryId,
         type: 'OBSERVED_ON',
@@ -154,13 +181,15 @@ export async function storeTelemetrySession(
 
     if (firmwareKey && firmwareNodeId) {
       const existing = store.nodes.get(input.repositoryId, firmwareNodeId);
-      const firmware = existing ?? store.nodes.upsert({
-        repositoryId: input.repositoryId,
-        type: 'Firmware',
-        key: `build:${firmwareKey}`,
-        attrs: { buildId: firmwareKey, source: 'telemetry-session-linkage' },
-        sourceEvidenceId: evidence.record.id,
-      }).record;
+      const firmware =
+        existing ??
+        store.nodes.upsert({
+          repositoryId: input.repositoryId,
+          type: 'Firmware',
+          key: `build:${firmwareKey}`,
+          attrs: { buildId: firmwareKey, source: 'telemetry-session-linkage' },
+          sourceEvidenceId: evidence.record.id,
+        }).record;
       store.edges.upsert({
         repositoryId: input.repositoryId,
         type: 'OBSERVED_ON',
@@ -173,14 +202,16 @@ export async function storeTelemetrySession(
 
     if (commitSha && commitNodeId) {
       const existing = store.nodes.get(input.repositoryId, commitNodeId);
-      const commit = existing ?? store.nodes.upsert({
-        repositoryId: input.repositoryId,
-        type: 'Commit',
-        key: commitSha,
-        attrs: { sha: commitSha, source: 'telemetry-session-linkage' },
-        sourceEvidenceId: evidence.record.id,
-        validFromCommit: commitSha,
-      }).record;
+      const commit =
+        existing ??
+        store.nodes.upsert({
+          repositoryId: input.repositoryId,
+          type: 'Commit',
+          key: commitSha,
+          attrs: { sha: commitSha, source: 'telemetry-session-linkage' },
+          sourceEvidenceId: evidence.record.id,
+          validFromCommit: commitSha,
+        }).record;
       store.edges.upsert({
         repositoryId: input.repositoryId,
         type: 'VERIFIED_BY',

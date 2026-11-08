@@ -77,9 +77,14 @@ function addRequiredEvidence(
       source: `fixture:${sourceType}:${suffix}`,
       sourceType,
       commitSha,
-      contentHash: sourceType === 'git' ? '1'.repeat(64) :
-        sourceType === 'coverage' ? '2'.repeat(64) :
-        sourceType === 'test-report' ? '3'.repeat(64) : '4'.repeat(64),
+      contentHash:
+        sourceType === 'git'
+          ? '1'.repeat(64)
+          : sourceType === 'coverage'
+            ? '2'.repeat(64)
+            : sourceType === 'test-report'
+              ? '3'.repeat(64)
+              : '4'.repeat(64),
       status: 'PASS',
       limitations: [],
       relatedEntityIds: [fileId],
@@ -93,21 +98,28 @@ describe('Change Passport evidence engine', () => {
     try {
       const commitSha = '0123456789abcdef0123456789abcdef01234567';
       addRequiredEvidence(store, repository.id, commitSha, fileA.id, 'first');
-      const result = recordChangePassport(store, {
-        repositoryId: repository.id,
-        repository: repository.key,
-        commitSha,
-        diffSha256: 'a'.repeat(64),
-        changedFiles: ['src/a.ts'],
-        evidence: [],
-      }, { now: () => '2026-11-08T10:00:00.000Z' });
+      const result = recordChangePassport(
+        store,
+        {
+          repositoryId: repository.id,
+          repository: repository.key,
+          commitSha,
+          diffSha256: 'a'.repeat(64),
+          changedFiles: ['src/a.ts'],
+          evidence: [],
+        },
+        { now: () => '2026-11-08T10:00:00.000Z' },
+      );
       expect(result.passport.state).toBe('COMPLETE');
       expect(result.passport.verificationStatus).toBe('PASS');
       expect(result.passport.missingEvidence).toEqual([]);
       expect(result.impact.affectedFiles).toContain('src/b.ts');
       expect(result.impact.relatedTests).toContain('test/a.test.ts');
       expect(result.dimensions.map((item) => item.status).slice(0, 4)).toEqual([
-        'PRESENT', 'PRESENT', 'PRESENT', 'PRESENT',
+        'PRESENT',
+        'PRESENT',
+        'PRESENT',
+        'PRESENT',
       ]);
       expect(store.nodes.get(repository.id, result.nodeId)?.type).toBe('ChangePassport');
       expect(getPassportHistory(store, repository.id, result.nodeId)).toHaveLength(1);

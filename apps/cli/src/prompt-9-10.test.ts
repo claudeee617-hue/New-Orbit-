@@ -31,23 +31,39 @@ describe('Prompt 9 — Flight Recorder CLI', () => {
   it('renders typed analysis, normalized events and explicit transport availability', async () => {
     const root = tempDir();
     const log = join(root, 'record.ndjson');
-    writeFileSync(log, [
-      '{"timestamp":"2026-11-08T10:00:00Z","voltage":3.3,"event":"boot","api_token":"DO_NOT_LEAK"}',
-      '{"timestamp":"2026-11-08T10:00:01Z","voltage":3.8,"event":"watchdog reset"}',
-    ].join('\n'));
-    const report = JSON.parse(await run([
-      'device', 'replay', log,
-      '--units', '{"voltage":"V"}',
-      '--thresholds', '[{"id":"vmax","metric":"voltage","max":3.5,"severity":"warning"}]',
-    ])) as {
+    writeFileSync(
+      log,
+      [
+        '{"timestamp":"2026-11-08T10:00:00Z","voltage":3.3,"event":"boot","api_token":"DO_NOT_LEAK"}',
+        '{"timestamp":"2026-11-08T10:00:01Z","voltage":3.8,"event":"watchdog reset"}',
+      ].join('\n'),
+    );
+    const report = JSON.parse(
+      await run([
+        'device',
+        'replay',
+        log,
+        '--units',
+        '{"voltage":"V"}',
+        '--thresholds',
+        '[{"id":"vmax","metric":"voltage","max":3.5,"severity":"warning"}]',
+      ]),
+    ) as {
       mode: string;
-      analysis: { anomalies: Array<{ kind: string }>; metricStats: Record<string, { unit: string | null }> };
+      analysis: {
+        anomalies: Array<{ kind: string }>;
+        metricStats: Record<string, { unit: string | null }>;
+      };
       serialTransport: { available: boolean };
       points: Array<{ event: string; raw: string }>;
     };
     expect(report.mode).toBe('read-only-recorded-file-replay');
     expect(report.analysis.metricStats.voltage?.unit).toBe('V');
-    expect(report.analysis.anomalies.map((item) => item.kind)).toEqual(['reset', 'watchdog', 'threshold']);
+    expect(report.analysis.anomalies.map((item) => item.kind)).toEqual([
+      'reset',
+      'watchdog',
+      'threshold',
+    ]);
     expect(report.points[0]?.event).toBe('boot');
     expect(report.points.every((item) => item.raw === '')).toBe(true);
     expect(report.serialTransport.available).toBe(false);
@@ -55,7 +71,10 @@ describe('Prompt 9 — Flight Recorder CLI', () => {
   });
 
   it('reports physical serial transport as unavailable instead of pretending to connect', async () => {
-    const report = JSON.parse(await run(['device', 'serial-status'])) as { available: boolean; reason: string };
+    const report = JSON.parse(await run(['device', 'serial-status'])) as {
+      available: boolean;
+      reason: string;
+    };
     expect(report.available).toBe(false);
     expect(report.reason).toContain('No USB serial adapter');
   });
@@ -73,14 +92,25 @@ describe('Prompt 9 — Flight Recorder CLI', () => {
     await fs.mkdir(join(repoRoot, 'fixtures'), { recursive: true });
     const raw = '{"timestamp":"2026-11-08T10:00:00Z","event":"watchdog reset","voltage":3.2}';
     await fs.writeFile(log, raw);
-    const report = JSON.parse(await run([
-      'device', 'replay', log,
-      '--db', dbPath,
-      '--repo', 'test/cli-telemetry',
-      '--repo-root', repoRoot,
-      '--artifact-path', 'fixtures/record.ndjson',
-      '--demo',
-    ])) as { demoLabel: string; persistence: { isDemo: boolean; pointCount: number; evidenceId: string } };
+    const report = JSON.parse(
+      await run([
+        'device',
+        'replay',
+        log,
+        '--db',
+        dbPath,
+        '--repo',
+        'test/cli-telemetry',
+        '--repo-root',
+        repoRoot,
+        '--artifact-path',
+        'fixtures/record.ndjson',
+        '--demo',
+      ]),
+    ) as {
+      demoLabel: string;
+      persistence: { isDemo: boolean; pointCount: number; evidenceId: string };
+    };
     expect(report.demoLabel).toContain('DEMO');
     expect(report.persistence.isDemo).toBe(true);
     expect(report.persistence.pointCount).toBe(1);
@@ -130,16 +160,28 @@ describe('Prompt 10 — Change Passport CLI', () => {
       attrs: {},
       sourceEvidenceId: parserEvidence.record.id,
     });
-    const addEvidence = (suffix: string, statuses: { git?: 'PASS'; coverage?: 'PASS'; 'test-report'?: 'PASS'; ci?: 'PASS' | 'FAIL' }) => {
-      for (const [sourceType, status] of Object.entries(statuses) as Array<['git' | 'coverage' | 'test-report' | 'ci', 'PASS' | 'FAIL']>) {
+    const addEvidence = (
+      suffix: string,
+      statuses: { git?: 'PASS'; coverage?: 'PASS'; 'test-report'?: 'PASS'; ci?: 'PASS' | 'FAIL' },
+    ) => {
+      for (const [sourceType, status] of Object.entries(statuses) as Array<
+        ['git' | 'coverage' | 'test-report' | 'ci', 'PASS' | 'FAIL']
+      >) {
         store.evidence.append({
           repositoryId: repository.id,
           source: `fixture:${sourceType}:${suffix}`,
           sourceType,
           commitSha,
-          contentHash: sourceType === 'git' ? '1'.repeat(64) :
-            sourceType === 'coverage' ? '2'.repeat(64) :
-            sourceType === 'test-report' ? '3'.repeat(64) : (suffix === 'second' ? '5'.repeat(64) : '4'.repeat(64)),
+          contentHash:
+            sourceType === 'git'
+              ? '1'.repeat(64)
+              : sourceType === 'coverage'
+                ? '2'.repeat(64)
+                : sourceType === 'test-report'
+                  ? '3'.repeat(64)
+                  : suffix === 'second'
+                    ? '5'.repeat(64)
+                    : '4'.repeat(64),
           status,
           limitations: status === 'PASS' ? [] : ['CI run failed.'],
           relatedEntityIds: [file.id],
@@ -159,15 +201,21 @@ describe('Prompt 10 — Change Passport CLI', () => {
     };
     writeFileSync(beforeFile, JSON.stringify({ ...base, diffSha256: 'a'.repeat(64) }));
     writeFileSync(afterFile, JSON.stringify({ ...base, diffSha256: 'b'.repeat(64) }));
-    const before = JSON.parse(await run(['passport', 'create', beforeFile, '--db', dbPath, '--repo', repository.key])) as {
+    const before = JSON.parse(
+      await run(['passport', 'create', beforeFile, '--db', dbPath, '--repo', repository.key]),
+    ) as {
       nodeId: string;
       passport: { state: string; verificationStatus: string };
     };
     expect(before.passport.state).toBe('COMPLETE');
     expect(before.passport.verificationStatus).toBe('PASS');
-    const history = JSON.parse(await run(['passport', 'history', before.nodeId, '--db', dbPath, '--repo', repository.key])) as Array<{ version: number }>;
+    const history = JSON.parse(
+      await run(['passport', 'history', before.nodeId, '--db', dbPath, '--repo', repository.key]),
+    ) as Array<{ version: number }>;
     expect(history).toHaveLength(1);
-    const plan = JSON.parse(await run(['passport', 'plan', before.nodeId, '--db', dbPath, '--repo', repository.key])) as {
+    const plan = JSON.parse(
+      await run(['passport', 'plan', before.nodeId, '--db', dbPath, '--repo', repository.key]),
+    ) as {
       steps: Array<{ automaticExecution: boolean }>;
     };
     expect(plan.steps.every((item) => item.automaticExecution === false)).toBe(true);
@@ -180,9 +228,14 @@ describe('Prompt 10 — Change Passport CLI', () => {
         source: `fixture:${sourceType}:second`,
         sourceType,
         commitSha,
-        contentHash: sourceType === 'git' ? '6'.repeat(64) :
-          sourceType === 'coverage' ? '7'.repeat(64) :
-          sourceType === 'test-report' ? '8'.repeat(64) : '9'.repeat(64),
+        contentHash:
+          sourceType === 'git'
+            ? '6'.repeat(64)
+            : sourceType === 'coverage'
+              ? '7'.repeat(64)
+              : sourceType === 'test-report'
+                ? '8'.repeat(64)
+                : '9'.repeat(64),
         status: sourceType === 'ci' ? 'FAIL' : 'PASS',
         limitations: sourceType === 'ci' ? ['CI run failed.'] : [],
         relatedEntityIds: [file.id],
@@ -190,14 +243,25 @@ describe('Prompt 10 — Change Passport CLI', () => {
     }
     writable.close();
 
-    const after = JSON.parse(await run(['passport', 'create', afterFile, '--db', dbPath, '--repo', repository.key])) as {
+    const after = JSON.parse(
+      await run(['passport', 'create', afterFile, '--db', dbPath, '--repo', repository.key]),
+    ) as {
       nodeId: string;
       passport: { verificationStatus: string };
     };
     expect(after.passport.verificationStatus).toBe('FAIL');
-    const comparison = JSON.parse(await run([
-      'passport', 'compare', before.nodeId, after.nodeId, '--db', dbPath, '--repo', repository.key,
-    ])) as { addedEvidenceIds: string[]; beforeStatus: string; afterStatus: string };
+    const comparison = JSON.parse(
+      await run([
+        'passport',
+        'compare',
+        before.nodeId,
+        after.nodeId,
+        '--db',
+        dbPath,
+        '--repo',
+        repository.key,
+      ]),
+    ) as { addedEvidenceIds: string[]; beforeStatus: string; afterStatus: string };
     expect(comparison.addedEvidenceIds.length).toBeGreaterThan(0);
     expect(comparison.beforeStatus).toBe('PASS');
     expect(comparison.afterStatus).toBe('FAIL');

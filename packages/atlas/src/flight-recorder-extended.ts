@@ -46,7 +46,10 @@ export interface TelemetryAnalysis {
   schemaVersion: 1;
   metrics: TypedTelemetryMetric[];
   anomalies: TelemetryAnomaly[];
-  metricStats: Record<string, { count: number; min: number; max: number; mean: number; unit: string | null }>;
+  metricStats: Record<
+    string,
+    { count: number; min: number; max: number; mean: number; unit: string | null }
+  >;
   eventCounts: Record<string, number>;
   limitations: string[];
 }
@@ -61,16 +64,23 @@ export function analyseTelemetry(
   options: TelemetryAnalysisOptions = {},
 ): TelemetryAnalysis {
   const rules = [...(options.thresholds ?? [])];
-  if (rules.length > MAX_THRESHOLD_RULES) throw new Error(`at most ${MAX_THRESHOLD_RULES} telemetry threshold rules are allowed`);
+  if (rules.length > MAX_THRESHOLD_RULES)
+    throw new Error(`at most ${MAX_THRESHOLD_RULES} telemetry threshold rules are allowed`);
   const ruleIds = new Set<string>();
   for (const rule of rules) {
-    if (!rule.id.trim() || ruleIds.has(rule.id)) throw new Error('telemetry threshold rule IDs must be non-empty and unique');
+    if (!rule.id.trim() || ruleIds.has(rule.id))
+      throw new Error('telemetry threshold rule IDs must be non-empty and unique');
     ruleIds.add(rule.id);
-    if (!/^[A-Za-z][A-Za-z0-9_.-]{0,63}$/.test(rule.metric)) throw new Error(`threshold ${rule.id} requires a valid metric name`);
-    if (rule.min === undefined && rule.max === undefined) throw new Error(`threshold ${rule.id} must define min or max`);
-    if (rule.severity !== undefined && !['info', 'warning', 'error'].includes(rule.severity)) throw new Error(`threshold ${rule.id} severity is invalid`);
-    if (rule.min !== undefined && !Number.isFinite(rule.min)) throw new Error(`threshold ${rule.id} min must be finite`);
-    if (rule.max !== undefined && !Number.isFinite(rule.max)) throw new Error(`threshold ${rule.id} max must be finite`);
+    if (!/^[A-Za-z][A-Za-z0-9_.-]{0,63}$/.test(rule.metric))
+      throw new Error(`threshold ${rule.id} requires a valid metric name`);
+    if (rule.min === undefined && rule.max === undefined)
+      throw new Error(`threshold ${rule.id} must define min or max`);
+    if (rule.severity !== undefined && !['info', 'warning', 'error'].includes(rule.severity))
+      throw new Error(`threshold ${rule.id} severity is invalid`);
+    if (rule.min !== undefined && !Number.isFinite(rule.min))
+      throw new Error(`threshold ${rule.id} min must be finite`);
+    if (rule.max !== undefined && !Number.isFinite(rule.max))
+      throw new Error(`threshold ${rule.id} max must be finite`);
     if (rule.min !== undefined && rule.max !== undefined && rule.min > rule.max) {
       throw new Error(`threshold ${rule.id} min must not exceed max`);
     }
@@ -114,7 +124,10 @@ export function analyseTelemetry(
         timestamp: point.timestamp,
         name,
         value,
-        unit: options.units?.[name] ?? rules.find((rule) => rule.metric === name && rule.unit)?.unit ?? null,
+        unit:
+          options.units?.[name] ??
+          rules.find((rule) => rule.metric === name && rule.unit)?.unit ??
+          null,
       });
       const series = values.get(name) ?? [];
       series.push(value);
@@ -138,7 +151,8 @@ export function analyseTelemetry(
           metric: name,
           value,
           ...(limit !== undefined ? { limit } : {}),
-          message: rule.label?.slice(0, 200) ??
+          message:
+            rule.label?.slice(0, 200) ??
             `${name}=${value}${options.units?.[name] ? ` ${options.units[name]}` : ''} is ${comparator} configured limit ${limit}`,
         });
       }
@@ -153,16 +167,23 @@ export function analyseTelemetry(
       min: series.reduce((minimum, value) => Math.min(minimum, value), Number.POSITIVE_INFINITY),
       max: series.reduce((maximum, value) => Math.max(maximum, value), Number.NEGATIVE_INFINITY),
       mean: sum / series.length,
-      unit: options.units?.[name] ?? rules.find((rule) => rule.metric === name && rule.unit)?.unit ?? null,
+      unit:
+        options.units?.[name] ??
+        rules.find((rule) => rule.metric === name && rule.unit)?.unit ??
+        null,
     };
   }
 
   return {
     schemaVersion: 1,
     metrics,
-    anomalies: anomalies.sort((a, b) => a.pointIndex - b.pointIndex || a.ruleId.localeCompare(b.ruleId)),
+    anomalies: anomalies.sort(
+      (a, b) => a.pointIndex - b.pointIndex || a.ruleId.localeCompare(b.ruleId),
+    ),
     metricStats,
-    eventCounts: Object.fromEntries(Object.entries(eventCounts).sort(([a], [b]) => a.localeCompare(b))),
+    eventCounts: Object.fromEntries(
+      Object.entries(eventCounts).sort(([a], [b]) => a.localeCompare(b)),
+    ),
     limitations: [
       'Watchdog and reset detection is keyword-based; confirm event meanings against the firmware log specification.',
       'Threshold findings are produced only from caller-supplied rules and units; no universal device limits are inferred.',
@@ -183,12 +204,17 @@ export function createRecordedFileTransport(content: string): TelemetryTransport
   return {
     kind: 'recorded-file',
     readOnly: true,
-    async read() { return content; },
-    async close() { /* no external resource is held */ },
+    async read() {
+      return content;
+    },
+    async close() {
+      /* no external resource is held */
+    },
   };
 }
 
 export const SERIAL_TRANSPORT_STATUS = {
   available: false,
-  reason: 'No USB serial adapter is shipped in this build. Use recorded-file replay; physical device access requires a separately reviewed, explicitly approved adapter.',
+  reason:
+    'No USB serial adapter is shipped in this build. Use recorded-file replay; physical device access requires a separately reviewed, explicitly approved adapter.',
 } as const;

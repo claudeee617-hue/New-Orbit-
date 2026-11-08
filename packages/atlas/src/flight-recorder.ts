@@ -33,7 +33,8 @@ function normaliseEvent(value: string): string {
   if (event.includes('boot')) return 'boot';
   if (event.includes('panic')) return 'panic';
   if (event.includes('brownout')) return 'brownout';
-  if (event.includes('fault') || event.includes('exception') || event.includes('assert')) return 'fault';
+  if (event.includes('fault') || event.includes('exception') || event.includes('assert'))
+    return 'fault';
   if (event.includes('crash')) return 'crash';
   if (event.includes('disconnect')) return 'disconnected';
   if (event.includes('connect')) return 'connected';
@@ -149,24 +150,31 @@ export function parseTelemetry(
     });
   } else if (detected === 'ndjson') {
     const lines = trimmed.split(/\r?\n/).filter(Boolean);
-    if (lines.length === 0 || lines.length > 100_000) throw new Error('NDJSON must contain between 1 and 100000 records');
+    if (lines.length === 0 || lines.length > 100_000)
+      throw new Error('NDJSON must contain between 1 and 100000 records');
     records = lines.map((raw) => {
-        const value = JSON.parse(raw) as unknown;
-        if (!value || typeof value !== 'object' || Array.isArray(value))
-          throw new Error('NDJSON rows must be objects');
-        return { value: value as Record<string, unknown>, raw };
-      });
+      const value = JSON.parse(raw) as unknown;
+      if (!value || typeof value !== 'object' || Array.isArray(value))
+        throw new Error('NDJSON rows must be objects');
+      return { value: value as Record<string, unknown>, raw };
+    });
   } else if (detected === 'csv') {
     const [headerLine, ...dataLines] = trimmed.split(/\r?\n/);
     const headers = csvCells(headerLine ?? '').map((value) => value.trim());
-    if (headers.length === 0 || headers.some((header) => !header) || new Set(headers).size !== headers.length) {
+    if (
+      headers.length === 0 ||
+      headers.some((header) => !header) ||
+      new Set(headers).size !== headers.length
+    ) {
       throw new Error('CSV telemetry requires unique, non-empty column names');
     }
     const lines = dataLines.filter((line) => line.trim());
-    if (lines.length === 0 || lines.length > 100_000) throw new Error('CSV must contain between 1 and 100000 data rows');
+    if (lines.length === 0 || lines.length > 100_000)
+      throw new Error('CSV must contain between 1 and 100000 data rows');
     records = lines.map((raw) => {
       const cells = csvCells(raw);
-      if (cells.length !== headers.length) throw new Error('CSV row has a different number of columns than its header');
+      if (cells.length !== headers.length)
+        throw new Error('CSV row has a different number of columns than its header');
       const value: Record<string, unknown> = {};
       headers.forEach((header, index) => {
         value[header] = cells[index] ?? '';
@@ -175,10 +183,12 @@ export function parseTelemetry(
     });
   } else {
     const lines = trimmed.split(/\r?\n/).filter(Boolean);
-    if (lines.length === 0 || lines.length > 100_000) throw new Error('Key-value telemetry must contain between 1 and 100000 records');
+    if (lines.length === 0 || lines.length > 100_000)
+      throw new Error('Key-value telemetry must contain between 1 and 100000 records');
     records = lines.map((raw) => {
       const value = parseKeyValue(raw);
-      if (Object.keys(value).length === 0) throw new Error('Key-value telemetry line contains no key/value pairs');
+      if (Object.keys(value).length === 0)
+        throw new Error('Key-value telemetry line contains no key/value pairs');
       return { value, raw: '' };
     });
   }
@@ -193,8 +203,7 @@ export function parseTelemetry(
     const event = point.event?.toLowerCase() ?? '';
     if (event) eventCounts[event] = (eventCounts[event] ?? 0) + 1;
     if (event.includes('watchdog') || event.includes('wdt')) watchdogEvents += 1;
-    if (event.includes('reset') || event.includes('reboot'))
-      resetEvents += 1;
+    if (event.includes('reset') || event.includes('reboot')) resetEvents += 1;
   }
   return {
     schemaVersion: 1,

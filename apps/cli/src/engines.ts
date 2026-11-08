@@ -140,11 +140,13 @@ async function inspectConfigFiles(rootInput: string): Promise<Record<string, str
   return collected;
 }
 
-
 async function withGraphStore<T>(
   dbPath: string,
   repositoryKey: string | undefined,
-  action: (store: ReturnType<typeof createGraphStore>, repository: { id: string; key: string }) => Promise<T> | T,
+  action: (
+    store: ReturnType<typeof createGraphStore>,
+    repository: { id: string; key: string },
+  ) => Promise<T> | T,
 ): Promise<T> {
   const database = openDatabase({ path: dbPath });
   try {
@@ -316,19 +318,30 @@ export function attachEngineCommands(program: Command, io: CliIo): void {
         const raw = await readText(file);
         const session = parseTelemetry(raw, options.format);
         const units = parseJsonOption<Record<string, string>>(options.units, '--units', {});
-        if (!units || typeof units !== 'object' || Array.isArray(units) ||
-            Object.entries(units).some(([key, value]) => !/^[A-Za-z][A-Za-z0-9_.-]{0,63}$/.test(key) || typeof value !== 'string' || value.length > 32)) {
+        if (
+          !units ||
+          typeof units !== 'object' ||
+          Array.isArray(units) ||
+          Object.entries(units).some(
+            ([key, value]) =>
+              !/^[A-Za-z][A-Za-z0-9_.-]{0,63}$/.test(key) ||
+              typeof value !== 'string' ||
+              value.length > 32,
+          )
+        ) {
           throw new Error('--units must be a JSON object of metric names to short unit strings');
         }
-        const thresholds = parseJsonOption<Array<{
-          id: string;
-          metric: string;
-          min?: number;
-          max?: number;
-          unit?: string;
-          severity?: 'info' | 'warning' | 'error';
-          label?: string;
-        }>>(options.thresholds, '--thresholds', []);
+        const thresholds = parseJsonOption<
+          Array<{
+            id: string;
+            metric: string;
+            min?: number;
+            max?: number;
+            unit?: string;
+            severity?: 'info' | 'warning' | 'error';
+            label?: string;
+          }>
+        >(options.thresholds, '--thresholds', []);
         if (!Array.isArray(thresholds)) throw new Error('--thresholds must be a JSON array');
         const analysis = analyseTelemetry(session, { units, thresholds });
         let persistence: unknown;
@@ -359,7 +372,9 @@ export function attachEngineCommands(program: Command, io: CliIo): void {
           analysis,
           serialTransport: SERIAL_TRANSPORT_STATUS,
           ...(persistence ? { persistence } : {}),
-          ...(options.demo ? { demoLabel: 'DEMO — synthetic data, not a physical device capture' } : {}),
+          ...(options.demo
+            ? { demoLabel: 'DEMO — synthetic data, not a physical device capture' }
+            : {}),
         };
         const output = `${JSON.stringify(report, null, 2)}\n`;
         await writeOutput(options.out, output);
@@ -377,7 +392,9 @@ export function attachEngineCommands(program: Command, io: CliIo): void {
     .description('assemble an evidence-backed Change Passport');
   passport
     .command('create <input-json>')
-    .description('create a canonical passport from supplied evidence, optionally correlating it with the ORBIT graph')
+    .description(
+      'create a canonical passport from supplied evidence, optionally correlating it with the ORBIT graph',
+    )
     .option('--out <file>', 'write passport to a new JSON file')
     .option('--repository <owner/name>', 'repository identifier for a standalone passport')
     .option('--commit <sha>', 'override commit SHA')

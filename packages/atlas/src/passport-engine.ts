@@ -65,7 +65,10 @@ function collectEvidence(
   changedFileIds: string[],
 ): PassportEvidence[] {
   const records = new Map<string, ReturnType<GraphStore['evidence']['get']>>();
-  for (const item of store.evidence.list(repositoryId, { commitSha: input.commitSha, limit: 10_000 })) {
+  for (const item of store.evidence.list(repositoryId, {
+    commitSha: input.commitSha,
+    limit: 10_000,
+  })) {
     records.set(item.id, item);
   }
   for (const entityId of changedFileIds) {
@@ -90,7 +93,9 @@ function collectEvidence(
       item.source !== supplied.source ||
       item.status !== supplied.status
     ) {
-      throw new Error(`Supplied evidence ${supplied.id} does not match an immutable stored evidence record for this commit`);
+      throw new Error(
+        `Supplied evidence ${supplied.id} does not match an immutable stored evidence record for this commit`,
+      );
     }
     records.set(item.id, item);
   }
@@ -143,7 +148,11 @@ function computeImpact(
       }
     }
     for (const edge of walk.edges) edgeIds.add(edge.id);
-    for (const edge of store.edges.list(repositoryId, { toId: file.id, types: ['TESTS'], limit: 1000 })) {
+    for (const edge of store.edges.list(repositoryId, {
+      toId: file.id,
+      types: ['TESTS'],
+      limit: 1000,
+    })) {
       const test = store.nodes.get(repositoryId, edge.fromId);
       if (test) {
         relatedTests.add(test.key);
@@ -178,10 +187,20 @@ function dimension(
     if (name === 'build') return item.kind === 'build';
     return item.kind === 'telemetry';
   });
-  const partial = related.some((item) => item.status === 'PARTIAL' || item.status === 'INCOMPLETE' || item.status === 'NOT_MEASURED');
+  const partial = related.some(
+    (item) =>
+      item.status === 'PARTIAL' || item.status === 'INCOMPLETE' || item.status === 'NOT_MEASURED',
+  );
   return {
     dimension: name,
-    status: related.length === 0 ? (required ? 'MISSING' : 'NOT_APPLICABLE') : partial ? 'PARTIAL' : 'PRESENT',
+    status:
+      related.length === 0
+        ? required
+          ? 'MISSING'
+          : 'NOT_APPLICABLE'
+        : partial
+          ? 'PARTIAL'
+          : 'PRESENT',
     rule,
     evidenceIds: related.map((item) => item.id).sort(),
   };
@@ -190,12 +209,32 @@ function dimension(
 function completeness(evidence: PassportEvidence[]): PassportDimension[] {
   return [
     dimension('diff', evidence, 'At least one Git/diff evidence record must be attached.', true),
-    dimension('coverage', evidence, 'At least one coverage report must be attached; coverage status is separate from presence.', true),
-    dimension('tests', evidence, 'At least one parsed test-report evidence record must be attached.', true),
+    dimension(
+      'coverage',
+      evidence,
+      'At least one coverage report must be attached; coverage status is separate from presence.',
+      true,
+    ),
+    dimension(
+      'tests',
+      evidence,
+      'At least one parsed test-report evidence record must be attached.',
+      true,
+    ),
     dimension('ci', evidence, 'At least one CI result evidence record must be attached.', true),
     dimension('environment', evidence, 'Environment snapshot is optional for a passport.', false),
-    dimension('build', evidence, 'Build evidence is optional unless required by project policy.', false),
-    dimension('hardware', evidence, 'Hardware telemetry is optional unless required by project policy.', false),
+    dimension(
+      'build',
+      evidence,
+      'Build evidence is optional unless required by project policy.',
+      false,
+    ),
+    dimension(
+      'hardware',
+      evidence,
+      'Hardware telemetry is optional unless required by project policy.',
+      false,
+    ),
   ];
 }
 
@@ -220,9 +259,12 @@ export function recordChangePassport(
   if (!/^[0-9a-f]{7,64}$/i.test(input.commitSha)) throw new Error('commit SHA is invalid');
   const changedFiles = [...new Set(input.changedFiles.map(normalizeRepoPath))].sort();
   const impact = computeImpact(store, input.repositoryId, changedFiles);
-  const evidence = collectEvidence(store, input.repositoryId, input, impact.nodeIds.filter((id) =>
-    store.nodes.get(input.repositoryId, id)?.type === 'File',
-  ));
+  const evidence = collectEvidence(
+    store,
+    input.repositoryId,
+    input,
+    impact.nodeIds.filter((id) => store.nodes.get(input.repositoryId, id)?.type === 'File'),
+  );
   const dimensions = completeness(evidence);
   const missing = dimensions.filter((item) => item.status === 'MISSING');
   const suppliedPassport = createChangePassport(
@@ -249,7 +291,12 @@ export function recordChangePassport(
     ? 'FAIL'
     : missing.length > 0
       ? 'NOT_MEASURED'
-      : evidence.some((item) => item.status === 'PARTIAL' || item.status === 'INCOMPLETE' || item.status === 'NOT_MEASURED')
+      : evidence.some(
+            (item) =>
+              item.status === 'PARTIAL' ||
+              item.status === 'INCOMPLETE' ||
+              item.status === 'NOT_MEASURED',
+          )
         ? 'PARTIAL'
         : 'PASS';
   const passportNodeId = nodeIdFor(
@@ -258,75 +305,80 @@ export function recordChangePassport(
     `passport:${suppliedPassport.commitSha}:${suppliedPassport.diffSha256}`,
   );
   return store.transaction(() => {
-  const passportEvidence = store.evidence.append({
-    repositoryId: input.repositoryId,
-    source: `change-passport:${suppliedPassport.id}`,
-    sourceType: 'manual',
-    commitSha: suppliedPassport.commitSha,
-    contentHash: suppliedPassport.contentSha256,
-    status: verificationStatus,
-    limitations: [
-      'A Change Passport is a traceable evidence summary, not a correctness guarantee or certification.',
-      'Completeness dimensions describe evidence presence and parser completeness; they are not a quality score.',
-      ...(impact.truncated ? ['Impact traversal reached its configured 1,000-node limit.'] : []),
-      ...(missing.length ? [`Missing required evidence dimensions: ${missing.map((item) => item.dimension).join(', ')}.`] : []),
-    ],
-    relatedEntityIds: [passportNodeId, ...impact.nodeIds, ...impact.edgeIds].slice(0, 1000),
-  });
-
-  const saved = store.nodes.upsert({
-    repositoryId: input.repositoryId,
-    type: 'ChangePassport',
-    key: `passport:${suppliedPassport.commitSha}:${suppliedPassport.diffSha256}`,
-    attrs: {
-      producer: 'orbit-passport',
-      schemaVersion: 1,
-      passportId: suppliedPassport.id,
+    const passportEvidence = store.evidence.append({
+      repositoryId: input.repositoryId,
+      source: `change-passport:${suppliedPassport.id}`,
+      sourceType: 'manual',
       commitSha: suppliedPassport.commitSha,
-      baseSha: suppliedPassport.baseSha,
-      diffSha256: suppliedPassport.diffSha256,
-      contentSha256: suppliedPassport.contentSha256,
-      state: suppliedPassport.state,
-      verificationStatus,
-      missingEvidence: suppliedPassport.missingEvidence,
-      completeness: dimensions as unknown as JsonValue,
-      impact: {
-        changedFiles: impact.changedFiles.slice(0, 50).map((value) => value.slice(0, 256)),
-        affectedFiles: impact.affectedFiles.slice(0, 50).map((value) => value.slice(0, 256)),
-        relatedTests: impact.relatedTests.slice(0, 50).map((value) => value.slice(0, 256)),
-        affectedModules: impact.affectedModules.slice(0, 50).map((value) => value.slice(0, 256)),
-        nodeIds: impact.nodeIds.slice(0, 100),
-        edgeIds: impact.edgeIds.slice(0, 100),
-        truncated: impact.truncated ||
-          impact.changedFiles.length > 50 ||
-          impact.affectedFiles.length > 50 ||
-          impact.relatedTests.length > 50 ||
-          impact.affectedModules.length > 50 ||
-          impact.nodeIds.length > 100 ||
-          impact.edgeIds.length > 100,
-      } as unknown as JsonValue,
-      evidence: suppliedPassport.evidence.slice(0, 100).map((item) => ({
-        id: item.id,
-        kind: item.kind,
-        status: item.status,
-        source: item.source.slice(0, 256),
-        ...(item.sha256 ? { sha256: item.sha256 } : {}),
-      })) as unknown as JsonValue,
-      findings: suppliedPassport.findings.slice(0, 50).map((item) => ({
-        id: item.id,
-        severity: item.severity,
-        message: item.message.slice(0, 300),
-        ...(item.path ? { path: item.path.slice(0, 256) } : {}),
-        ...(item.lines ? { lines: item.lines.slice(0, 50) } : {}),
-      })) as unknown as JsonValue,
-      environmentFingerprint: suppliedPassport.environmentFingerprint,
-      firmwareBuildId: suppliedPassport.firmwareBuildId,
-      telemetrySessionSha256: suppliedPassport.telemetrySessionSha256,
-      limitations: suppliedPassport.limitations,
-    },
-    sourceEvidenceId: passportEvidence.record.id,
-    validFromCommit: suppliedPassport.commitSha,
-  });
+      contentHash: suppliedPassport.contentSha256,
+      status: verificationStatus,
+      limitations: [
+        'A Change Passport is a traceable evidence summary, not a correctness guarantee or certification.',
+        'Completeness dimensions describe evidence presence and parser completeness; they are not a quality score.',
+        ...(impact.truncated ? ['Impact traversal reached its configured 1,000-node limit.'] : []),
+        ...(missing.length
+          ? [
+              `Missing required evidence dimensions: ${missing.map((item) => item.dimension).join(', ')}.`,
+            ]
+          : []),
+      ],
+      relatedEntityIds: [passportNodeId, ...impact.nodeIds, ...impact.edgeIds].slice(0, 1000),
+    });
+
+    const saved = store.nodes.upsert({
+      repositoryId: input.repositoryId,
+      type: 'ChangePassport',
+      key: `passport:${suppliedPassport.commitSha}:${suppliedPassport.diffSha256}`,
+      attrs: {
+        producer: 'orbit-passport',
+        schemaVersion: 1,
+        passportId: suppliedPassport.id,
+        commitSha: suppliedPassport.commitSha,
+        baseSha: suppliedPassport.baseSha,
+        diffSha256: suppliedPassport.diffSha256,
+        contentSha256: suppliedPassport.contentSha256,
+        state: suppliedPassport.state,
+        verificationStatus,
+        missingEvidence: suppliedPassport.missingEvidence,
+        completeness: dimensions as unknown as JsonValue,
+        impact: {
+          changedFiles: impact.changedFiles.slice(0, 50).map((value) => value.slice(0, 256)),
+          affectedFiles: impact.affectedFiles.slice(0, 50).map((value) => value.slice(0, 256)),
+          relatedTests: impact.relatedTests.slice(0, 50).map((value) => value.slice(0, 256)),
+          affectedModules: impact.affectedModules.slice(0, 50).map((value) => value.slice(0, 256)),
+          nodeIds: impact.nodeIds.slice(0, 100),
+          edgeIds: impact.edgeIds.slice(0, 100),
+          truncated:
+            impact.truncated ||
+            impact.changedFiles.length > 50 ||
+            impact.affectedFiles.length > 50 ||
+            impact.relatedTests.length > 50 ||
+            impact.affectedModules.length > 50 ||
+            impact.nodeIds.length > 100 ||
+            impact.edgeIds.length > 100,
+        } as unknown as JsonValue,
+        evidence: suppliedPassport.evidence.slice(0, 100).map((item) => ({
+          id: item.id,
+          kind: item.kind,
+          status: item.status,
+          source: item.source.slice(0, 256),
+          ...(item.sha256 ? { sha256: item.sha256 } : {}),
+        })) as unknown as JsonValue,
+        findings: suppliedPassport.findings.slice(0, 50).map((item) => ({
+          id: item.id,
+          severity: item.severity,
+          message: item.message.slice(0, 300),
+          ...(item.path ? { path: item.path.slice(0, 256) } : {}),
+          ...(item.lines ? { lines: item.lines.slice(0, 50) } : {}),
+        })) as unknown as JsonValue,
+        environmentFingerprint: suppliedPassport.environmentFingerprint,
+        firmwareBuildId: suppliedPassport.firmwareBuildId,
+        telemetrySessionSha256: suppliedPassport.telemetrySessionSha256,
+        limitations: suppliedPassport.limitations,
+      },
+      sourceEvidenceId: passportEvidence.record.id,
+      validFromCommit: suppliedPassport.commitSha,
+    });
 
     for (const path of impact.changedFiles) {
       const fileId = nodeIdFor(input.repositoryId, 'File', path);
@@ -357,7 +409,11 @@ export function recordChangePassport(
       }
     }
     for (const item of evidence) {
-      const telemetryNodeId = nodeIdFor(input.repositoryId, 'TelemetrySession', `telemetry:${item.sha256 ?? ''}`);
+      const telemetryNodeId = nodeIdFor(
+        input.repositoryId,
+        'TelemetrySession',
+        `telemetry:${item.sha256 ?? ''}`,
+      );
       if (item.kind === 'telemetry' && store.nodes.get(input.repositoryId, telemetryNodeId)) {
         store.edges.upsert({
           repositoryId: input.repositoryId,
@@ -436,10 +492,16 @@ export function compareChangePassports(
   const beforeAttrs = before.attrs;
   const afterAttrs = after.attrs;
   const beforeEvidence = new Set(
-    (Array.isArray(beforeAttrs['evidence']) ? (beforeAttrs['evidence'] as unknown as PassportEvidence[]) : []).map((item) => item.id),
+    (Array.isArray(beforeAttrs['evidence'])
+      ? (beforeAttrs['evidence'] as unknown as PassportEvidence[])
+      : []
+    ).map((item) => item.id),
   );
   const afterEvidence = new Set(
-    (Array.isArray(afterAttrs['evidence']) ? (afterAttrs['evidence'] as unknown as PassportEvidence[]) : []).map((item) => item.id),
+    (Array.isArray(afterAttrs['evidence'])
+      ? (afterAttrs['evidence'] as unknown as PassportEvidence[])
+      : []
+    ).map((item) => item.id),
   );
   const beforeFiles = new Set(
     Array.isArray((asRecord(beforeAttrs['impact']) ?? {})['changedFiles'])
@@ -452,17 +514,31 @@ export function compareChangePassports(
       : [],
   );
   const beforeFindings = new Set(
-    (Array.isArray(beforeAttrs['findings']) ? (beforeAttrs['findings'] as unknown as Array<{ id: string }>) : []).map((item) => item.id),
+    (Array.isArray(beforeAttrs['findings'])
+      ? (beforeAttrs['findings'] as unknown as Array<{ id: string }>)
+      : []
+    ).map((item) => item.id),
   );
   const afterFindings = new Set(
-    (Array.isArray(afterAttrs['findings']) ? (afterAttrs['findings'] as unknown as Array<{ id: string }>) : []).map((item) => item.id),
+    (Array.isArray(afterAttrs['findings'])
+      ? (afterAttrs['findings'] as unknown as Array<{ id: string }>)
+      : []
+    ).map((item) => item.id),
   );
-  const beforeDimensions = Array.isArray(beforeAttrs['completeness']) ? beforeAttrs['completeness'] as unknown as PassportDimension[] : [];
-  const afterDimensions = Array.isArray(afterAttrs['completeness']) ? afterAttrs['completeness'] as unknown as PassportDimension[] : [];
+  const beforeDimensions = Array.isArray(beforeAttrs['completeness'])
+    ? (beforeAttrs['completeness'] as unknown as PassportDimension[])
+    : [];
+  const afterDimensions = Array.isArray(afterAttrs['completeness'])
+    ? (afterAttrs['completeness'] as unknown as PassportDimension[])
+    : [];
   const beforeDimensionMap = new Map(beforeDimensions.map((item) => [item.dimension, item.status]));
   const completenessChanges = afterDimensions
     .filter((item) => beforeDimensionMap.get(item.dimension) !== item.status)
-    .map((item) => ({ dimension: item.dimension, before: beforeDimensionMap.get(item.dimension) ?? 'MISSING', after: item.status }));
+    .map((item) => ({
+      dimension: item.dimension,
+      before: beforeDimensionMap.get(item.dimension) ?? 'MISSING',
+      after: item.status,
+    }));
 
   const addedEvidenceIds = [...afterEvidence].filter((id) => !beforeEvidence.has(id)).sort();
   const removedEvidenceIds = [...beforeEvidence].filter((id) => !afterEvidence.has(id)).sort();
@@ -473,7 +549,10 @@ export function compareChangePassports(
   return {
     beforeNodeId,
     afterNodeId,
-    changedEvidenceIds: addedEvidenceIds.length || removedEvidenceIds.length ? [...addedEvidenceIds, ...removedEvidenceIds] : [],
+    changedEvidenceIds:
+      addedEvidenceIds.length || removedEvidenceIds.length
+        ? [...addedEvidenceIds, ...removedEvidenceIds]
+        : [],
     addedEvidenceIds,
     removedEvidenceIds,
     changedFiles: { added: addedFiles, removed: removedFiles },
@@ -511,8 +590,12 @@ export function createReproductionPlan(
   const node = store.nodes.get(repositoryId, passportNodeId);
   if (!node || !isPassportNode(node)) throw new Error('Change Passport does not exist');
   const attrs = node.attrs;
-  const evidence = Array.isArray(attrs['evidence']) ? attrs['evidence'] as unknown as PassportEvidence[] : [];
-  const missing = Array.isArray(attrs['missingEvidence']) ? attrs['missingEvidence'] as string[] : [];
+  const evidence = Array.isArray(attrs['evidence'])
+    ? (attrs['evidence'] as unknown as PassportEvidence[])
+    : [];
+  const missing = Array.isArray(attrs['missingEvidence'])
+    ? (attrs['missingEvidence'] as string[])
+    : [];
   const commitSha = asString(attrs['commitSha']) ?? '';
   const environmentFingerprint = asString(attrs['environmentFingerprint']);
   const steps: ReproductionStep[] = [
@@ -537,7 +620,8 @@ export function createReproductionPlan(
     {
       id: 'tests',
       title: 'Re-run the recorded test suite',
-      purpose: 'Run project-approved test commands and attach the resulting report; the passport does not imply that commands were executed.',
+      purpose:
+        'Run project-approved test commands and attach the resulting report; the passport does not imply that commands were executed.',
       command: null,
       automaticExecution: false,
       evidenceRequired: ['test report', 'CI result'],
@@ -547,7 +631,8 @@ export function createReproductionPlan(
     steps.push({
       id: 'hardware',
       title: 'Replay the linked device recording',
-      purpose: 'Use the original hashed telemetry artifact; do not connect to or control a physical device as part of replay.',
+      purpose:
+        'Use the original hashed telemetry artifact; do not connect to or control a physical device as part of replay.',
       command: 'orbit device replay <recorded-log> --format ndjson',
       automaticExecution: false,
       evidenceRequired: ['original telemetry artifact', 'firmware build identifier'],

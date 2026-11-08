@@ -26,7 +26,8 @@ function setup() {
 
 afterEach(() => {
   for (const database of databases.splice(0)) database.close();
-  for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true });
+  for (const directory of directories.splice(0))
+    rmSync(directory, { recursive: true, force: true });
 });
 
 describe('FLIGHT RECORDER typed analysis', () => {
@@ -38,7 +39,9 @@ describe('FLIGHT RECORDER typed analysis', () => {
     const session = parseTelemetry(raw);
     const analysis = analyseTelemetry(session, {
       units: { voltage: 'V', temperature: '°C' },
-      thresholds: [{ id: 'voltage-limit', metric: 'voltage', max: 3.5, unit: 'V', severity: 'warning' }],
+      thresholds: [
+        { id: 'voltage-limit', metric: 'voltage', max: 3.5, unit: 'V', severity: 'warning' },
+      ],
     });
     expect(analysis.metricStats.voltage).toMatchObject({ count: 2, min: 3.3, max: 3.7, unit: 'V' });
     expect(analysis.anomalies.map((item) => item.kind)).toEqual(['reset', 'watchdog', 'threshold']);
@@ -54,11 +57,15 @@ describe('FLIGHT RECORDER typed analysis', () => {
 
   it('requires explicit bounds and unique IDs for threshold rules', () => {
     const session = parseTelemetry('{"temperature":23}');
-    expect(() => analyseTelemetry(session, [{ id: 'empty', metric: 'temperature' }])).toThrow(/min or max/);
-    expect(() => analyseTelemetry(session, [
-      { id: 'same', metric: 'temperature', max: 30 },
-      { id: 'same', metric: 'temperature', max: 20 },
-    ])).toThrow(/unique/);
+    expect(() => analyseTelemetry(session, [{ id: 'empty', metric: 'temperature' }])).toThrow(
+      /min or max/,
+    );
+    expect(() =>
+      analyseTelemetry(session, [
+        { id: 'same', metric: 'temperature', max: 30 },
+        { id: 'same', metric: 'temperature', max: 20 },
+      ]),
+    ).toThrow(/unique/);
   });
 
   it('uses a recorded-file-only transport and explicitly reports serial support unavailable', async () => {
@@ -73,7 +80,9 @@ describe('FLIGHT RECORDER typed analysis', () => {
   it('rejects empty, malformed, oversized-row-count and inconsistent CSV input', () => {
     expect(() => parseTelemetry('  ')).toThrow(/empty/);
     expect(() => parseTelemetry('[1,2]')).toThrow(/records must be objects/);
-    expect(() => parseTelemetry('timestamp,voltage\n2026-11-08T10:00:00Z')).toThrow(/different number of columns/);
+    expect(() => parseTelemetry('timestamp,voltage\n2026-11-08T10:00:00Z')).toThrow(
+      /different number of columns/,
+    );
     expect(() => parseTelemetry('key=value', 'ndjson')).toThrow(/valid JSON|JSON/);
   });
 });
@@ -122,24 +131,28 @@ describe('FLIGHT RECORDER immutable persistence', () => {
     const raw = '{"voltage":3.2}';
     const session = parseTelemetry(raw);
     const analysis = analyseTelemetry(session);
-    await expect(storeTelemetrySession(store, {
-      repositoryId: repository.id,
-      repositoryRoot: root,
-      source: 'test',
-      artifactRelativePath: '../outside.ndjson',
-      session,
-      analysis,
-      isDemo: false,
-    })).rejects.toThrow(/Unsafe repository path/);
-    await expect(storeTelemetrySession(store, {
-      repositoryId: repository.id,
-      repositoryRoot: root,
-      source: 'test',
-      artifactRelativePath: 'record.ndjson',
-      session,
-      analysis,
-      isDemo: false,
-    })).rejects.toThrow(/does not match/);
+    await expect(
+      storeTelemetrySession(store, {
+        repositoryId: repository.id,
+        repositoryRoot: root,
+        source: 'test',
+        artifactRelativePath: '../outside.ndjson',
+        session,
+        analysis,
+        isDemo: false,
+      }),
+    ).rejects.toThrow(/Unsafe repository path/);
+    await expect(
+      storeTelemetrySession(store, {
+        repositoryId: repository.id,
+        repositoryRoot: root,
+        source: 'test',
+        artifactRelativePath: 'record.ndjson',
+        session,
+        analysis,
+        isDemo: false,
+      }),
+    ).rejects.toThrow(/does not match/);
     expect(store.evidence.list(repository.id)).toHaveLength(0);
   });
 });
