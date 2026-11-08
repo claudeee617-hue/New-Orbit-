@@ -5,7 +5,7 @@ Last updated: 2026-11-08
 
 ## Current phase
 
-**Engineering roadmap Prompts 0–10 and App Business Module sub-prompts 0–4 are merged into `main` (PRs #5 and #9). Prompt 11 API/CLI implementation is in `feat/prompt-11-api-cli`; full CI run #136 passed on Ubuntu, macOS and Windows (373 Ubuntu tests), and PR #11 is ready for review but not merged.**
+**Engineering Prompts 0–11 and App Business Module sub-prompts 0–4 are merged into `main` (PRs #5, #9 and #11). Prompt 11 CI passed on Ubuntu, macOS and Windows before merge. Prompt 12 is an incomplete draft in PR #13; Prompt 13 is an incomplete draft in PR #14; Prompt 14's opt-in AI integration is an experimental stacked draft in PR #21. Security/privacy/release groundwork PR #15 is merged, but independent security review and release gates remain open.**
 
 ## Phase checklist
 
@@ -22,13 +22,13 @@ Last updated: 2026-11-08
 | 8      | CAPSULE                                        | Merged to `main` via PR #5: polyglot manifest inspection and CLI; build replay remains out of scope |
 | 9      | FLIGHT RECORDER                                | Merged to `main` via PR #5: recorded-log analysis + hash-verified graph persistence; no physical serial connection |
 | 10     | Change Passport and Replay Room                | Merged to `main` via PR #5: commit-scoped evidence correlation, immutable history, comparison and non-executing reproduction plan; no visual Replay Room UI |
-| 11     | API and CLI (full)                             | Partial: local engine CLI commands on feature branch |
-| 12     | Command Center (full)                          | Not started (shell exists)                     |
-| 13     | GitHub Action                                  | Partial implementation on `feat/prompt-13-github-action`: composite action for WITNESS changed-line coverage and sensitive-path checks; CI/action runtime validation and Marketplace release pending |
-| 14     | ORBIT AI                                       | Not started                                    |
-| 15     | Security review                                | Not started                                    |
-| 16     | Testing and validation                         | Not started                                    |
-| 17     | Release polish                                 | Not started                                    |
+| 11     | API and CLI (full)                             | Merged to `main` via PR #11; CI passed Ubuntu, macOS and Windows |
+| 12     | Command Center (full)                          | Partial: authenticated dashboard and integrity view in draft PR #13; engine screens and UX pending |
+| 13     | GitHub Action                                  | Prototype in draft PR #14; action harness added, CI validation pending |
+| 14     | ORBIT AI                                       | Experimental preview/approval integration in stacked draft PR #21; provider smoke/E2E tests pending |
+| 15     | Security review                                | Security/privacy/release groundwork merged via PR #15; independent review pending |
+| 16     | Testing and validation                         | Partial: unit/API/CLI tests exist; browser E2E, fuzz, migration and action tests pending |
+| 17     | Release polish                                 | Partial: governance docs merged; release validation and approval remain |
 
 
 ## Cross-engine implementation merged via PR #5
@@ -267,35 +267,41 @@ Verified by GitHub Actions run `42481493312` on Ubuntu, macOS and Windows; the e
 - No live accounting, billing, checkout, CRM, customer database, hosted sync or payment integration. Financial inputs remain in local React state and are discarded after refresh. No demo revenue/customer data is seeded.
 
 
-## Prompt 11 — Local API and CLI (in progress on feat/prompt-11-api-cli)
+## Prompt 11 — Local API and CLI (merged via PR #11)
 
 - Added persistent local API Bearer session-token support. The token is random, stored beside the workspace database in a private `api.token` file, and never returned in API responses or logs. `ORBIT_API_TOKEN` can override the file token.
 - Added authenticated repository, scan, graph, evidence, Change Passport, impact/ATLAS report and CI/test/environment/recorded-telemetry ingestion routes under `/api/v1`. Public `/health` and Host-header/DNS-rebinding protection remain.
 - API ingestion uses bounded inputs and allowlisted CI summary/environment metadata; it does not persist arbitrary credential fields or raw test/telemetry report bodies as graph attributes.
 - Added CLI `init`, `doctor`, `graph summary`, `graph nodes`, `ci ingest`, `tests ingest` and `tests history` commands.
 - Added API token lifecycle, API route/integration and CLI workspace/ingestion tests.
-- **Status:** Implementation pushed in PR #11; full format/lint/typecheck/test/build matrix passed on Ubuntu, macOS and Windows in GitHub Actions run #136. Ubuntu reported 373 passing tests across nine workspace suites; 15/15 typecheck tasks and 9/9 build tasks passed. PR #11 is ready for review and is not merged.
+- **Status:** Merged into `main` via PR #11 on 2026-11-08 after full format/lint/typecheck/test/build CI passed on Ubuntu, macOS and Windows. Merge commit: `96a44e56a9d5400c989a1ad4c190d6b58b1dff79`.
 
 
-## Prompt 13 — GitHub Action (initial implementation)
+## Prompts 14–17 documentation and security groundwork
 
-Branch: `feat/prompt-13-github-action`.
+PR #15 merged this groundwork into `main` on 2026-11-08. It adds `SECURITY.md`, privacy/data-handling policy, CodeQL workflow, Dependabot configuration, validation-gap checklist, contributor/release documentation, Apache-2.0 license text, citation metadata and issue templates. This is not an independent security audit or a release approval. Parser/path/XXE/secret-redaction tests, host/CSRF review, dependency findings review, E2E/fuzz/migration/action tests and owner/legal release approval remain open. The separate Prompt 14 AI adapter and Command Center integration is experimental in draft PR #21 and is not merged.
 
-Implemented:
-- Composite action metadata under `.github/actions/orbit/action.yml`.
-- Trusted runtime strategy: checkout the PR base commit into a separate work directory with persisted credentials disabled, then install/build the base revision's ORBIT CLI. The PR head is consumed as diff data and is not built or executed.
-- Changed-line coverage check using existing WITNESS CLI (LCOV or Cobertura).
-- Sensitive-path filename check; explicitly does not inspect file contents.
-- Optional single upserted PR comment, with permission failures (including fork PR read-only tokens) handled as warnings.
-- Optional SARIF upload, disabled by default and requiring `security-events: write`.
-- Opt-in fail-on-uncovered behavior; default remains advisory.
-- Usage, least-privilege permissions, fork limitations and current gaps documented in `docs/GITHUB_ACTION.md`.
+## Prompt 12 — active implementation (PR #13)
 
-Pending:
-- Run the action end-to-end in a sample repository on Ubuntu, macOS and Windows.
-- Verify fork PR behavior and confirm no PR-head code execution.
-- Add action-level tests for event parsing, diff acquisition, comment idempotency and missing coverage.
-- Add annotations and ingestion of test reports / FLARE history.
-- Decide release/tagging and Marketplace publication only after validation.
+A clean feature branch was created from the updated `main` after Prompt 11 was merged. This avoids carrying the Prompt 11 implementation as duplicate changes in the Prompt 12 pull request.
 
-Do not mark Prompt 13 complete until the action runs successfully in real GitHub Actions events and the security review confirms the trusted-base runtime boundary.
+Implemented in the current slice:
+- Same-origin API client for repository listing, graph, evidence, Change Passports, ATLAS impact/report and local scan endpoints.
+- Local API token entry; token stays in component memory and is sent only as a Bearer Authorization header.
+- Dark-first Command Center with repository selection, graph node table, evidence list, passport list, measured metrics, loading/error/empty states.
+- Read-only repository integrity endpoint and integrity status display.
+- Vite proxy rule preserves the authenticated `/api/v1` prefix while retaining the public `/api/health` route.
+- API client tests for malformed tokens, bearer header behavior, 401 responses, URL encoding and abort signals.
+- Business Module remains accessible from the top-level navigation.
+
+Known gaps before Prompt 12 can be called complete:
+- No dedicated ATLAS, WITNESS, FLARE, CAPSULE or FLIGHT RECORDER dashboards yet.
+- Engineering Graph is a bounded table, not an interactive node-link graph; edge detail and filters are pending.
+- No full Change Passport detail/history/compare UI or Replay Room.
+- Evidence Explorer does not yet offer content-hash verification drill-down.
+- MCP & AI, Integrations and Settings screens remain.
+- Responsive sidebar/bottom navigation, accessibility and browser-level end-to-end tests remain.
+- The dashboard's local API token is entered manually; no browser persistence is intentional.
+- The web app must be tested against a running local API with real fixture repositories.
+
+Validation status: source has been committed to the feature branch. Do not claim Prompt 12 CI passes until the PR's Ubuntu/macOS/Windows workflow completes successfully. Do not merge until CI, integration behavior and review pass.
