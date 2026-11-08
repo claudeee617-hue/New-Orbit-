@@ -12,6 +12,13 @@ export default defineConfig({
     host: '127.0.0.1',
     port: 5173,
     proxy: {
+      // Keep the authenticated API's /api/v1 prefix intact. It must be matched
+      // before the generic /api health-check proxy below.
+      '/api/v1': {
+        target: apiTarget,
+        changeOrigin: false,
+      },
+      // The API health endpoint is intentionally public at /health.
       '/api': {
         target: apiTarget,
         changeOrigin: false,
