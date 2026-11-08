@@ -136,7 +136,7 @@ export function attachAdvancedEngineCommands(program: Command, io: CliIo): void 
       io.stdout(options.out ? `Wrote path findings to ${options.out}\n` : output);
     });
 
-  const flare = program.command('flare');
+  const flare = program.commands.find((command) => command.name() === 'flare') ?? program.command('flare');
   flare
     .command('analyse <report-files...>')
     .description('combine JUnit, pytest, Jest or Go test reports for reliability, failure and duration analysis')
@@ -170,7 +170,7 @@ export function attachAdvancedEngineCommands(program: Command, io: CliIo): void 
       io.stdout(options.out ? `Wrote FLARE reliability report to ${options.out}\n` : output);
     });
 
-  const capsule = program.command('capsule');
+  const capsule = program.commands.find((command) => command.name() === 'capsule') ?? program.command('capsule');
   capsule
     .command('inspect-extended <repository>')
     .description('inspect polyglot toolchain, dependency, container and workspace manifests without executing tools')
