@@ -35,6 +35,19 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      - name: Temporary policy formatter preview
+        if: matrix.os == 'ubuntu-latest' && github.event.pull_request.head.ref == 'docs/prompt-15-17-security-release'
+        run: |
+          pnpm exec prettier --write .github/ISSUE_TEMPLATE/bug_report.yml .github/ISSUE_TEMPLATE/feature_request.yml .github/workflows/security.yml CITATION.cff
+          echo '--- BUG TEMPLATE ---'
+          cat .github/ISSUE_TEMPLATE/bug_report.yml
+          echo '--- FEATURE TEMPLATE ---'
+          cat .github/ISSUE_TEMPLATE/feature_request.yml
+          echo '--- SECURITY WORKFLOW ---'
+          cat .github/workflows/security.yml
+          echo '--- CITATION ---'
+          cat CITATION.cff
+
       # format:check, lint, typecheck, test, build
       - name: Check
         run: pnpm run check
