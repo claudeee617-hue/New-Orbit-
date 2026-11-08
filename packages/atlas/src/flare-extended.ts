@@ -268,17 +268,21 @@ export function analyseTestHistory(
       throw new Error('FLARE history entries must be objects');
     }
     if (
-      typeof item.id !== 'string' || !item.id || item.id.length > 1000 ||
-      typeof item.name !== 'string' || item.name.length > 500 ||
-      typeof item.suite !== 'string' || item.suite.length > 500 ||
+      typeof item.id !== 'string' ||
+      !item.id ||
+      item.id.length > 1000 ||
+      typeof item.name !== 'string' ||
+      item.name.length > 500 ||
+      typeof item.suite !== 'string' ||
+      item.suite.length > 500 ||
       !['passed', 'failed', 'skipped'].includes(item.outcome) ||
-      (item.durationSeconds !== null && (
-        typeof item.durationSeconds !== 'number' || !Number.isFinite(item.durationSeconds) ||
-        item.durationSeconds < 0 || item.durationSeconds > 1_000_000_000
-      )) ||
-      (item.message !== undefined && (
-        typeof item.message !== 'string' || item.message.length > 10_000
-      ))
+      (item.durationSeconds !== null &&
+        (typeof item.durationSeconds !== 'number' ||
+          !Number.isFinite(item.durationSeconds) ||
+          item.durationSeconds < 0 ||
+          item.durationSeconds > 1_000_000_000)) ||
+      (item.message !== undefined &&
+        (typeof item.message !== 'string' || item.message.length > 10_000))
     ) {
       throw new Error('FLARE history entry fields are invalid or exceed their limits');
     }
@@ -331,7 +335,10 @@ export function analyseTestHistory(
           Math.round((values.reduce((sum, value) => sum + value, 0) / values.length) * 10000) /
           10000,
         p95Seconds: Math.round((percentile(values, 0.95) ?? 0) * 10000) / 10000,
-        maxSeconds: values.reduce((maximum, value) => Math.max(maximum, value), Number.NEGATIVE_INFINITY),
+        maxSeconds: values.reduce(
+          (maximum, value) => Math.max(maximum, value),
+          Number.NEGATIVE_INFINITY,
+        ),
       };
     })
     .sort((a, b) => b.p95Seconds - a.p95Seconds || a.testId.localeCompare(b.testId))
