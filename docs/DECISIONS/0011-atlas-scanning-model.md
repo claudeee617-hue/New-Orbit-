@@ -16,6 +16,11 @@ ATLAS must understand an unfamiliar repository without running its code, preserv
 8. **Incrementality.** Per-file extraction is cached by content hash (+ ATLAS version + call setting). The graph write is idempotent (unchanged facts are no-ops), atomic (one transaction), and reconciles: ATLAS facts no longer observed are retired (tombstoned) and can be revived. Commits are history and are never retired. The cache is only an optimisation; deleting it changes nothing but speed.
 9. **Analysis definitions.** Cycles use iterative Tarjan SCC (no recursion limit); runtime cycles exclude `import type` edges, which are reported separately. Hotspot score = cyclomatic complexity × max(churn, 1), with both inputs reported; churn is commits in the indexed window. Ownership is commit share per author name (no emails stored), not surviving lines. Entry points come from `package.json` main/module/bin/exports, shebangs, Python `__main__` guards, Java `public static void main`, and C/C++ `main`.
 
+## Update 2026-11-10 (ATLAS 0.2.0)
+- Imports record **bindings** (local name to imported name): aliases, namespace imports, default imports, destructured `require`, Python `import x as y` / `from x import a as b`, Java class imports. Calls like `h()` (alias), `ns.fn()` and `Util.twice()` (Java) now resolve through them at confidence 0.8.
+- Python standard-library modules are recognised from a list generated from Python 3.13 `sys.stdlib_module_names` and recorded as `python-stdlib:<name>` dependencies; everything else not in the repository is assumed third-party at 0.6.
+- Git is read with `core.quotepath=false` so non-ASCII file names are not mangled.
+
 ## Consequences
 - Call graphs are partial by design (no type information); the 0.4/0.3 heuristics can be wrong and are labelled.
 - Path aliases (tsconfig `paths`), C include paths from build systems, and Python stdlib vs third-party are not resolved without further inputs.

@@ -2,14 +2,27 @@ import { useCallback, useEffect, useState } from 'react';
 import { ORBIT_TAGLINE } from '@orbit/shared/health';
 import { loadHealth, type HealthState } from './health.js';
 
-/** Engines planned for ORBIT. None are implemented in the foundation build; the UI says so. */
-const ENGINES = [
-  { name: 'ATLAS', purpose: 'Codebase intelligence and decision memory' },
-  { name: 'WITNESS', purpose: 'Evidence-based pull-request verification' },
-  { name: 'FLARE', purpose: 'CI intelligence and flaky-test detection' },
-  { name: 'CAPSULE', purpose: 'Reproducible environments' },
-  { name: 'FLIGHT RECORDER', purpose: 'Embedded telemetry capture and replay' },
-] as const;
+type EngineStatus = 'CLI ONLY' | 'NOT IMPLEMENTED';
+
+/**
+ * Engines planned for ORBIT and what actually exists. "CLI ONLY" means the engine works from the
+ * `orbit` command but the dashboard does not display its results yet.
+ */
+const ENGINES: readonly { name: string; purpose: string; status: EngineStatus }[] = [
+  { name: 'ATLAS', purpose: 'Codebase intelligence (scan, export, impact)', status: 'CLI ONLY' },
+  {
+    name: 'WITNESS',
+    purpose: 'Evidence-based pull-request verification (verify)',
+    status: 'CLI ONLY',
+  },
+  { name: 'FLARE', purpose: 'CI intelligence and flaky-test detection', status: 'NOT IMPLEMENTED' },
+  { name: 'CAPSULE', purpose: 'Reproducible environments', status: 'NOT IMPLEMENTED' },
+  {
+    name: 'FLIGHT RECORDER',
+    purpose: 'Embedded telemetry capture and replay',
+    status: 'NOT IMPLEMENTED',
+  },
+];
 
 function StatusBadge({ state }: { state: HealthState }) {
   const styles: Record<HealthState['kind'], { label: string; dot: string; text: string }> = {
@@ -109,7 +122,8 @@ export function App() {
           Engines
         </h2>
         <p className="mb-4 text-sm text-mute">
-          This is the foundation build. No engine is implemented yet, so no analysis data is shown.
+          Engines marked CLI ONLY work from the orbit command. This dashboard does not display
+          analysis data yet.
         </p>
         <ul className="divide-y divide-edge">
           {ENGINES.map((engine) => (
@@ -118,7 +132,11 @@ export function App() {
                 <span className="font-mono text-sm text-ink">{engine.name}</span>
                 <span className="ml-3 text-sm text-mute">{engine.purpose}</span>
               </div>
-              <span className="shrink-0 font-mono text-xs text-violet">NOT IMPLEMENTED</span>
+              <span
+                className={`shrink-0 font-mono text-xs ${engine.status === 'CLI ONLY' ? 'text-ok' : 'text-violet'}`}
+              >
+                {engine.status}
+              </span>
             </li>
           ))}
         </ul>

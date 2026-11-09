@@ -5,6 +5,7 @@ import type {
   ExtractedImport,
   ExtractedSymbol,
   FileExtraction,
+  ImportBinding,
   ImportKind,
   Language,
   SourceLocation,
@@ -132,7 +133,62 @@ function pushImport(
   confidence: number,
   relativeLevel = 0,
 ): void {
-  ctx.imports.push({ specifier, kind, names, relativeLevel, location: loc(node), confidence });
+  ctx.imports.push({
+    specifier,
+    kind,
+    names,
+    bindings: [],
+    relativeLevel,
+    location: loc(node),
+    confidence,
+  });
+}
+
+/** Attach bindings to the import that was just pushed. */
+function bind(ctx: Ctx, bindings: ImportBinding[]): void {
+  const last = ctx.imports[ctx.imports.length - 1];
+  if (last) last.bindings = bindings;
+}
+
+function jsBindings(node: Node): ImportBinding[] {
+  const out: ImportBinding[] = [];
+  for (const clause of named(node)) {
+    if (clause.type !== 'import_clause') continue;
+    for (const part of named(clause)) {
+      if (part.type === 'identifier') out.push({ local: part.text, imported: 'default' });
+      else if (part.type === 'namespace_import') {
+        const id = named(part).find((c) => c.type === 'identifier');
+        if (id) out.push({ local: id.text, imported: '*' });
+      } else if (part.type === 'named_imports') {
+        for (const spec of named(part)) {
+          if (spec.type !== 'import_specifier') continue;
+          const imported = field(spec, 'name')?.text;
+          if (imported) out.push({ local: field(spec, 'alias')?.text ?? imported, imported });
+        }
+      }
+    }
+  }
+  return out;
+}
+
+/** `const x = require('m')` and `const { a, b: c } = require('m')`. */
+function requireBindings(call: Node): ImportBinding[] {
+  const declarator = call.parent?.type === 'await_expression' ? call.parent.parent : call.parent;
+  if (declarator?.type !== 'variable_declarator') return [];
+  const target = field(declarator, 'name');
+  if (target?.type === 'identifier') return [{ local: target.text, imported: '*' }];
+  if (target?.type !== 'object_pattern') return [];
+  const out: ImportBinding[] = [];
+  for (const prop of named(target)) {
+    if (prop.type === 'shorthand_property_identifier_pattern')
+      out.push({ local: prop.text, imported: prop.text });
+    else if (prop.type === 'pair_pattern') {
+      const key = field(prop, 'key')?.text;
+      const value = field(prop, 'value')?.text;
+      if (key && value) out.push({ local: value, imported: key });
+    }
+  }
+  return out;
 }
 
 function pushCall(ctx: Ctx, node: Node, callee: string, receiver?: string): void {
@@ -344,6 +400,7 @@ function jsVisit(node: Node, ctx: Ctx, recurse: (n: Node) => void): boolean {
           jsImportNames(node),
           1,
         );
+        bind(ctx, jsBindings(node));
       }
       return false;
     }
@@ -372,9 +429,10 @@ function jsVisit(node: Node, ctx: Ctx, recurse: (n: Node) => void): boolean {
             'import() with a non-literal specifier cannot be resolved statically',
           );
       } else if (fn?.type === 'identifier' && fn.text === 'require') {
-        if (firstArg?.type === 'string')
+        if (firstArg?.type === 'string') {
           pushImport(ctx, node, stripQuotes(firstArg.text), 'require', [], 0.95);
-        else
+          bind(ctx, requireBindings(node));
+        } else
           addUnsupported(
             ctx,
             node,
@@ -495,8 +553,14 @@ function pyVisit(node: Node, ctx: Ctx, recurse: (n: Node) => void): boolean {
     case 'import_statement': {
       for (const child of named(node)) {
         const target = child.type === 'aliased_import' ? field(child, 'name') : child;
-        if (target?.type === 'dotted_name')
-          pushImport(ctx, node, pyDottedText(target), 'static', [], 1);
+        if (target?.type === 'dotted_name') {
+          const dotted = pyDottedText(target);
+          pushImport(ctx, node, dotted, 'static', [], 1);
+          const alias = child.type === 'aliased_import' ? field(child, 'alias')?.text : undefined;
+          // `import a.b` binds only the top name `a`, which we cannot map to one file: no binding.
+          if (alias) bind(ctx, [{ local: alias, imported: '*' }]);
+          else if (!dotted.includes('.')) bind(ctx, [{ local: dotted, imported: '*' }]);
+        }
       }
       return false;
     }
@@ -512,11 +576,14 @@ function pyVisit(node: Node, ctx: Ctx, recurse: (n: Node) => void): boolean {
         }
       } else specifier = pyDottedText(module);
       const names: string[] = [];
+      const pyBindings: ImportBinding[] = [];
       for (const child of node.childrenForFieldName('name')) {
         if (!child) continue;
-        names.push(
-          child.type === 'aliased_import' ? (field(child, 'name')?.text ?? child.text) : child.text,
-        );
+        const imported =
+          child.type === 'aliased_import' ? (field(child, 'name')?.text ?? child.text) : child.text;
+        names.push(imported);
+        const alias = child.type === 'aliased_import' ? field(child, 'alias')?.text : undefined;
+        pyBindings.push({ local: alias ?? imported, imported });
       }
       if (named(node).some((c) => c.type === 'wildcard_import')) {
         names.push('*');
@@ -528,6 +595,7 @@ function pyVisit(node: Node, ctx: Ctx, recurse: (n: Node) => void): boolean {
         );
       }
       pushImport(ctx, node, specifier, 'static', names, 1, level);
+      bind(ctx, pyBindings);
       return false;
     }
     case 'call': {
@@ -628,6 +696,10 @@ function javaVisit(node: Node, ctx: Ctx, recurse: (n: Node) => void): boolean {
       const isStatic = node.children.some((c) => c?.type === 'static');
       const names = wildcard ? ['*'] : isStatic ? [id.text.split('.').pop() ?? id.text] : [];
       pushImport(ctx, node, id.text, 'static', names, 1);
+      if (!wildcard && !isStatic) {
+        const simple = id.text.split('.').pop();
+        if (simple) bind(ctx, [{ local: simple, imported: '*' }]);
+      }
       return false;
     }
     case 'class_declaration':

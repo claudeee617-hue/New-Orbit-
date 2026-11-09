@@ -1,0 +1,387 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "ORBIT WITNESS",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "COVERAGE-REGRESSION",
+              "name": "COVERAGE-REGRESSION",
+              "shortDescription": {
+                "text": "Coverage of src/math.ts dropped from 100.0% to 62.5%"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "NO-COVERAGE",
+              "name": "NO-COVERAGE",
+              "shortDescription": {
+                "text": "No coverage data for changed file"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "NO-RELATED-TEST",
+              "name": "NO-RELATED-TEST",
+              "shortDescription": {
+                "text": "No test directly linked to src/auth.ts"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "SENSITIVE-FILE",
+              "name": "SENSITIVE-FILE",
+              "shortDescription": {
+                "text": "Sensitive file changed"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "TEST-FAILURE",
+              "name": "TEST-FAILURE",
+              "shortDescription": {
+                "text": "Test failed"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "TEST-REGRESSION",
+              "name": "TEST-REGRESSION",
+              "shortDescription": {
+                "text": "Test passed at base and fails at head"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "UNCOVERED-LINES",
+              "name": "UNCOVERED-LINES",
+              "shortDescription": {
+                "text": "Changed lines not executed by tests"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "UNTESTED-SYMBOL",
+              "name": "UNTESTED-SYMBOL",
+              "shortDescription": {
+                "text": "function mul changed with no executed changed line"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            }
+          ]
+        }
+      },
+      "invocations": [
+        {
+          "executionSuccessful": true
+        }
+      ],
+      "properties": {
+        "overallStatus": "FAIL",
+        "baseSha": "bd01b9f7877299105c24bd1d4d2cfea477faad00",
+        "headSha": "080a9d2fd2a4e97a92b752aa8932bb24e0f2ebf3"
+      },
+      "results": [
+        {
+          "ruleId": "TEST-FAILURE",
+          "level": "error",
+          "message": {
+            "text": "Test failed: math::div by zero. expected to throw Suggested action: Fix the failing test or the code it exercises."
+          },
+          "partialFingerprints": {
+            "orbitFindingId/v1": "WIT-TEST-FAILURE-d8c57103"
+          },
+          "properties": {
+            "severity": "high",
+            "evidence": [
+              "JUnit report"
+            ],
+            "security-severity": "7.5"
+          }
+        },
+        {
+          "ruleId": "TEST-REGRESSION",
+          "level": "error",
+          "message": {
+            "text": "Test passed at base and fails at head: math::div by zero. This is a regression relative to the base test report. Suggested action: Restore the test, or confirm it was intentionally removed or renamed."
+          },
+          "partialFingerprints": {
+            "orbitFindingId/v1": "WIT-TEST-REGRESSION-e91ea94a"
+          },
+          "properties": {
+            "severity": "high",
+            "evidence": [
+              "base: passed, head: failed"
+            ],
+            "security-severity": "7.5"
+          }
+        },
+        {
+          "ruleId": "SENSITIVE-FILE",
+          "level": "error",
+          "message": {
+            "text": "Sensitive file changed: .github/workflows/ci.yml. CI configuration controls what runs with repository credentials. Category: ci-workflow. Suggested action: Have an owner of this area review the change explicitly."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": ".github/workflows/ci.yml",
+                  "uriBaseId": "%SRCROOT%"
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "orbitFindingId/v1": "WIT-SENSITIVE-FILE-abca1f72"
+          },
+          "properties": {
+            "severity": "high",
+            "evidence": [
+              "git diff bd01b9f787..080a9d2fd2 touches this path (added)"
+            ],
+            "security-severity": "7.5"
+          }
+        },
+        {
+          "ruleId": "SENSITIVE-FILE",
+          "level": "error",
+          "message": {
+            "text": "Sensitive file changed: src/auth.ts. Path suggests authentication, authorisation or cryptography code. Category: auth-security. Suggested action: Have an owner of this area review the change explicitly."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/auth.ts",
+                  "uriBaseId": "%SRCROOT%"
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "orbitFindingId/v1": "WIT-SENSITIVE-FILE-0977e99c"
+          },
+          "properties": {
+            "severity": "high",
+            "evidence": [
+              "git diff bd01b9f787..080a9d2fd2 touches this path (modified)"
+            ],
+            "security-severity": "7.5"
+          }
+        },
+        {
+          "ruleId": "UNCOVERED-LINES",
+          "level": "error",
+          "message": {
+            "text": "Changed lines not executed by tests: src/math.ts:6. These lines were added or modified in this change and the coverage report records zero executions for them. Suggested action: Add or extend a test that executes these lines, then regenerate coverage."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/math.ts",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 6,
+                  "endLine": 6
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "orbitFindingId/v1": "WIT-UNCOVERED-LINES-85e36af8"
+          },
+          "properties": {
+            "severity": "high",
+            "evidence": [
+              "coverage entry \"src/math.ts\" reports hits=0 for lines 6"
+            ],
+            "security-severity": "7.5"
+          }
+        },
+        {
+          "ruleId": "UNCOVERED-LINES",
+          "level": "error",
+          "message": {
+            "text": "Changed lines not executed by tests: src/math.ts:10-11. These lines were added or modified in this change and the coverage report records zero executions for them. Suggested action: Add or extend a test that executes these lines, then regenerate coverage."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/math.ts",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 10,
+                  "endLine": 11
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "orbitFindingId/v1": "WIT-UNCOVERED-LINES-0d75b726"
+          },
+          "properties": {
+            "severity": "high",
+            "evidence": [
+              "coverage entry \"src/math.ts\" reports hits=0 for lines 10-11"
+            ],
+            "security-severity": "7.5"
+          }
+        },
+        {
+          "ruleId": "UNTESTED-SYMBOL",
+          "level": "error",
+          "message": {
+            "text": "function mul changed with no executed changed line. None of the executable changed lines in mul (src/math.ts:10-12) were executed. File-level coverage is not used to infer that this symbol is tested. Suggested action: Add a test that calls mul."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/math.ts",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 10,
+                  "endLine": 12
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "orbitFindingId/v1": "WIT-UNTESTED-SYMBOL-23b34ee0"
+          },
+          "properties": {
+            "severity": "high",
+            "evidence": [
+              "uncovered changed lines: 10-11"
+            ],
+            "security-severity": "7.5"
+          }
+        },
+        {
+          "ruleId": "TEST-REGRESSION",
+          "level": "warning",
+          "message": {
+            "text": "Test passed at base but is missing at head: math::legacy. A test that passed on the base is absent from the head report. It may have been renamed or deleted, or it did not run. Suggested action: Restore the test, or confirm it was intentionally removed or renamed."
+          },
+          "partialFingerprints": {
+            "orbitFindingId/v1": "WIT-TEST-REGRESSION-a5031892"
+          },
+          "properties": {
+            "severity": "medium",
+            "evidence": [
+              "base: passed, head: missing"
+            ],
+            "security-severity": "5.0"
+          }
+        },
+        {
+          "ruleId": "NO-COVERAGE",
+          "level": "warning",
+          "message": {
+            "text": "No coverage data for changed file: src/auth.ts. Coverage could not be measured for this file: the coverage report has no entry for this file. A changed file is not assumed to be tested. Suggested action: Include this file in coverage instrumentation, or confirm it cannot be executed by tests."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/auth.ts",
+                  "uriBaseId": "%SRCROOT%"
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "orbitFindingId/v1": "WIT-NO-COVERAGE-72a1c474"
+          },
+          "properties": {
+            "severity": "medium",
+            "evidence": [
+              "the coverage report has no entry for this file"
+            ],
+            "security-severity": "5.0"
+          }
+        },
+        {
+          "ruleId": "NO-RELATED-TEST",
+          "level": "warning",
+          "message": {
+            "text": "No test directly linked to src/auth.ts. ATLAS found no test file that imports or is conventionally named for this file. Suggested action: Add a test that imports this file, or confirm an existing test exercises it."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/auth.ts",
+                  "uriBaseId": "%SRCROOT%"
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "orbitFindingId/v1": "WIT-NO-RELATED-TEST-602d5d7b"
+          },
+          "properties": {
+            "severity": "medium",
+            "evidence": [
+              "ATLAS TESTS edges and reverse-import walk found no direct test"
+            ],
+            "security-severity": "5.0"
+          }
+        },
+        {
+          "ruleId": "COVERAGE-REGRESSION",
+          "level": "warning",
+          "message": {
+            "text": "Coverage of src/math.ts dropped from 100.0% to 62.5%. Whole-file line coverage is lower at head than at base (instrumented lines only). Suggested action: Cover the new or changed behaviour, or explain why coverage legitimately decreased."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/math.ts",
+                  "uriBaseId": "%SRCROOT%"
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "orbitFindingId/v1": "WIT-COVERAGE-REGRESSION-caaf8631"
+          },
+          "properties": {
+            "severity": "medium",
+            "evidence": [
+              "base 100.0% → head 62.5%, threshold 1.0 points"
+            ],
+            "security-severity": "5.0"
+          }
+        }
+      ]
+    }
+  ]
+}

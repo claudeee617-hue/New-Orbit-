@@ -1,11 +1,11 @@
 # ORBIT — Build State
 
 Durable progress log. Update after every implementation phase.
-Last updated: 2026-11-08
+Last updated: 2026-11-10
 
 ## Current phase
 
-**Prompts 0–4 complete.** Next: Prompt 5 (ATLAS memory and MCP).
+**Prompts 0–4 and 6 complete. Prompt 5 (ATLAS memory and MCP) was skipped at the user's request** ("nahi bhai prompt 5 nahi", 2026-11-08) and is still open. Next: Prompt 7 (FLARE), or Prompt 5 if the user wants it back.
 
 ## Phase checklist
 
@@ -16,8 +16,8 @@ Last updated: 2026-11-08
 | 2      | Monorepo foundation                            | Done (see results below)                       |
 | 3      | ORBIT Core graph                               | Done (see results below; not pushed)           |
 | 4      | ATLAS scanning                                 | Done (see results below)                       |
-| 5      | ATLAS memory and MCP                           | Not started                                    |
-| 6      | WITNESS                                        | Not started                                    |
+| 5      | ATLAS memory and MCP                           | **Skipped at user's request** (not built)      |
+| 6      | WITNESS                                        | Done (see results below)                       |
 | 7      | FLARE                                          | Not started                                    |
 | 8      | CAPSULE                                        | Not started                                    |
 | 9      | FLIGHT RECORDER                                | Not started                                    |
@@ -29,6 +29,39 @@ Last updated: 2026-11-08
 | 15     | Security review                                | Not started                                    |
 | 16     | Testing and validation                         | Not started                                    |
 | 17     | Release polish                                 | Not started                                    |
+
+## Prompt 6 summary (WITNESS: evidence-based PR verification)
+
+- `packages/witness`: Git diff (merge base to head, `--unified=0`) to exact changed head lines (added / modified / deletion-only, renames, binary); changed-file classification (ATLAS classifier); changed-symbol mapping from ATLAS extraction of the file *at head*; LCOV and Cobertura XML parsers; JUnit XML parser; changed-line coverage (covered / uncovered / non-executable) that never infers from file coverage; per-symbol coverage; regression comparison (base vs head coverage per file, base vs head test results); test linkage via ATLAS static facts (direct vs indirect); sensitive-file rules; relevant ADRs by textual mention; findings with stable IDs (`WIT-<RULE>-<hash>`), severity, explanation, location, evidence and suggested action; Markdown, JSON and SARIF 2.1.0 renderers; opt-in graph recording (`--record`: evidence per input + `Finding` nodes + `AFFECTS` edges).
+- CLI: `orbit verify --base --head [--repo --coverage --base-coverage --test-report --base-test-report --build-result --coverage-commit --min-coverage --format md|json|sarif --out --force --record --key --db --fail-on PARTIAL|INCOMPLETE|FAIL]`. New exit code 6 (`VERIFICATION_FAILED`). `--out` refuses to overwrite without `--force`.
+- Status rules and design: ADR-0012. Dashboard now marks WITNESS `CLI ONLY`.
+- Deterministic sample PR report (Markdown/JSON/SARIF) in `packages/witness/samples/`, produced by a fixed-date fixture repo; its LCOV/JUnit inputs are **hand-written parser fixtures, not output of a real run** (stated in the samples README).
+
+Test results (`pnpm run check`, Node 22.23.4, Linux): shared 36, core 66, database 43, graph 14, atlas 96, witness 62, api 12, cli 21, web 6 = **356 passing**; format, lint, typecheck and build clean.
+
+Parser tests cover: empty/garbage/binary input, truncated files, malformed records, CRLF, duplicate records, wrong root elements, DOCTYPE and entity handling, runaway nesting, nameless test cases, ambiguous and suffix path matches, hostile refs, missing inputs.
+
+Real-world check run here (not a unit test): after committing, `orbit verify --base HEAD~1 --head HEAD` on this repository with a real LCOV and JUnit report from `vitest --coverage` of the witness package and a real `pnpm run build` result gave overall PARTIAL: 440 of 463 executable changed lines covered (95.0%), tests PASS (62/62), build PASS, and every changed file outside `packages/witness` reported NOT_MEASURED for coverage because no coverage for those packages was supplied. That is the intended behaviour.
+
+Limitations specific to Prompt 6:
+- WITNESS reads evidence files; it does not run tests or builds. Coverage staleness cannot be detected from the report itself (it states the assumption; `--coverage-commit` enables a check).
+- SARIF output was validated structurally by tests only; the official SARIF JSON schema could not be fetched offline, so schema validation was not run.
+- Test linkage is static (imports and naming); dynamic dispatch and reflection are invisible. Link is not coverage.
+- Line coverage only: no branch coverage, no per-test coverage contexts.
+- Relevant ADRs are matched by textual mention of changed paths (heuristic).
+- Symbol ranges depend on ATLAS parsing; files with syntax errors give imprecise ranges (reported as limitations).
+- A coverage entry matched only by path suffix is labelled; ambiguous matches become NOT_MEASURED.
+- Test linkage needs a clean working tree at head (or an existing ATLAS scan of head in the database); otherwise it is NOT_MEASURED.
+- Golden sample SHAs depend on Git producing identical commits across platforms; CI on Windows/macOS had not run these tests when this was written.
+- The dashboard does not display verification results yet.
+
+## ATLAS 0.2.0 upgrades and debugging pass (between Prompt 4 and 6)
+
+Prompts 0–4 were re-audited (links, dependency audit, fresh-clone install and check, real-browser look at the dashboard, CI on three operating systems, a store fuzz test).
+
+Fixed or added: import bindings (aliases, namespace/default imports, destructured `require`, Python `as`, Java class imports) so more calls resolve; Python standard-library recognition (list generated from Python 3.13); `core.quotepath=false` so non-ASCII paths survive git; a fuzz test for extractors; a seeded fuzz test comparing the graph store against an in-memory model; dashboard status made truthful; README rewritten to match reality; ADR-0011 updated.
+
+Still open from Prompt 4 (not tackled): tsconfig `paths` aliases, C/C++ include paths from build systems, git rename following and surviving-line ownership, scan-time optimisation above 3000 files, `CALLS` edges from module-level code (needs a core rule change), LICENSE file.
 
 ## Prompt 3 summary (ORBIT Core: Living Engineering Graph)
 
@@ -98,7 +131,7 @@ Created: root config (pnpm workspace, Turborepo, strict tsconfig, ESLint 10 flat
 | -------------------- | ---------------------------------------- |
 | `pnpm run build`     | 8/8 tasks pass                           |
 | `pnpm run typecheck` | 13/13 tasks pass                         |
-| `pnpm run test`      | 276 tests pass (shared 36, core 66, database 39, graph 14, atlas 89, api 12, cli 14, web 6) |
+| `pnpm run test`      | 356 tests pass (shared 36, core 66, database 43, graph 14, atlas 96, witness 62, api 12, cli 21, web 6) |
 | `pnpm run lint`      | clean                                    |
 | `pnpm run format:check` | clean (Markdown excluded)             |
 
@@ -132,8 +165,9 @@ node apps/cli/dist/index.js status --json
 node apps/cli/dist/index.js scan . --db .orbit/orbit.db   # ATLAS scan of this repo
 node apps/cli/dist/index.js atlas export --db .orbit/orbit.db --out atlas.json
 node apps/cli/dist/index.js atlas impact packages/core/src/index.ts --db .orbit/orbit.db
+node apps/cli/dist/index.js verify --base main --head HEAD --coverage lcov.info --test-report junit.xml --format md
 ```
 
 ## Next step
 
-Prompt 5: ATLAS memory and MCP (persistent architectural memory; MCP server exposing the graph read-only).
+Prompt 7 (FLARE: CI intelligence and flaky-test detection), unless the user asks to build Prompt 5 (ATLAS memory and MCP) first. Remaining ATLAS limitations are listed above.

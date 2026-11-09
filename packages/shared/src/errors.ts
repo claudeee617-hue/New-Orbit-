@@ -1,5 +1,10 @@
 export type OrbitErrorCode =
-  'CONFIG_INVALID' | 'INVALID_INPUT' | 'NOT_FOUND' | 'DATABASE_ERROR' | 'INTERNAL';
+  | 'CONFIG_INVALID'
+  | 'INVALID_INPUT'
+  | 'NOT_FOUND'
+  | 'DATABASE_ERROR'
+  | 'VERIFICATION_FAILED'
+  | 'INTERNAL';
 
 /** Process exit codes used by the CLI. 0 is success; codes are stable once released. */
 export const EXIT_CODES: Readonly<Record<OrbitErrorCode, number>> = {
@@ -7,6 +12,8 @@ export const EXIT_CODES: Readonly<Record<OrbitErrorCode, number>> = {
   CONFIG_INVALID: 3,
   NOT_FOUND: 4,
   DATABASE_ERROR: 5,
+  /** `orbit verify --fail-on …`: the verification result met the failure threshold. */
+  VERIFICATION_FAILED: 6,
   INTERNAL: 1,
 };
 

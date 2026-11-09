@@ -1,0 +1,446 @@
+{
+  "witnessVersion": "0.1.0",
+  "repository": {
+    "name": "sample-repo"
+  },
+  "base": {
+    "ref": "bd01b9f7877299105c24bd1d4d2cfea477faad00",
+    "sha": "bd01b9f7877299105c24bd1d4d2cfea477faad00"
+  },
+  "mergeBase": "bd01b9f7877299105c24bd1d4d2cfea477faad00",
+  "head": {
+    "ref": "feature",
+    "sha": "080a9d2fd2a4e97a92b752aa8932bb24e0f2ebf3"
+  },
+  "overall": "FAIL",
+  "dimensions": [
+    {
+      "name": "coverage",
+      "applicable": true,
+      "status": "PARTIAL",
+      "summary": "1 of 4 executable changed lines covered (25.0%); 1 of 2 changed source files have no measurable changed lines."
+    },
+    {
+      "name": "tests",
+      "applicable": true,
+      "status": "FAIL",
+      "summary": "1 passed, 1 failed, 0 skipped of 2."
+    },
+    {
+      "name": "build",
+      "applicable": true,
+      "status": "PASS",
+      "summary": "Build reported success (as recorded in the supplied file)."
+    },
+    {
+      "name": "test-linkage",
+      "applicable": true,
+      "status": "PARTIAL",
+      "summary": "1 of 2 changed source files have a directly linked test (static links, not proof of coverage)."
+    }
+  ],
+  "totals": {
+    "filesChanged": 3,
+    "linesAdded": 10,
+    "linesRemoved": 1,
+    "changedExecutableLines": 4,
+    "coveredChangedLines": 1,
+    "uncoveredChangedLines": 3,
+    "filesWithoutCoverage": 1
+  },
+  "files": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "status": "added",
+      "category": "config",
+      "binary": false,
+      "addedLines": 3,
+      "removedLines": 0,
+      "sensitive": [
+        {
+          "category": "ci-workflow",
+          "severity": "high",
+          "reason": "CI configuration controls what runs with repository credentials"
+        }
+      ]
+    },
+    {
+      "path": "src/auth.ts",
+      "status": "modified",
+      "category": "source",
+      "language": "typescript",
+      "binary": false,
+      "addedLines": 1,
+      "removedLines": 1,
+      "sensitive": [
+        {
+          "category": "auth-security",
+          "severity": "high",
+          "reason": "Path suggests authentication, authorisation or cryptography code"
+        }
+      ],
+      "coverage": {
+        "path": "src/auth.ts",
+        "status": "NOT_MEASURED",
+        "covered": [],
+        "uncovered": [],
+        "nonExecutable": [],
+        "note": "the coverage report has no entry for this file"
+      },
+      "linkage": {
+        "status": "PARTIAL",
+        "direct": [],
+        "transitive": [],
+        "changedTests": [],
+        "dependents": []
+      }
+    },
+    {
+      "path": "src/math.ts",
+      "status": "modified",
+      "category": "source",
+      "language": "typescript",
+      "binary": false,
+      "addedLines": 6,
+      "removedLines": 0,
+      "sensitive": [],
+      "coverage": {
+        "path": "src/math.ts",
+        "status": "PARTIAL",
+        "covered": [
+          5
+        ],
+        "uncovered": [
+          6,
+          10,
+          11
+        ],
+        "nonExecutable": [
+          7,
+          12
+        ],
+        "matchedAs": "src/math.ts"
+      },
+      "linkage": {
+        "status": "PASS",
+        "direct": [
+          "src/math.test.ts"
+        ],
+        "transitive": [],
+        "changedTests": [],
+        "dependents": [
+          "src/math.test.ts"
+        ]
+      },
+      "baseCoverageRatio": 1,
+      "headCoverageRatio": 0.625
+    }
+  ],
+  "symbols": [
+    {
+      "name": "login",
+      "qualifiedName": "login",
+      "kind": "function",
+      "path": "src/auth.ts",
+      "startLine": 1,
+      "endLine": 3,
+      "changedLines": [
+        2
+      ],
+      "change": "changed-lines",
+      "covered": [],
+      "uncovered": [],
+      "nonExecutable": [],
+      "coverage": "NOT_MEASURED"
+    },
+    {
+      "name": "div",
+      "qualifiedName": "div",
+      "kind": "function",
+      "path": "src/math.ts",
+      "startLine": 4,
+      "endLine": 9,
+      "changedLines": [
+        5,
+        6,
+        7
+      ],
+      "change": "changed-lines",
+      "covered": [
+        5
+      ],
+      "uncovered": [
+        6
+      ],
+      "nonExecutable": [
+        7
+      ],
+      "coverage": "PARTIAL"
+    },
+    {
+      "name": "mul",
+      "qualifiedName": "mul",
+      "kind": "function",
+      "path": "src/math.ts",
+      "startLine": 10,
+      "endLine": 12,
+      "changedLines": [
+        10,
+        11,
+        12
+      ],
+      "change": "changed-lines",
+      "covered": [],
+      "uncovered": [
+        10,
+        11
+      ],
+      "nonExecutable": [
+        12
+      ],
+      "coverage": "PARTIAL"
+    }
+  ],
+  "tests": {
+    "status": "FAIL",
+    "total": 2,
+    "passed": 1,
+    "failed": 1,
+    "errored": 0,
+    "skipped": 0,
+    "failures": [
+      {
+        "id": "math::div by zero",
+        "message": "expected to throw"
+      }
+    ],
+    "regressions": [
+      {
+        "id": "math::div by zero",
+        "baseStatus": "passed",
+        "headStatus": "failed"
+      },
+      {
+        "id": "math::legacy",
+        "baseStatus": "passed",
+        "headStatus": "missing"
+      }
+    ],
+    "note": "1 passed, 1 failed, 0 skipped of 2."
+  },
+  "build": {
+    "status": "PASS",
+    "command": "pnpm build",
+    "note": "Build reported success (as recorded in the supplied file)."
+  },
+  "impactedModules": [
+    "src"
+  ],
+  "decisions": [
+    {
+      "path": "docs/DECISIONS/0001-math-module.md",
+      "title": "ADR-0001: Keep arithmetic in src/math.ts",
+      "status": "Accepted",
+      "matched": [
+        "src/math.ts"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "WIT-TEST-FAILURE-d8c57103",
+      "rule": "TEST-FAILURE",
+      "severity": "high",
+      "title": "Test failed: math::div by zero",
+      "explanation": "expected to throw",
+      "evidence": [
+        "JUnit report"
+      ],
+      "suggestedAction": "Fix the failing test or the code it exercises."
+    },
+    {
+      "id": "WIT-TEST-REGRESSION-e91ea94a",
+      "rule": "TEST-REGRESSION",
+      "severity": "high",
+      "title": "Test passed at base and fails at head: math::div by zero",
+      "explanation": "This is a regression relative to the base test report.",
+      "evidence": [
+        "base: passed, head: failed"
+      ],
+      "suggestedAction": "Restore the test, or confirm it was intentionally removed or renamed."
+    },
+    {
+      "id": "WIT-SENSITIVE-FILE-abca1f72",
+      "rule": "SENSITIVE-FILE",
+      "severity": "high",
+      "title": "Sensitive file changed: .github/workflows/ci.yml",
+      "explanation": "CI configuration controls what runs with repository credentials. Category: ci-workflow.",
+      "location": {
+        "path": ".github/workflows/ci.yml"
+      },
+      "evidence": [
+        "git diff bd01b9f787..080a9d2fd2 touches this path (added)"
+      ],
+      "suggestedAction": "Have an owner of this area review the change explicitly."
+    },
+    {
+      "id": "WIT-SENSITIVE-FILE-0977e99c",
+      "rule": "SENSITIVE-FILE",
+      "severity": "high",
+      "title": "Sensitive file changed: src/auth.ts",
+      "explanation": "Path suggests authentication, authorisation or cryptography code. Category: auth-security.",
+      "location": {
+        "path": "src/auth.ts"
+      },
+      "evidence": [
+        "git diff bd01b9f787..080a9d2fd2 touches this path (modified)"
+      ],
+      "suggestedAction": "Have an owner of this area review the change explicitly."
+    },
+    {
+      "id": "WIT-UNCOVERED-LINES-85e36af8",
+      "rule": "UNCOVERED-LINES",
+      "severity": "high",
+      "title": "Changed lines not executed by tests: src/math.ts:6",
+      "explanation": "These lines were added or modified in this change and the coverage report records zero executions for them.",
+      "location": {
+        "path": "src/math.ts",
+        "startLine": 6,
+        "endLine": 6
+      },
+      "evidence": [
+        "coverage entry \"src/math.ts\" reports hits=0 for lines 6"
+      ],
+      "suggestedAction": "Add or extend a test that executes these lines, then regenerate coverage."
+    },
+    {
+      "id": "WIT-UNCOVERED-LINES-0d75b726",
+      "rule": "UNCOVERED-LINES",
+      "severity": "high",
+      "title": "Changed lines not executed by tests: src/math.ts:10-11",
+      "explanation": "These lines were added or modified in this change and the coverage report records zero executions for them.",
+      "location": {
+        "path": "src/math.ts",
+        "startLine": 10,
+        "endLine": 11
+      },
+      "evidence": [
+        "coverage entry \"src/math.ts\" reports hits=0 for lines 10-11"
+      ],
+      "suggestedAction": "Add or extend a test that executes these lines, then regenerate coverage."
+    },
+    {
+      "id": "WIT-UNTESTED-SYMBOL-23b34ee0",
+      "rule": "UNTESTED-SYMBOL",
+      "severity": "high",
+      "title": "function mul changed with no executed changed line",
+      "explanation": "None of the executable changed lines in mul (src/math.ts:10-12) were executed. File-level coverage is not used to infer that this symbol is tested.",
+      "location": {
+        "path": "src/math.ts",
+        "startLine": 10,
+        "endLine": 12
+      },
+      "evidence": [
+        "uncovered changed lines: 10-11"
+      ],
+      "suggestedAction": "Add a test that calls mul."
+    },
+    {
+      "id": "WIT-TEST-REGRESSION-a5031892",
+      "rule": "TEST-REGRESSION",
+      "severity": "medium",
+      "title": "Test passed at base but is missing at head: math::legacy",
+      "explanation": "A test that passed on the base is absent from the head report. It may have been renamed or deleted, or it did not run.",
+      "evidence": [
+        "base: passed, head: missing"
+      ],
+      "suggestedAction": "Restore the test, or confirm it was intentionally removed or renamed."
+    },
+    {
+      "id": "WIT-NO-COVERAGE-72a1c474",
+      "rule": "NO-COVERAGE",
+      "severity": "medium",
+      "title": "No coverage data for changed file: src/auth.ts",
+      "explanation": "Coverage could not be measured for this file: the coverage report has no entry for this file. A changed file is not assumed to be tested.",
+      "location": {
+        "path": "src/auth.ts"
+      },
+      "evidence": [
+        "the coverage report has no entry for this file"
+      ],
+      "suggestedAction": "Include this file in coverage instrumentation, or confirm it cannot be executed by tests."
+    },
+    {
+      "id": "WIT-NO-RELATED-TEST-602d5d7b",
+      "rule": "NO-RELATED-TEST",
+      "severity": "medium",
+      "title": "No test directly linked to src/auth.ts",
+      "explanation": "ATLAS found no test file that imports or is conventionally named for this file.",
+      "location": {
+        "path": "src/auth.ts"
+      },
+      "evidence": [
+        "ATLAS TESTS edges and reverse-import walk found no direct test"
+      ],
+      "suggestedAction": "Add a test that imports this file, or confirm an existing test exercises it."
+    },
+    {
+      "id": "WIT-COVERAGE-REGRESSION-caaf8631",
+      "rule": "COVERAGE-REGRESSION",
+      "severity": "medium",
+      "title": "Coverage of src/math.ts dropped from 100.0% to 62.5%",
+      "explanation": "Whole-file line coverage is lower at head than at base (instrumented lines only).",
+      "location": {
+        "path": "src/math.ts"
+      },
+      "evidence": [
+        "base 100.0% → head 62.5%, threshold 1.0 points"
+      ],
+      "suggestedAction": "Cover the new or changed behaviour, or explain why coverage legitimately decreased."
+    }
+  ],
+  "limitations": [
+    "Relevant architecture decisions are found by textual mention of changed paths (heuristic); a decision may apply without naming the path.",
+    "Test linkage uses static imports and naming conventions; calls through dynamic dispatch or reflection are not seen."
+  ],
+  "assumptions": [
+    "The coverage report is assumed to have been produced from the head commit; ORBIT cannot verify that from the report itself."
+  ],
+  "inputs": [
+    {
+      "kind": "coverage",
+      "path": "lcov.info",
+      "sha256": "269c559edc783481391629a993357eed571fcbad21dbbcba150697e034cf73c6",
+      "status": "PASS",
+      "problems": []
+    },
+    {
+      "kind": "base-coverage",
+      "path": "base-lcov.info",
+      "sha256": "e8688a4967da6a35892846452d1c074967bb90e50a81968f4bb686224904cf3f",
+      "status": "PASS",
+      "problems": []
+    },
+    {
+      "kind": "test-report",
+      "path": "junit.xml",
+      "sha256": "db4d140fe3b9d873899596ac1fd3972070ba84b834b29bf558fe1acae10687b1",
+      "status": "PASS",
+      "problems": []
+    },
+    {
+      "kind": "base-test-report",
+      "path": "base-junit.xml",
+      "sha256": "d3ffc71efc397e316c91c7adee5edab4535904dbb7923f44389376c980b3cfa2",
+      "status": "PASS",
+      "problems": []
+    },
+    {
+      "kind": "build-result",
+      "path": "build.json",
+      "sha256": "7983c72902489dea8f7c3583ed2582a25db8b8c8783283787ad356a79d86f5bb",
+      "status": "PASS",
+      "problems": []
+    }
+  ]
+}
