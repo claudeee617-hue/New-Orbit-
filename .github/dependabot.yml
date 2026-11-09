@@ -7,6 +7,9 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - dependencies
+    groups:
+      npm-minor-patch:
+        update-types: [minor, patch]
   - package-ecosystem: github-actions
     directory: /
     schedule:
@@ -14,3 +17,6 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - dependencies
+    groups:
+      actions:
+        patterns: ['*']

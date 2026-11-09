@@ -5,7 +5,7 @@ Last updated: 2026-11-08
 
 ## Current phase
 
-**Engineering roadmap Prompts 0–10 and App Business Module sub-prompts 0–4 are merged into `main` (PRs #5 and #9). Prompt 11 API/CLI implementation is in `feat/prompt-11-api-cli`; full CI run #136 passed on Ubuntu, macOS and Windows (373 Ubuntu tests), and PR #11 is ready for review but not merged.**
+**Engineering roadmap Prompts 0–10 and App Business Module sub-prompts 0–4 are merged into `main` (PRs #5 and #9). Prompt 11 (local API and CLI) is merged into `main` via PR #11.**
 
 ## Phase checklist
 
@@ -22,7 +22,7 @@ Last updated: 2026-11-08
 | 8      | CAPSULE                                        | Merged to `main` via PR #5: polyglot manifest inspection and CLI; build replay remains out of scope |
 | 9      | FLIGHT RECORDER                                | Merged to `main` via PR #5: recorded-log analysis + hash-verified graph persistence; no physical serial connection |
 | 10     | Change Passport and Replay Room                | Merged to `main` via PR #5: commit-scoped evidence correlation, immutable history, comparison and non-executing reproduction plan; no visual Replay Room UI |
-| 11     | API and CLI (full)                             | Partial: local engine CLI commands on feature branch |
+| 11     | API and CLI (full)                             | Merged (PR #11) |
 | 12     | Command Center (full)                          | Not started (shell exists)                     |
 | 13     | GitHub Action                                  | Not started                                    |
 | 14     | ORBIT AI                                       | Not implemented; provider/privacy design in `docs/AI_PROVIDER_POLICY.md` |
@@ -157,7 +157,7 @@ Manual end-to-end checks that passed: API `/health` returned `ok` with schema ve
 3. A fresh-clone install was tested locally only (see below).
 4. Competitor claims for CodeGraph, CodeCortex, Chisel and PatchProof remain unverified (`docs/COMPETITIVE_ANALYSIS.md`).
 5. Project name availability (GitHub, npm, domains, trademarks) not checked.
-6. No `LICENSE` file yet (Apache-2.0 targeted).
+6. `LICENSE` (Apache-2.0) is present.
 7. Repository moved/renamed: GitHub reports the canonical URL as `claudeee617-hue/New-Orbit-`; the session's remote uses the lowercase form, which redirects.
 8. MCP SDK 1.32.2 is installed and used by the Prompt 5 stdio server on main; only local stdio transport is implemented.
 
@@ -253,7 +253,7 @@ Verified by GitHub Actions run `42481493312` on Ubuntu, macOS and Windows; the e
 - The separate App Business Module Prompts 0–4 are also merged into `main` through PR #9.
 - Final main-head validation is performed by the latest `main` push-CI after the Business Module merge. All three OS jobs passed in run `42482443566`.
 - Business and engineering layers remain separated: business UI uses local planning state and does not add billing, hosted customer data, CRM, payment processing or live accounting.
-- The repository still has no `LICENSE` file, so the project should not be described as currently licensed open source until that file is added.
+- The repository is licensed under Apache-2.0 (`LICENSE`).
 
 ## App Business Module sub-prompts 0–4 (separate from engineering roadmap)
 
@@ -267,14 +267,14 @@ Verified by GitHub Actions run `42481493312` on Ubuntu, macOS and Windows; the e
 - No live accounting, billing, checkout, CRM, customer database, hosted sync or payment integration. Financial inputs remain in local React state and are discarded after refresh. No demo revenue/customer data is seeded.
 
 
-## Prompt 11 — Local API and CLI (in progress on feat/prompt-11-api-cli)
+## Prompt 11 — Local API and CLI (merged, PR #11)
 
 - Added persistent local API Bearer session-token support. The token is random, stored beside the workspace database in a private `api.token` file, and never returned in API responses or logs. `ORBIT_API_TOKEN` can override the file token.
 - Added authenticated repository, scan, graph, evidence, Change Passport, impact/ATLAS report and CI/test/environment/recorded-telemetry ingestion routes under `/api/v1`. Public `/health` and Host-header/DNS-rebinding protection remain.
 - API ingestion uses bounded inputs and allowlisted CI summary/environment metadata; it does not persist arbitrary credential fields or raw test/telemetry report bodies as graph attributes.
 - Added CLI `init`, `doctor`, `graph summary`, `graph nodes`, `ci ingest`, `tests ingest` and `tests history` commands.
 - Added API token lifecycle, API route/integration and CLI workspace/ingestion tests.
-- **Status:** Implementation pushed in PR #11; full format/lint/typecheck/test/build matrix passed on Ubuntu, macOS and Windows in GitHub Actions run #136. Ubuntu reported 373 passing tests across nine workspace suites; 15/15 typecheck tasks and 9/9 build tasks passed. PR #11 is ready for review and is not merged.
+- **Status:** Implementation pushed in PR #11; full format/lint/typecheck/test/build matrix passed on Ubuntu, macOS and Windows in GitHub Actions run #136. Ubuntu reported 373 passing tests across nine workspace suites; 15/15 typecheck tasks and 9/9 build tasks passed. PR #11 was merged into `main`.
 
 
 ## Prompts 14–17 documentation and security groundwork

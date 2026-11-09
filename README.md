@@ -8,7 +8,7 @@ Its central artifact is the **Change Passport**: a content-hashed record of a ch
 
 ## Current status
 
-The public `main` branch contains engineering roadmap Prompts 0–10 and the separate App Business Module sub-prompts 0–4. Engineering Prompts 5–10 were merged through PR #5; the Business Module was merged through PR #9 on 2026-11-08. Their full CI matrices passed on Ubuntu, macOS and Windows. Prompt 11 (local API and CLI) is in [PR #11](https://github.com/claudeee617-hue/New-Orbit-/pull/11); its full Ubuntu/macOS/Windows CI passed, and it is awaiting review (not yet merged).
+The public `main` branch contains engineering roadmap Prompts 0–10 and the separate App Business Module sub-prompts 0–4. Engineering Prompts 5–10 were merged through PR #5; the Business Module was merged through PR #9 on 2026-11-08. Their full CI matrices passed on Ubuntu, macOS and Windows. Prompt 11 (local API and CLI) is merged into `main` (PR #11).
 
 | Capability | Current implementation |
 | --- | --- |
@@ -78,7 +78,7 @@ node apps/cli/dist/index.js atlas impact packages/core/src/index.ts --db .orbit/
 
 ### Evidence-engine prototype commands
 
-These commands are available after the feature branch is checked out and built:
+These commands are available on `main` after `pnpm build`:
 
 ```bash
 # Compare changed lines with LCOV or Cobertura evidence
@@ -121,6 +121,32 @@ node apps/cli/dist/index.js flare analyse pytest-1.json pytest-2.json --format p
 node apps/cli/dist/index.js capsule inspect-extended .
 ```
 
+### ATLAS memory and MCP (Prompt 5)
+
+ATLAS can store versioned architectural notes and import ADR/Markdown documents into the same append-only graph as code facts:
+
+```ts
+import { importMarkdownMemory, searchMemories } from '@orbit/atlas';
+
+const memory = importMarkdownMemory(store, {
+  repositoryId,
+  path: 'docs/DECISIONS/0012-atlas-persistent-memory-and-read-only-mcp.md',
+  content: markdownText,
+});
+const matches = searchMemories(store, repositoryId, { query: 'read-only MCP' });
+```
+
+Each memory version carries a SHA-256-backed evidence record. Updating a key appends a version; invalidation appends a tombstone. ADR metadata can declare `Supersedes` and `Conflicts with` references. Source freshness is compared only against explicitly supplied current hashes; absent hashes are reported as unknown. This is bounded lexical retrieval, not an embedding or AI inference system.
+
+Start the read-only MCP server after scanning a repository:
+
+```bash
+pnpm build
+node apps/cli/dist/index.js mcp start --db .orbit/orbit.db --repo local/my-repository
+```
+
+`mcp start` uses stdio transport and opens an existing SQLite database in read-only mode. It does not create or migrate databases. The 12 tools are `orbit_repository_map`, `orbit_search_symbols`, `orbit_get_symbol`, `orbit_get_callers`, `orbit_get_callees`, `orbit_analyze_impact`, `orbit_find_related_tests`, `orbit_search_history`, `orbit_search_memory`, `orbit_get_architecture`, `orbit_get_change_context` and `orbit_get_evidence`. No tool can mutate the graph, run commands, write files or control hardware. MCP responses are capped at 48 KiB.
+
 ## Product architecture
 
 - **ATLAS** maps source structure, symbols, imports, calls, repository history and impact.
@@ -160,34 +186,7 @@ The architecture and current roadmap are documented in [docs/ROADMAP.md](docs/RO
 
 ## License
 
-The repository targets Apache-2.0, but the `LICENSE` file has not yet been added. Until that is done, the repository does not grant an open-source license.
-
-### ATLAS memory and MCP (Prompt 5)
-
-ATLAS can store versioned architectural notes and import ADR/Markdown documents into the same append-only graph as code facts:
-
-```ts
-import { importMarkdownMemory, searchMemories } from '@orbit/atlas';
-
-const memory = importMarkdownMemory(store, {
-  repositoryId,
-  path: 'docs/DECISIONS/0012-atlas-persistent-memory-and-read-only-mcp.md',
-  content: markdownText,
-});
-const matches = searchMemories(store, repositoryId, { query: 'read-only MCP' });
-```
-
-Each memory version carries a SHA-256-backed evidence record. Updating a key appends a version; invalidation appends a tombstone. ADR metadata can declare `Supersedes` and `Conflicts with` references. Source freshness is compared only against explicitly supplied current hashes; absent hashes are reported as unknown. This is bounded lexical retrieval, not an embedding or AI inference system.
-
-Start the read-only MCP server after scanning a repository:
-
-```bash
-pnpm build
-node apps/cli/dist/index.js mcp start --db .orbit/orbit.db --repo local/my-repository
-```
-
-`mcp start` uses stdio transport and opens an existing SQLite database in read-only mode. It does not create or migrate databases. The 12 tools are `orbit_repository_map`, `orbit_search_symbols`, `orbit_get_symbol`, `orbit_get_callers`, `orbit_get_callees`, `orbit_analyze_impact`, `orbit_find_related_tests`, `orbit_search_history`, `orbit_search_memory`, `orbit_get_architecture`, `orbit_get_change_context` and `orbit_get_evidence`. No tool can mutate the graph, run commands, write files or control hardware. MCP responses are capped at 48 KiB.
-
+Apache-2.0. See [LICENSE](LICENSE).
 
 ## Security and contribution
 
