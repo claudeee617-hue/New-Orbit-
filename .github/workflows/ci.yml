@@ -79,8 +79,50 @@ jobs:
       - name: Install workspace
         run: pnpm install --frozen-lockfile
 
+      - name: Build the local API and all workspace dependencies
+        run: pnpm --filter @orbit/api... build
+
       - name: Build shared workspace package
         run: pnpm --filter @orbit/shared build
+
+      - name: Prepare disposable local workspace fixture
+        shell: bash
+        env:
+          FIXTURE_DIR: ${{ runner.temp }}/orbit-e2e-fixture
+        run: |
+          set -euo pipefail
+          mkdir -p "$FIXTURE_DIR/src"
+          cat > "$FIXTURE_DIR/src/index.ts" <<'EOF'
+          export function orbitSmoke(value: string): string {
+            return `ORBIT:${value}`;
+          }
+          EOF
+          cat > "$FIXTURE_DIR/README.md" <<'EOF'
+          # Disposable ORBIT CI workspace
+          This fixture is created only for an isolated CI database smoke test.
+          EOF
+
+      - name: Start the real local API with a disposable SQLite database
+        shell: bash
+        env:
+          ORBIT_DB_PATH: ${{ runner.temp }}/orbit-e2e/orbit.db
+          ORBIT_HOST: 127.0.0.1
+          ORBIT_PORT: '4318'
+          ORBIT_API_TOKEN: orbit_ci_test_token_0123456789_ABCDEFGHIJKLMNOPQRSTUVWXYZ
+        run: |
+          set -euo pipefail
+          mkdir -p "$(dirname "$ORBIT_DB_PATH")"
+          node apps/api/dist/main.js > "$RUNNER_TEMP/orbit-api.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/orbit-api.pid"
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:4318/health >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat "$RUNNER_TEMP/orbit-api.log"
+          echo "Disposable ORBIT API did not become healthy" >&2
+          exit 1
 
       # Keep browser tooling out of the production/workspace dependency graph.
       - name: Install Playwright test runner
@@ -92,6 +134,10 @@ jobs:
       - name: Run resilient browser E2E
         env:
           CI: true
+          ORBIT_API_URL: http://127.0.0.1:4318
+          ORBIT_E2E_API_URL: http://127.0.0.1:4318
+          ORBIT_E2E_API_TOKEN: orbit_ci_test_token_0123456789_ABCDEFGHIJKLMNOPQRSTUVWXYZ
+          ORBIT_E2E_FIXTURE_ROOT: ${{ runner.temp }}/orbit-e2e-fixture
         run: >-
           pnpm dlx --package=@playwright/test -c
           'PLAYWRIGHT_MODULE="$(find "$(dirname "$(dirname "$(command -v playwright)")")"
