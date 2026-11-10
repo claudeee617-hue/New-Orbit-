@@ -20,7 +20,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:stdio": "node --test scripts/stdio.integration.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.2",
