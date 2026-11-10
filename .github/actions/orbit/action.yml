@@ -1,0 +1,128 @@
+name: ORBIT Engineering Verification
+description: Run local ORBIT WITNESS changed-line coverage and sensitive-path checks on a pull request.
+author: ORBIT contributors
+
+inputs:
+  base-sha:
+    description: Base commit SHA to compare against. Defaults to the pull request base SHA.
+    required: false
+  head-sha:
+    description: Head commit SHA to verify. Defaults to the pull request head SHA.
+    required: false
+  coverage-file:
+    description: Optional repository-relative LCOV or Cobertura report path.
+    required: false
+  coverage-format:
+    description: Coverage format when coverage-file is set (lcov or cobertura).
+    required: false
+    default: lcov
+  fail-on-uncovered:
+    description: Fail the action when measured changed lines are not fully covered. No coverage is not silently treated as zero.
+    required: false
+    default: 'false'
+  comment:
+    description: Upsert a single ORBIT verification comment on pull requests.
+    required: false
+    default: 'true'
+  upload-sarif:
+    description: Upload the SARIF report. The calling workflow must grant security-events write.
+    required: false
+    default: 'false'
+  github-token:
+    description: Token used for the optional pull-request comment.
+    required: false
+    default: ''
+
+outputs:
+  report-path:
+    description: Path to the generated Markdown report.
+    value: ${{ steps.verify.outputs.report-path }}
+  sarif-path:
+    description: Path to the generated SARIF report (only when coverage-file is supplied).
+    value: ${{ steps.verify.outputs.sarif-path }}
+  verification-status:
+    description: ORBIT changed-line coverage status or NOT_MEASURED.
+    value: ${{ steps.verify.outputs.verification-status }}
+
+runs:
+  using: composite
+  steps:
+    - name: Check out trusted ORBIT runtime
+      uses: actions/checkout@v7
+      with:
+        # This SHA is the reviewed ORBIT runtime snapshot, not the caller repository's PR base SHA.
+        # Bump it only after reviewing and testing a newer ORBIT runtime commit.
+        ref: fde44b79d97a9e9c8e62120816799dee48c41233
+        path: .orbit-action-runtime
+        persist-credentials: false
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v7
+      with:
+        node-version: 22
+
+    - name: Set up pnpm
+      uses: pnpm/action-setup@v6
+      with:
+        version: 10.28.0
+
+    - name: Install dependencies
+      shell: bash
+      working-directory: .orbit-action-runtime
+      run: pnpm install --frozen-lockfile
+
+    - name: Build ORBIT
+      shell: bash
+      working-directory: .orbit-action-runtime
+      run: pnpm run build
+
+    - name: Run ORBIT verification
+      id: verify
+      shell: bash
+      env:
+        INPUT_BASE_SHA: ${{ inputs.base-sha }}
+        INPUT_HEAD_SHA: ${{ inputs.head-sha }}
+        INPUT_COVERAGE_FILE: ${{ inputs.coverage-file }}
+        INPUT_COVERAGE_FORMAT: ${{ inputs.coverage-format }}
+        INPUT_FAIL_ON_UNCOVERED: ${{ inputs.fail-on-uncovered }}
+        ORBIT_RUNTIME_DIR: ${{ github.workspace }}/.orbit-action-runtime
+      run: node ${{ github.action_path }}/../../scripts/orbit-action.mjs
+
+    - name: Upsert pull-request verification comment
+      if: inputs.comment == 'true' && inputs.github-token != '' && github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      env:
+        ORBIT_REPORT_PATH: ${{ steps.verify.outputs.report-path }}
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const fs = require('node:fs');
+          const marker = '<!-- orbit-verification-report -->';
+          const report = fs.readFileSync(process.env.ORBIT_REPORT_PATH, 'utf8');
+          const body = marker + '\n' + report;
+          const { owner, repo } = context.repo;
+          const issue_number = context.issue.number;
+          const comments = await github.paginate(github.rest.issues.listComments, {
+            owner, repo, issue_number, per_page: 100
+          });
+          const existing = comments.find((comment) =>
+            comment.user?.type === 'Bot' && comment.body?.includes(marker)
+          );
+          try {
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner, repo, comment_id: existing.id, body
+              });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
+          } catch (error) {
+            core.warning(`ORBIT report generated, but PR comment could not be written (common for fork PRs with read-only tokens): ${error.message}`);
+          }
+
+    - name: Upload ORBIT SARIF
+      if: inputs.upload-sarif == 'true' && steps.verify.outputs.sarif-path != ''
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ steps.verify.outputs.sarif-path }}
+        category: orbit-witness
