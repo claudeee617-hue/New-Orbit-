@@ -1,7 +1,7 @@
 import { timingSafeEqual } from 'node:crypto';
 import { realpath, stat } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
-import Fastify from 'fastify';
+import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import {
   hashArtifact,
   nodeIdFor,
@@ -345,6 +345,42 @@ export function buildServer(options: BuildServerOptions) {
   const store = createGraphStore(options.database);
   const dbPath = options.databasePath ?? options.database.path;
 
+  // Integrity verification walks the repository ledger. Bound repeated requests
+  // per client so an authenticated local session cannot monopolise the API.
+  const integrityRateWindows = new Map<string, { startedAt: number; count: number }>();
+  const integrityRateLimit = async (request: FastifyRequest, reply: FastifyReply) => {
+    const now = Date.now();
+    const windowMs = 60_000;
+    const maxRequests = 60;
+    const key = request.ip;
+    let window = integrityRateWindows.get(key);
+
+    if (!window || now - window.startedAt >= windowMs) {
+      // Expire stale entries and keep the map bounded even if the API is
+      // deliberately exposed to many distinct local network clients.
+      for (const [client, entry] of integrityRateWindows) {
+        if (now - entry.startedAt >= windowMs) integrityRateWindows.delete(client);
+      }
+      if (!integrityRateWindows.has(key) && integrityRateWindows.size >= 1024) {
+        const oldest = integrityRateWindows.keys().next().value;
+        if (oldest !== undefined) integrityRateWindows.delete(oldest);
+      }
+      window = { startedAt: now, count: 0 };
+      integrityRateWindows.set(key, window);
+    }
+
+    if (window.count >= maxRequests) {
+      const retryAfter = Math.max(1, Math.ceil((window.startedAt + windowMs - now) / 1000));
+      return reply.header('Retry-After', String(retryAfter)).code(429).send({
+        error: 'RATE_LIMITED',
+        message: 'Integrity checks are limited to 60 requests per minute',
+      });
+    }
+
+    window.count += 1;
+    return undefined;
+  };
+
   server.get('/api/v1/session', async () => ({
     authenticated: true,
     tokenSource: tokenInfo?.source ?? 'in-memory-test',
@@ -394,11 +430,19 @@ export function buildServer(options: BuildServerOptions) {
 
   server.get<{
     Params: { key: string };
-    Querystring: { limit?: string; offset?: string; type?: string };
+    Querystring: {
+      limit?: string;
+      offset?: string;
+      nodeOffset?: string;
+      edgeOffset?: string;
+      type?: string;
+    };
   }>('/api/v1/repositories/:key/graph', async (request) => {
     const repository = repositoryByKey(store, request.params.key);
     const limit = boundedInteger(request.query.limit, 100, 1, MAX_GRAPH_LIMIT, 'limit');
     const offset = boundedInteger(request.query.offset, 0, 0, 1_000_000, 'offset');
+    const nodeOffset = boundedInteger(request.query.nodeOffset, offset, 0, 1_000_000, 'nodeOffset');
+    const edgeOffset = boundedInteger(request.query.edgeOffset, offset, 0, 1_000_000, 'edgeOffset');
     const type = optionalText(request.query.type, 'type', 64) as NodeType | undefined;
     const validTypes: readonly string[] = [
       'Repository',
@@ -427,8 +471,12 @@ export function buildServer(options: BuildServerOptions) {
     ];
     if (type && !validTypes.includes(type))
       throw new OrbitError('INVALID_INPUT', 'type is not a supported graph node type');
-    const nodes = store.nodes.find(repository.id, { ...(type ? { type } : {}), limit, offset });
-    const edges = store.edges.list(repository.id, { limit, offset });
+    const nodes = store.nodes.find(repository.id, {
+      ...(type ? { type } : {}),
+      limit,
+      offset: nodeOffset,
+    });
+    const edges = store.edges.list(repository.id, { limit, offset: edgeOffset });
     const ledgerHead = store.ledger.head(repository.id);
     return {
       repository,
@@ -437,6 +485,8 @@ export function buildServer(options: BuildServerOptions) {
       page: {
         limit,
         offset,
+        nodeOffset,
+        edgeOffset,
         hasMoreNodes: nodes.length === limit,
         hasMoreEdges: edges.length === limit,
       },
@@ -444,12 +494,27 @@ export function buildServer(options: BuildServerOptions) {
     };
   });
 
+  server.get<{ Params: { key: string } }>(
+    '/api/v1/repositories/:key/integrity',
+    { preHandler: integrityRateLimit },
+    async (request) => {
+      const repository = repositoryByKey(store, request.params.key);
+      return { repository, integrity: store.verifyIntegrity(repository.id) };
+    },
+  );
+
   server.get<{
     Params: { key: string };
-    Querystring: { limit?: string; commitSha?: string; sourceType?: string };
+    Querystring: {
+      limit?: string;
+      offset?: string;
+      commitSha?: string;
+      sourceType?: string;
+    };
   }>('/api/v1/repositories/:key/evidence', async (request) => {
     const repository = repositoryByKey(store, request.params.key);
     const limit = boundedInteger(request.query.limit, 100, 1, 1000, 'limit');
+    const offset = boundedInteger(request.query.offset, 0, 0, 1_000_000, 'offset');
     const commitSha = optionalText(request.query.commitSha, 'commitSha', 64);
     if (commitSha && !/^[0-9a-f]{7,64}$/i.test(commitSha))
       throw new OrbitError('INVALID_INPUT', 'commitSha is invalid');
@@ -470,12 +535,19 @@ export function buildServer(options: BuildServerOptions) {
       throw new OrbitError('INVALID_INPUT', 'sourceType is invalid');
     const evidence = store.evidence.list(repository.id, {
       limit,
+      offset,
       ...(commitSha ? { commitSha } : {}),
       ...(sourceType
         ? { sourceType: sourceType as 'ci' | 'test-report' | 'environment' | 'telemetry' }
         : {}),
     });
-    return { repository, evidence, returned: evidence.length, limit };
+    return {
+      repository,
+      evidence,
+      returned: evidence.length,
+      limit,
+      page: { limit, offset, hasMore: evidence.length === limit },
+    };
   });
 
   server.get<{ Params: { key: string }; Querystring: { limit?: string; offset?: string } }>(

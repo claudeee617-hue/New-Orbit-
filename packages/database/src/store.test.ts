@@ -82,6 +82,34 @@ describe('evidence', () => {
     expect(b.record.id).toBe(a.record.id);
   });
 
+  it('pages through evidence with a stable recorded-at and id order', () => {
+    const { repo } = setup();
+    for (const value of ['report-a', 'report-b', 'report-c']) {
+      store.evidence.append({
+        repositoryId: repo,
+        source: value,
+        sourceType: 'test-report',
+        contentHash: hashArtifact(value),
+        status: 'PASS',
+        limitations: [],
+        relatedEntityIds: [],
+      });
+    }
+
+    const page1 = store.evidence.list(repo, { sourceType: 'test-report', limit: 2 });
+    const page2 = store.evidence.list(repo, {
+      sourceType: 'test-report',
+      limit: 2,
+      offset: 2,
+    });
+    expect([...page1, ...page2].map((item) => item.source)).toEqual([
+      'report-a',
+      'report-b',
+      'report-c',
+    ]);
+    expect(() => store.evidence.list(repo, { offset: -1 })).toThrowError(/offset/);
+  });
+
   it('requires a registered repository', () => {
     expect(() =>
       store.evidence.append({

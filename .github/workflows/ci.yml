@@ -38,3 +38,50 @@ jobs:
       # format:check, lint, typecheck, test, build
       - name: Check
         run: pnpm run check
+
+  browser-e2e:
+    name: browser E2E (Chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared workspace package
+        run: pnpm --filter @orbit/shared build
+
+      # Keep browser tooling out of the production/workspace dependency graph.
+      - name: Install Playwright test runner
+        run: pnpm dlx --package=@playwright/test playwright --version
+
+      - name: Install Chromium
+        run: pnpm dlx --package=@playwright/test playwright install --with-deps chromium
+
+      - name: Run resilient browser E2E
+        env:
+          CI: true
+        run: >-
+          pnpm dlx --package=@playwright/test -c
+          'PLAYWRIGHT_MODULE="$(find "$(dirname "$(dirname "$(command -v playwright)")")"
+          -path "*/@playwright/test" -type d -print -quit)"
+          playwright test --config=e2e/playwright.config.cjs'
+
+      - name: Upload browser diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: orbit-playwright-diagnostics
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7

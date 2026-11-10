@@ -74,6 +74,8 @@ export interface EvidenceQuery {
   commitSha?: string;
   sourceType?: EvidenceSourceType;
   limit?: number;
+  /** Rows to skip, for paging through evidence (stable order: recordedAt, id). */
+  offset?: number;
 }
 
 export interface GraphStore {
@@ -628,6 +630,7 @@ export function createGraphStore(
         .where(and(...conditions))
         .orderBy(asc(t.evidence.recordedAt), asc(t.evidence.id))
         .limit(clampLimit(query.limit))
+        .offset(clampOffset(query.offset))
         .all()
         .map(toEvidence);
     },
