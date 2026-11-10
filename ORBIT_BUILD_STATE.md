@@ -1,11 +1,11 @@
 # ORBIT — Build State
 
 Durable progress log. Update after every implementation phase.
-Last updated: 2026-11-08
+Last updated: 2026-11-10
 
 ## Current phase
 
-**Engineering roadmap Prompts 0–10 and App Business Module sub-prompts 0–4 are merged into `main` (PRs #5 and #9). Prompt 11 API/CLI implementation is in `feat/prompt-11-api-cli`; full CI run #136 passed on Ubuntu, macOS and Windows (373 Ubuntu tests), and PR #11 is ready for review but not merged.**
+**Engineering Prompts 0–11 and App Business Module Prompts 0–4 are merged into `main` (PRs #5, #9 and #11). PR #23 (Prompt 12) is a draft Command Center vertical slice; CI #393 and CodeQL #187 passed, but user-local workspace and manual accessibility gates remain. PR #25 (Prompt 13) is a draft WITNESS GitHub Action; CI #422, Security #215 and Action integration #10 passed, including a static fork-safety regression guard; a genuine external-fork event remains pending. PR #24 (Prompt 14) is draft AI preview/approval work stacked on #23; CI #403 and CodeQL #196 passed on its current head, including the AI preview/approval browser test. PR #26 adds all-12-MCP-tool coverage, a Claude Code guide, and production stdio + disposable SQLite read-only acceptance; CI #414 and Security #207 passed on the latest head. PR #27 is now ACCELQ-only after removal of the separate remote-browser integration and smoke workflow. The disposable SQLite-backed real API/browser smoke remains in local Chromium CI. Earlier CI #395, CodeQL #189 and ACCELQ runner validation #105 passed on the pre-cleanup head; cleanup-head ACCELQ runner validation passed, while fresh full CI/Security checks are being re-run. Security/privacy/release groundwork is merged via PR #15. No release is ready: manual user-local validation, WCAG/screen-reader audit, fork-specific Action testing, live provider/vendor pilots and release review remain outstanding.**
 
 ## Phase checklist
 
@@ -22,13 +22,13 @@ Last updated: 2026-11-08
 | 8      | CAPSULE                                        | Merged to `main` via PR #5: polyglot manifest inspection and CLI; build replay remains out of scope |
 | 9      | FLIGHT RECORDER                                | Merged to `main` via PR #5: recorded-log analysis + hash-verified graph persistence; no physical serial connection |
 | 10     | Change Passport and Replay Room                | Merged to `main` via PR #5: commit-scoped evidence correlation, immutable history, comparison and non-executing reproduction plan; no visual Replay Room UI |
-| 11     | API and CLI (full)                             | Partial: local engine CLI commands on feature branch |
-| 12     | Command Center (full)                          | Not started (shell exists)                     |
-| 13     | GitHub Action                                  | Not started                                    |
-| 14     | ORBIT AI                                       | Not implemented; provider/privacy design in `docs/AI_PROVIDER_POLICY.md` |
-| 15     | Security review                                | Partial: SECURITY.md, privacy policy, CodeQL workflow and Dependabot config added; independent review and security tests pending |
-| 16     | Testing and validation                         | Partial: existing unit/API/CLI tests plus validation-gap checklist; browser E2E, fuzz, migration and action tests pending |
-| 17     | Release polish                                 | Partial: contributor docs, Apache-2.0 license, citation metadata, issue templates and release checklist added; clean-machine validation and release approval pending |
+| 11     | API and CLI (full)                             | Merged to `main` via PR #11; full Ubuntu/macOS/Windows CI passed |
+| 12     | Command Center (full)                          | Partial: authenticated dashboard, repository selector, graph/evidence/passport views and ledger integrity (PR #23); remaining engine screens, Replay Room and browser E2E pending |
+| 13     | GitHub Action                                  | Partial: composite WITNESS diff/coverage action and trusted-base runtime (PR #25); action-specific end-to-end/fork validation pending |
+| 14     | ORBIT AI                                       | Experimental: opt-in OpenAI/Anthropic/Ollama adapters, local API preview/approval and Command Center panel in PR #24; provider smoke/E2E tests pending |
+| 15     | Security review                                | Governance groundwork merged via PR #15; independent security review and additional parser/API threat tests pending |
+| 16     | Testing and validation                         | Partial: unit/API/CLI tests and CI/CodeQL; browser E2E, fuzz, migration, action and real-provider smoke tests pending |
+| 17     | Release polish                                 | Governance/docs groundwork merged via PR #15; clean-machine validation, release approval and publication gates pending |
 
 
 ## Cross-engine implementation merged via PR #5
@@ -281,9 +281,31 @@ Verified by GitHub Actions run `42481493312` on Ubuntu, macOS and Windows; the e
 
 Branch: `docs/prompt-15-17-security-release`.
 
-- Prompt 14: provider/privacy policy documented in `docs/AI_PROVIDER_POLICY.md`. No provider adapter or AI UI has been implemented; AI remains unavailable and must not be described as shipped.
+- Prompt 14: experimental OpenAI/Anthropic/Ollama adapters, authenticated preview/analyse API and AI Analysis UI are proposed in draft PR #24, stacked on PR #23. The browser test covers preview-before-approval and the backend tests enforce explicit approval/AI-disabled states; live provider smoke and fresh merged-head CI remain pending.
 - Prompt 15: `SECURITY.md`, `docs/PRIVACY.md`, scheduled CodeQL workflow and Dependabot configuration added. This is groundwork, not an independent security audit. Parser/path/XXE/secret-redaction tests and host/CSRF review remain.
 - Prompt 16: `docs/VALIDATION_GAPS.md` records outstanding E2E, fuzz, migration, action and controlled-scenario tests. Existing CI and unit/API/CLI tests do not close those gaps.
 - Prompt 17: Apache-2.0 license text, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `CITATION.cff`, issue templates and `docs/RELEASE_CHECKLIST.md` added. No package or Marketplace release has been published.
 
 All these changes require CI and owner/legal review before merge. ORBIT's working codename and package/repository names have not been trademark-cleared.
+
+
+## 2026-11-09 status update — PR #26
+
+- PR #26 (`test(mcp): cover all 12 MCP tools and add tested Claude Code guide`) is open and not part of `main` at this snapshot.
+- It adds `packages/mcp/src/tools.integration.test.ts`, which creates a temporary repository, scans it, calls all 12 MCP tools through the official in-memory client transport, checks invalid limits and traversal-style input, and verifies read queries do not append to the ledger.
+- It adds `docs/CLAUDE_CODE_MCP.md` with build/scan/setup instructions, tool names, limits, interpretation cautions and a recorded manual Claude Code Linux smoke test.
+- PR description reports `pnpm run check` exit 0, 15/15 tasks and 9/9 builds, with 13 MCP tests passing. Treat these as PR-reported results; refresh current head checks before merge.
+- Remaining manual coverage: Claude Desktop/Cursor, Windows/macOS Claude Code setup, and a separate end-to-end test of the production stdio launch path and read-only database opening.
+
+
+
+## 2026-11-10 status refresh — PRs #22–#27
+
+- PR #22 remains an open documentation-only audit update, based on the 9 November snapshot.
+- PR #23: latest verified CI #393 and CodeQL #187 passed on head `f0db435f9a209ebcfd1e187a5d937107cdc2f65e`; proxy fix for authenticated `/api/v1` paths is included.
+- PR #24: current head `1a80972a417fc96bd6c3f21c521fc94b4e0b5a86`; fresh CI/CodeQL are running after a strict-mode browser locator fix. Do not use historical CI #231 as current validation.
+- PR #25: CI #390, CodeQL #184 and ORBIT Action integration #7 passed on head `60f6aacd10b204a60f0025353153d964d2d97d23`; fork-specific permission test remains pending.
+- PR #26: CI #236 and Security #30 passed on head `940caca57ce225024d2bdac6590503c0224f4dcd`; PR remains open and not merged.
+- PR #27: CI #395, CodeQL #189 and ACCELQ runner validation #105 passed on head `2f8aa302305d028709526f31a9bbdb1f74a49c9c`. Live ACCELQ execution remains skipped pending tenant/job/agent setup; the real API/browser check uses a disposable CI SQLite DB, not the user's personal DB.
+- Branch query on 10 November returned 29 branches. No branch deletions or PR merges were made as part of this status refresh.
+

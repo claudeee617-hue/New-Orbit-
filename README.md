@@ -8,14 +8,14 @@ Its central artifact is the **Change Passport**: a content-hashed record of a ch
 
 ## Current status
 
-The public `main` branch contains engineering roadmap Prompts 0–10 and the separate App Business Module sub-prompts 0–4. Engineering Prompts 5–10 were merged through PR #5; the Business Module was merged through PR #9 on 2026-11-08. Their full CI matrices passed on Ubuntu, macOS and Windows. Prompt 11 (local API and CLI) is in [PR #11](https://github.com/claudeee617-hue/New-Orbit-/pull/11); its full Ubuntu/macOS/Windows CI passed, and it is awaiting review (not yet merged).
+The public `main` branch contains Engineering Prompts 0–11 and App Business Module Prompts 0–4, merged through PRs #5, #9 and #11. Prompt 12 Command Center is in draft [PR #23](https://github.com/claudeee617-hue/New-Orbit-/pull/23); its current head passed CI #393 and CodeQL #187, but real user-local workspace and manual accessibility gates remain. Prompt 13 WITNESS GitHub Action is in draft [PR #25](https://github.com/claudeee617-hue/New-Orbit-/pull/25); CI #422, CodeQL #215 and Action integration #10 passed, including the static fork-safety regression guard; a genuine external-fork event remains pending. Prompt 14 AI preview/approval is in draft [PR #24](https://github.com/claudeee617-hue/New-Orbit-/pull/24), stacked on #23; its AI backend/UI and approval-flow browser test are implemented, with CI #403, CodeQL #196 and AI approval-flow browser E2E passed. [PR #26](https://github.com/claudeee617-hue/New-Orbit-/pull/26) adds tests for all 12 MCP tools, a Claude Code guide, and a production stdio + disposable SQLite read-only acceptance test; its fresh CI #414 (Ubuntu/macOS/Windows plus process-level MCP test) and Security #207 passed. [PR #27](https://github.com/claudeee617-hue/New-Orbit-/pull/27) adds the gated ACCELQ REST runner, scenario plan and disposable SQLite-backed real-API browser smoke. Its separate remote-browser integration was removed. Earlier CI #395, CodeQL #189 and ACCELQ runner validation #105 passed before cleanup; the cleanup-head ACCELQ runner-validation job passed and fresh full CI/Security checks are being rerun. Live ACCELQ execution remains skipped pending account configuration. Open PRs are not a release: user-local DB validation, manual WCAG/screen-reader audit, provider live smoke, fork-specific Action validation, vendor pilots and independent release review remain outstanding.
 
 | Capability | Current implementation |
 | --- | --- |
 | Monorepo, TypeScript, lint, tests and CI foundation | Implemented on `main` |
 | ORBIT Core graph, versioned records and hash-chained ledger | Implemented on `main` |
 | ATLAS repository scanner and architecture reports | Implemented on `main` |
-| ATLAS persistent decision memory and read-only stdio MCP | Implemented on `main` (PR #5 merged; full Ubuntu/macOS/Windows CI passed) |
+| ATLAS persistent decision memory and read-only stdio MCP | Implemented on `main` (PR #5 merged); expanded all-12-tool integration coverage and Claude Code guide proposed in PR #26 |
 | WITNESS changed-line coverage, baseline comparison, filename findings, Markdown/SARIF | Extended prototype on `main` (PR #5 merged; full cross-platform CI passed) |
 | FLARE JUnit, pytest, Jest and Go JSON reports; failure clusters and duration summaries | Extended prototype on `main`; durable history across independent invocations remains outstanding |
 | CAPSULE polyglot toolchain, dependency, container and workspace manifest inspection | Extended prototype on `main`; build replay is not implemented |
@@ -160,7 +160,7 @@ The architecture and current roadmap are documented in [docs/ROADMAP.md](docs/RO
 
 ## License
 
-The repository targets Apache-2.0, but the `LICENSE` file has not yet been added. Until that is done, the repository does not grant an open-source license.
+The repository includes an Apache License 2.0 `LICENSE` file, merged through PR #15. Before release, review third-party notices, dependency-license compatibility, attribution and ORBIT name/trademark availability; see [the release checklist](docs/RELEASE_CHECKLIST.md).
 
 ### ATLAS memory and MCP (Prompt 5)
 
