@@ -3,7 +3,7 @@
 **Audit snapshot:** 11 November 2026 (refreshed after dependency merges and ACCELQ-only cleanup)  
 **Repository:** https://github.com/claudeee617-hue/New-Orbit-  
 **Default branch:** main  
-**Coverage:** Full known PR history #1–#30, all 29 branches returned by the latest branch search, engineering Prompts 0–17, App Business Module sub-prompts 0–4, commercial strategy, security/release groundwork, Dependabot PRs, CI evidence, known gaps and next actions.
+**Coverage:** Full known PR history #1–#31, all 30 branches returned by the latest branch search, engineering Prompts 0–17, App Business Module sub-prompts 0–4, commercial strategy, security/release groundwork, Dependabot PRs, CI evidence, known gaps and next actions.
 
 > This is a repository-wide handoff, not a report limited to PRs #22–25. It distinguishes merged code, closed/superseded work, current open PRs, historical branches and unimplemented roadmap scope. A green CI run does not by itself mean a feature is complete or release-ready.
 
@@ -28,7 +28,7 @@ Three product workstreams are represented in the repository:
 - Dependabot PRs #17–20 were individually merged into main on 10 November 2026 after their CI/Security workflows passed.
 - No public release is approved. ORBIT remains a working codename pending name/trademark checks.
 
-## 2. Complete PR register — #1–#30
+## 2. Complete PR register — #1–#31
 
 “Closed, unmerged” means the PR is not the merge target; trace its implementation to the consolidation/replacement PR below. Merged status is based on the GitHub PR metadata returned during this audit.
 
@@ -63,7 +63,8 @@ Three product workstreams are represented in the repository:
 | [#27](https://github.com/claudeee617-hue/New-Orbit-/pull/27) | ACCELQ enterprise regression (ACCELQ-only after cleanup) | Open, draft | Separate remote-browser integration and smoke files removed; local Chromium E2E retained; ACCELQ runner validation passed; live ACCELQ vendor run skipped pending owner setup |
 | [#28](https://github.com/claudeee617-hue/New-Orbit-/pull/28) | Reserved / no PR created | — | No pull request #28 exists; PR numbering advances from #27 to #29 |
 | [#29](https://github.com/claudeee617-hue/New-Orbit-/pull/29) | Persistent FLARE per-test history across CLI runs | Open, draft | Per-case TestRun persistence, `--run-id`, idempotency, PARTIAL empty reports and bounded historical analysis; Security passed, Ubu/Win CI passed, macOS still queued |
-| [#30](https://github.com/claudeee617-hue/New-Orbit-/pull/30) | FLARE history API and Command Center workbench | Open, draft | Stacked on PR #23; depends on per-test history from PR #29; adds read-only API, bounded/rate-limited analysis, UI, API/browser tests; fresh CI/Security pending |
+| [#30](https://github.com/claudeee617-hue/New-Orbit-/pull/30) | FLARE history API and Command Center workbench | Open, draft | Stacked on PR #23; depends on PR #29; read-only rate-limited API, workbench UI and browser/API tests; Ubuntu/Windows CI, Chromium E2E and CodeQL passed; macOS queued |
+| [#31](https://github.com/claudeee617-hue/New-Orbit-/pull/31) | Parser path/XML/size-limit security regressions | Open, draft | Adds diff traversal, absolute path, LCOV/Cobertura, DTD/entity and 10 MiB boundary regressions; Ubuntu CI and CodeQL passed, Windows running, macOS queued |
 
 ### PR lineage
 
@@ -81,9 +82,9 @@ Three product workstreams are represented in the repository:
 
 Closed superseded PRs are historical records, not active merge targets. Trace their changes to the consolidation/replacement PR above.
 
-## 3. All 29 branches returned by GitHub after dependency merges
+## 3. All 30 branches returned by GitHub after dependency merges
 
-The 11 November refresh returned 29 branch names, including the FLARE history and Command Center integration branches. Presence in this list does not imply an open PR or release readiness.
+The 11 November refresh returned 30 branch names, including the FLARE history, Command Center integration and parser security test branches. Presence in this list does not imply an open PR or release readiness.
 
 ### Main and documentation
 - `main`
@@ -116,6 +117,9 @@ The 11 November refresh returned 29 branch names, including the FLARE history an
 - `feat/accelq-enterprise-regression`
 - `feat/flare-persistent-history`
 - `feat/flare-command-center-history`
+
+### Security and regression tests
+- `test/security-parser-regressions`
 
 ### Maintenance / strategy
 - `fix/audit-2026-11-08`
@@ -439,7 +443,7 @@ A fresh repository query on 9 November returned 26 branches (the previous snapsh
 
 The PR #26 integration test exercises `createOrbitMcpServer` using an in-memory graph store and linked in-memory MCP transport. It verifies tool responses, input bounds, traversal-style path behavior and unchanged ledger head. It does **not by itself** prove the production `orbit mcp start` process opens a real on-disk SQLite database read-only; that launch/database-mode path remains a separate acceptance test. The manual Claude Code smoke test is Linux-only; Claude Desktop, Cursor, Windows and macOS remain unverified.
 
-Current open PRs observed on 11 November: #22 (status/handoff docs), #23 (Prompt 12), #24 (Prompt 14 stacked on #23), #25 (Prompt 13), #26 (MCP tests/guide), #27 (ACCELQ-only integration), #29 (persistent FLARE history) and #30 (FLARE Command Center API/workbench, stacked on #23 and dependent on #29). PRs #17–20 have merged; #28 was not created. Refresh all PR head SHAs, base branches, review state and CI/security/action checks before any merge. Do not merge #24 before #23; do not merge or close any PR solely because its description reports a green historical run.
+Current open PRs observed on 11 November: #22 (status/handoff docs), #23 (Prompt 12), #24 (Prompt 14 stacked on #23), #25 (Prompt 13), #26 (MCP tests/guide), #27 (ACCELQ-only integration), #29 (persistent FLARE history), #30 (FLARE Command Center API/workbench, stacked on #23 and dependent on #29) and #31 (parser security regressions). PRs #17–20 have merged; #28 was not created. Refresh all PR head SHAs, base branches, review state and CI/security/action checks before any merge. Do not merge #24 before #23; do not merge or close any PR solely because its description reports a green historical run.
 
 
 ### Additional Prompt 13 security correction found during 9 November review
