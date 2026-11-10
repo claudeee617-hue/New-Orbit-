@@ -108,9 +108,17 @@ describe('untrusted parser input boundaries', () => {
   });
 
   it('rejects external entities in JUnit and Cobertura XML', () => {
-    const external = '<!DOCTYPE x [<!ENTITY secret SYSTEM "file:///etc/passwd">]><testsuite><testcase name="x">&secret;</testcase></testsuite>';
+    const external =
+      '<!DOCTYPE x [<!ENTITY secret SYSTEM "file:///etc/passwd">]><testsuite><testcase name="x">&secret;</testcase></testsuite>';
     expect(() => parseJunitXml(external)).toThrow(/DTD\/entity/);
-    expect(() => parseCobertura(external.replace('<testsuite><testcase name="x">&secret;</testcase></testsuite>', '<coverage>&secret;</coverage>'))).toThrow(/DTD or entity/);
+    expect(() =>
+      parseCobertura(
+        external.replace(
+          '<testsuite><testcase name="x">&secret;</testcase></testsuite>',
+          '<coverage>&secret;</coverage>',
+        ),
+      ),
+    ).toThrow(/DTD or entity/);
   });
 });
 
