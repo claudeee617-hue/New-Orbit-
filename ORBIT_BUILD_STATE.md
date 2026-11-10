@@ -1,11 +1,11 @@
 # ORBIT — Build State
 
 Durable progress log. Update after every implementation phase.
-Last updated: 2026-11-10
+Last updated: 2026-11-11
 
 ## Current phase
 
-**Engineering Prompts 0–11 and App Business Module Prompts 0–4 are merged into `main` (PRs #5, #9 and #11). PR #23 (Prompt 12) is a draft Command Center vertical slice; CI #393 and CodeQL #187 passed, but user-local workspace and manual accessibility gates remain. PR #25 (Prompt 13) is a draft WITNESS GitHub Action; CI #422, Security #215 and Action integration #10 passed, including a static fork-safety regression guard; a genuine external-fork event remains pending. PR #24 (Prompt 14) is draft AI preview/approval work stacked on #23; CI #403 and CodeQL #196 passed on its current head, including the AI preview/approval browser test. PR #26 adds all-12-MCP-tool coverage, a Claude Code guide, and production stdio + disposable SQLite read-only acceptance; CI #414 and Security #207 passed on the latest head. PR #27 is now ACCELQ-only after removal of the separate remote-browser integration and smoke workflow. The disposable SQLite-backed real API/browser smoke remains in local Chromium CI. Earlier CI #395, CodeQL #189 and ACCELQ runner validation #105 passed on the pre-cleanup head; cleanup-head ACCELQ runner validation passed, while fresh full CI/Security checks are being re-run. Security/privacy/release groundwork is merged via PR #15. No release is ready: manual user-local validation, WCAG/screen-reader audit, fork-specific Action testing, live provider/vendor pilots and release review remain outstanding.**
+**Engineering Prompts 0–11 and App Business Module Prompts 0–4 are merged into `main` (PRs #5, #9 and #11). PR #23 (Prompt 12) is a draft Command Center vertical slice; CI #393 and CodeQL #187 passed, but user-local workspace and manual accessibility gates remain. PR #25 (Prompt 13) is a draft WITNESS GitHub Action; CI #422, Security #215 and Action integration #10 passed, including a static fork-safety regression guard; a genuine external-fork event remains pending. PR #24 (Prompt 14) is draft AI preview/approval work stacked on #23; CI #403 and CodeQL #196 passed on its current head, including the AI preview/approval browser test. PR #26 adds all-12-MCP-tool coverage, a Claude Code guide, and production stdio + disposable SQLite read-only acceptance; CI #414 and Security #207 passed on the latest head. PR #27 is ACCELQ-only; the separate remote-browser-provider workflow, smoke script and documentation have been removed. Local Chromium Playwright coverage and disposable SQLite-backed real API/browser acceptance remain. The ACCELQ runner-validation job passed on the cleanup/rebased head, while the live ACCELQ vendor run remains skipped pending tenant/job/agent configuration. PR #29 proposes persistent FLARE per-test history across separate CLI runs; its CI/Security checks are in progress and it is not merged. Security/privacy/release groundwork is merged via PR #15. No release is ready: manual user-local validation, WCAG/screen-reader audit, fork-specific Action testing, live provider/vendor pilots and release review remain outstanding.**
 
 ## Phase checklist
 
@@ -18,7 +18,7 @@ Last updated: 2026-11-10
 | 4      | ATLAS scanning                                 | Done (see results below)                       |
 | 5      | ATLAS memory and MCP                           | Implemented on `main` via PR #5; CI run #109 passed on Ubuntu, macOS and Windows |
 | 6      | WITNESS                                        | Base prototype plus extended verification helpers and CLI on `main` via PR #5; CI run #109 passed on three OSs |
-| 7      | FLARE                                          | Merged to `main` via PR #5: pytest/Jest/Go adapters and reliability analytics/CLI; durable history remains outstanding |
+| 7      | FLARE                                          | Base adapters/analytics merged via PR #5; durable per-test history proposed in PR #29, validation pending |
 | 8      | CAPSULE                                        | Merged to `main` via PR #5: polyglot manifest inspection and CLI; build replay remains out of scope |
 | 9      | FLIGHT RECORDER                                | Merged to `main` via PR #5: recorded-log analysis + hash-verified graph persistence; no physical serial connection |
 | 10     | Change Passport and Replay Room                | Merged to `main` via PR #5: commit-scoped evidence correlation, immutable history, comparison and non-executing reproduction plan; no visual Replay Room UI |
@@ -36,7 +36,7 @@ Last updated: 2026-11-10
 Engineering Prompts 5–10 were consolidated and merged into main through PR #5 on 2026-11-08. The sections below describe that merged implementation and preserve its remaining limitations.
 
 - WITNESS: unified-diff added-line parsing, LCOV and Cobertura line-coverage adapters, changed-line coverage summaries, deterministic finding IDs and explicit status semantics.
-- FLARE: bounded JUnit XML parser and supplied-history test summaries using outcome flips and Wilson 95% intervals. Jest/pytest/Go adapters were added in the Prompt 7 extension below; a durable history store across separate invocations remains outstanding.
+- FLARE: bounded JUnit XML parser and supplied-history test summaries using outcome flips and Wilson 95% intervals. Jest/pytest/Go adapters were added in the Prompt 7 extension below. PR #29 proposes durable graph-backed per-test history, explicit CI run IDs, idempotent report ingestion and a bounded `orbit flare history` query; this remains branch-only until CI and review pass.
 - CAPSULE: inspect supplied manifest files for declared runtimes, package managers, scripts, dependencies, environment variable names, container manifests and lockfile hashes. No build replay.
 - FLIGHT RECORDER: parse recorded JSON, NDJSON, CSV and key-value telemetry files; hash raw input and identify keyword-based watchdog/reset events. No serial-port connection or device commands.
 - Change Passport: deterministic, content-hashed assembly from explicitly supplied evidence, with missing evidence listed. No graph persistence or Replay Room.
@@ -175,7 +175,7 @@ node apps/cli/dist/index.js atlas impact packages/core/src/index.ts --db .orbit/
 
 ## Next step
 
-Next engineering work: complete the remaining Prompt 11–17 roadmap gates, especially API/CLI depth, full Command Center UX, security review, broader validation and release polish. Physical serial capture remains a separately scoped future capability.
+Next engineering work: finish Prompt 12 Command Center UX and its manual acceptance, complete Prompt 13 fork/SARIF checks, finish Prompt 14 privacy/provider validation, review MCP acceptance, complete ACCELQ owner setup, and validate PR #29 FLARE persistent history. Independent security review, fuzz/migration tests and release polish remain. Physical serial capture remains separately scoped future capability.
 
 
 ## Prompt 6–8 extension work merged via PR #5 (CI passed)
@@ -267,14 +267,14 @@ Verified by GitHub Actions run `42481493312` on Ubuntu, macOS and Windows; the e
 - No live accounting, billing, checkout, CRM, customer database, hosted sync or payment integration. Financial inputs remain in local React state and are discarded after refresh. No demo revenue/customer data is seeded.
 
 
-## Prompt 11 — Local API and CLI (in progress on feat/prompt-11-api-cli)
+## Prompt 11 — Local API and CLI (merged via PR #11)
 
 - Added persistent local API Bearer session-token support. The token is random, stored beside the workspace database in a private `api.token` file, and never returned in API responses or logs. `ORBIT_API_TOKEN` can override the file token.
 - Added authenticated repository, scan, graph, evidence, Change Passport, impact/ATLAS report and CI/test/environment/recorded-telemetry ingestion routes under `/api/v1`. Public `/health` and Host-header/DNS-rebinding protection remain.
 - API ingestion uses bounded inputs and allowlisted CI summary/environment metadata; it does not persist arbitrary credential fields or raw test/telemetry report bodies as graph attributes.
 - Added CLI `init`, `doctor`, `graph summary`, `graph nodes`, `ci ingest`, `tests ingest` and `tests history` commands.
 - Added API token lifecycle, API route/integration and CLI workspace/ingestion tests.
-- **Status:** Implementation pushed in PR #11; full format/lint/typecheck/test/build matrix passed on Ubuntu, macOS and Windows in GitHub Actions run #136. Ubuntu reported 373 passing tests across nine workspace suites; 15/15 typecheck tasks and 9/9 build tasks passed. PR #11 is ready for review and is not merged.
+- **Status:** Merged into `main` through PR #11 on 8 November 2026; the full cross-platform CI matrix passed before merge.
 
 
 ## Prompts 14–17 documentation and security groundwork
@@ -284,7 +284,7 @@ Branch: `docs/prompt-15-17-security-release`.
 - Prompt 14: experimental OpenAI/Anthropic/Ollama adapters, authenticated preview/analyse API and AI Analysis UI are proposed in draft PR #24, stacked on PR #23. The browser test covers preview-before-approval and the backend tests enforce explicit approval/AI-disabled states; live provider smoke and fresh merged-head CI remain pending.
 - Prompt 15: `SECURITY.md`, `docs/PRIVACY.md`, scheduled CodeQL workflow and Dependabot configuration added. This is groundwork, not an independent security audit. Parser/path/XXE/secret-redaction tests and host/CSRF review remain.
 - Prompt 16: `docs/VALIDATION_GAPS.md` records outstanding E2E, fuzz, migration, action and controlled-scenario tests. Existing CI and unit/API/CLI tests do not close those gaps.
-- Prompt 17: Apache-2.0 license text, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `CITATION.cff`, issue templates and `docs/RELEASE_CHECKLIST.md` added. No package or Marketplace release has been published.
+- Prompt 17: Apache-2.0 `LICENSE`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `CITATION.cff`, issue templates and `docs/RELEASE_CHECKLIST.md` are merged. No package or Marketplace release has been published.
 
 All these changes require CI and owner/legal review before merge. ORBIT's working codename and package/repository names have not been trademark-cleared.
 
@@ -306,6 +306,7 @@ All these changes require CI and owner/legal review before merge. ORBIT's workin
 - PR #24: current head `1a80972a417fc96bd6c3f21c521fc94b4e0b5a86`; fresh CI/CodeQL are running after a strict-mode browser locator fix. Do not use historical CI #231 as current validation.
 - PR #25: CI #390, CodeQL #184 and ORBIT Action integration #7 passed on head `60f6aacd10b204a60f0025353153d964d2d97d23`; fork-specific permission test remains pending.
 - PR #26: CI #236 and Security #30 passed on head `940caca57ce225024d2bdac6590503c0224f4dcd`; PR remains open and not merged.
-- PR #27: CI #395, CodeQL #189 and ACCELQ runner validation #105 passed on head `2f8aa302305d028709526f31a9bbdb1f74a49c9c`. Live ACCELQ execution remains skipped pending tenant/job/agent setup; the real API/browser check uses a disposable CI SQLite DB, not the user's personal DB.
-- Branch query on 10 November returned 29 branches. No branch deletions or PR merges were made as part of this status refresh.
+- PR #27: the ACCELQ-only cleanup/rebased head has a successful runner-validation job and CodeQL passed; the full CI matrix needs its current macOS rerun to complete. Live ACCELQ execution remains skipped pending tenant/job/agent setup; the real API/browser check uses a disposable CI SQLite DB, not the user's personal DB.
+- PR #29: persistent per-test FLARE history branch added; latest CI/Security checks are pending. Do not count PR #29 as complete or shipped.
+- Branch query on 11 November returned 28 branches. The separate remote-browser workflow and smoke-test files were removed from the ACCELQ branch; no user data or vendor credentials were accessed or changed.
 
