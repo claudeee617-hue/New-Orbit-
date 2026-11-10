@@ -82,7 +82,14 @@ describe('untrusted parser input boundaries', () => {
 
   it('keeps untrusted coverage paths as inert repository labels', () => {
     const lcov = parseLcov(
-      'SF:../../etc/passwd\nDA:1,1\nend_of_record\nSF:C:\\\\Windows\\\\win.ini\nDA:2,1\nend_of_record',
+      [
+        'SF:../../etc/passwd',
+        'DA:1,1',
+        'end_of_record',
+        String.raw`SF:C:\Windows\win.ini`,
+        'DA:2,1',
+        'end_of_record',
+      ].join('\\n'),
     );
     expect(lcov.map((item) => item.path)).toEqual(['passwd', 'Windows/win.ini']);
     expect(lcov.some((item) => item.path.startsWith('/') || item.path.includes('..'))).toBe(false);
