@@ -89,7 +89,7 @@ describe('untrusted parser input boundaries', () => {
         String.raw`SF:C:\Windows\win.ini`,
         'DA:2,1',
         'end_of_record',
-      ].join('\\n'),
+      ].join('\n'),
     );
     expect(lcov.map((item) => item.path)).toEqual(['passwd', 'Windows/win.ini']);
     expect(lcov.some((item) => item.path.startsWith('/') || item.path.includes('..'))).toBe(false);
