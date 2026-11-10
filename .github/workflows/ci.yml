@@ -35,11 +35,6 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      - name: Temporary Prettier preview for security parser tests
-        run: |
-          pnpm exec prettier --write packages/atlas/src/engines.test.ts
-          git diff --no-ext-diff -- packages/atlas/src/engines.test.ts
-
       # format:check, lint, typecheck, test, build
       - name: Check
         run: pnpm run check
