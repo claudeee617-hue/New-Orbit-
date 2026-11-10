@@ -68,21 +68,21 @@ describe('untrusted parser input boundaries', () => {
       '+++ b/../../etc/passwd',
       '@@ -0,0 +1 @@',
       '+leak',
-    ].join('\\n');
+    ].join('\n');
     const absolute = [
       'diff --git a/safe.ts b/safe.ts',
       '--- a/safe.ts',
       '+++ b/C:/Windows/win.ini',
       '@@ -0,0 +1 @@',
       '+leak',
-    ].join('\\n');
+    ].join('\n');
     expect(() => parseUnifiedDiff(traversal)).toThrow(/Unsafe repository path/);
     expect(() => parseUnifiedDiff(absolute)).toThrow(/repository-relative path/);
   });
 
   it('keeps untrusted coverage paths as inert repository labels', () => {
     const lcov = parseLcov(
-      'SF:../../etc/passwd\\nDA:1,1\\nend_of_record\\nSF:C:\\\\Windows\\\\win.ini\\nDA:2,1\\nend_of_record',
+      'SF:../../etc/passwd\nDA:1,1\nend_of_record\nSF:C:\\\\Windows\\\\win.ini\nDA:2,1\nend_of_record',
     );
     expect(lcov.map((item) => item.path)).toEqual(['passwd', 'Windows/win.ini']);
     expect(lcov.some((item) => item.path.startsWith('/') || item.path.includes('..'))).toBe(false);
