@@ -1,9 +1,9 @@
 # ORBIT — Complete Repository Audit & Claude Handoff
 
-**Audit snapshot:** 10 November 2026 (updated after the 9 November baseline)  
+**Audit snapshot:** 11 November 2026 (refreshed after dependency merges and ACCELQ-only cleanup)  
 **Repository:** https://github.com/claudeee617-hue/New-Orbit-  
 **Default branch:** main  
-**Coverage:** Full known PR history #1–#27, all 27 branches returned by the latest branch search, engineering Prompts 0–17, App Business Module sub-prompts 0–4, commercial strategy, security/release groundwork, Dependabot PRs, CI evidence, known gaps and next actions.
+**Coverage:** Full known PR history #1–#29, all 28 branches returned by the latest branch search, engineering Prompts 0–17, App Business Module sub-prompts 0–4, commercial strategy, security/release groundwork, Dependabot PRs, CI evidence, known gaps and next actions.
 
 > This is a repository-wide handoff, not a report limited to PRs #22–25. It distinguishes merged code, closed/superseded work, current open PRs, historical branches and unimplemented roadmap scope. A green CI run does not by itself mean a feature is complete or release-ready.
 
@@ -28,7 +28,7 @@ Three product workstreams are represented in the repository:
 - Dependabot PRs #17–20 were individually merged into main on 10 November 2026 after their CI/Security workflows passed.
 - No public release is approved. ORBIT remains a working codename pending name/trademark checks.
 
-## 2. Complete PR register — #1–#27
+## 2. Complete PR register — #1–#29
 
 “Closed, unmerged” means the PR is not the merge target; trace its implementation to the consolidation/replacement PR below. Merged status is based on the GitHub PR metadata returned during this audit.
 
@@ -53,14 +53,16 @@ Three product workstreams are represented in the repository:
 | [#17](https://github.com/claudeee617-hue/New-Orbit-/pull/17) | Dependabot: actions/setup-node 4 → 7 | **Merged** | GitHub merge recorded 10 November 2026; resulting main checks passed |
 | [#18](https://github.com/claudeee617-hue/New-Orbit-/pull/18) | Dependabot: actions/checkout 4 → 7 | **Merged** | GitHub merge recorded 10 November 2026; resulting main checks passed |
 | [#19](https://github.com/claudeee617-hue/New-Orbit-/pull/19) | Dependabot: github/codeql-action 3 → 4 | **Merged** | GitHub merge recorded 10 November 2026; resulting main checks passed |
-| [#20](https://github.com/claudeee617-hue/New-Orbit-/pull/20) | Dependabot: pnpm/action-setup 4 → 6 | Open | CI dependency update; verify pnpm 10 pin and all OS workflows |
+| [#20](https://github.com/claudeee617-hue/New-Orbit-/pull/20) | Dependabot: pnpm/action-setup 4 → 6 | **Merged** | GitHub merge recorded 10 November 2026; resulting main CI/Security checks passed |
 | [#21](https://github.com/claudeee617-hue/New-Orbit-/pull/21) | Earlier Prompt 14 AI preview/approval | Closed, unmerged | Superseded by clean replacement #24 |
 | [#22](https://github.com/claudeee617-hue/New-Orbit-/pull/22) | Repository status/docs and Claude handoff | Open | Documentation-only corrections to README/build-state and this full handoff |
 | [#23](https://github.com/claudeee617-hue/New-Orbit-/pull/23) | Prompt 12 Command Center clean replacement | Open, draft | Partial Command Center vertical slice based directly on main |
 | [#24](https://github.com/claudeee617-hue/New-Orbit-/pull/24) | Prompt 14 AI preview/approval clean replacement | Open, draft | CI #403 and CodeQL #196 passed, including AI approval-flow browser E2E; live provider smoke remains opt-in |
 | [#25](https://github.com/claudeee617-hue/New-Orbit-/pull/25) | Prompt 13 GitHub Action clean replacement | Open, draft | CI #422, Security #215, Action integration #10 passed; static fork-safety guard included; live external-fork event pending |
 | [#26](https://github.com/claudeee617-hue/New-Orbit-/pull/26) | MCP all-tool integration coverage + Claude Code guide | Open | CI #414 and Security #207 passed; includes 12-tool tests and production stdio / disposable SQLite read-only acceptance |
-| [#27](https://github.com/claudeee617-hue/New-Orbit-/pull/27) | ACCELQ enterprise regression (ACCELQ-only after cleanup) | Open, draft | Pre-cleanup CI/Security and ACCELQ runner validation passed; cleanup-head runner validation passed; fresh full CI/Security checks rerunning |
+| [#27](https://github.com/claudeee617-hue/New-Orbit-/pull/27) | ACCELQ enterprise regression (ACCELQ-only after cleanup) | Open, draft | Separate remote-browser integration and smoke files removed; local Chromium E2E retained; ACCELQ runner validation passed; live ACCELQ vendor run skipped pending owner setup |
+| [#28](https://github.com/claudeee617-hue/New-Orbit-/pull/28) | Reserved / no PR created | — | No pull request #28 exists; PR numbering advances from #27 to #29 |
+| [#29](https://github.com/claudeee617-hue/New-Orbit-/pull/29) | Persistent FLARE per-test history across CLI runs | Open, draft | Per-case TestRun persistence, `--run-id`, idempotency, PARTIAL empty reports and bounded historical analysis; CI/Security validation still running |
 
 ### PR lineage
 
@@ -74,12 +76,13 @@ Three product workstreams are represented in the repository:
 - Security/release groundwork: **#15** merged.
 - Documentation correction/full handoff: **#22**, open.
 - Dependency automation: **#17–20**, all merged into `main` on 10 November 2026.
+- FLARE persistent history: **#29**, open draft branch-only work; #28 was not used.
 
 Closed superseded PRs are historical records, not active merge targets. Trace their changes to the consolidation/replacement PR above.
 
-## 3. All 27 branches returned by GitHub after dependency merges
+## 3. All 28 branches returned by GitHub after dependency merges
 
-The 11 November refresh returned 27 branch names. Presence in this list does not imply an open PR or release readiness.
+The 11 November refresh returned 28 branch names, including the new FLARE history branch. Presence in this list does not imply an open PR or release readiness.
 
 ### Main and documentation
 - `main`
@@ -110,6 +113,7 @@ The 11 November refresh returned 27 branch names. Presence in this list does not
 - `feat/prompt-14-opt-in-ai-full`
 - `feat/prompt-14-ai-rebased`
 - `feat/accelq-enterprise-regression`
+- `feat/flare-persistent-history`
 
 ### Maintenance / strategy
 - `fix/audit-2026-11-08`
@@ -150,7 +154,8 @@ Claude must verify exact current implementation against packages/core, packages/
 
 **Prompt 7 — FLARE**
 - Bounded JUnit, pytest, Jest and Go report adapters; reliability history, failure clustering and duration analytics.
-- One report is not enough to label a test flaky; durable history depends on supplied/ingested prior runs and minimum-sample gating.
+- PR #29 proposes durable per-test `TestRun` graph records during CLI ingestion, optional `--run-id` to distinguish repeated identical report files, duplicate-run protection, PARTIAL status for zero-test reports and `orbit flare history` across ingested runs. This work is branch-only pending CI/review.
+- One report is not enough to label a test flaky; minimum sample and pass/fail-flip gates remain required. Failure-message redaction is pattern-based and best-effort, not a secret-scanning guarantee.
 
 **Prompt 8 — CAPSULE**
 - Polyglot manifest/toolchain/container/workspace inspection and deterministic fingerprints.
@@ -432,7 +437,7 @@ A fresh repository query on 9 November returned 26 branches (the previous snapsh
 
 The PR #26 integration test exercises `createOrbitMcpServer` using an in-memory graph store and linked in-memory MCP transport. It verifies tool responses, input bounds, traversal-style path behavior and unchanged ledger head. It does **not by itself** prove the production `orbit mcp start` process opens a real on-disk SQLite database read-only; that launch/database-mode path remains a separate acceptance test. The manual Claude Code smoke test is Linux-only; Claude Desktop, Cursor, Windows and macOS remain unverified.
 
-Current open PRs observed after dependency maintenance: #22 (status/handoff docs), #23 (Prompt 12), #24 (Prompt 14 stacked on #23), #25 (Prompt 13), #26 (MCP tests/guide) and #27 (ACCELQ-only integration). PRs #17–20 have since merged. Refresh all PR head SHAs, base branches, review state and CI/security/action checks before any merge. Do not merge #24 before #23; do not merge or close any PR solely because its description reports a green historical run.
+Current open PRs observed on 11 November: #22 (status/handoff docs), #23 (Prompt 12), #24 (Prompt 14 stacked on #23), #25 (Prompt 13), #26 (MCP tests/guide), #27 (ACCELQ-only integration) and #29 (persistent FLARE history). PRs #17–20 have merged; #28 was not created. Refresh all PR head SHAs, base branches, review state and CI/security/action checks before any merge. Do not merge #24 before #23; do not merge or close any PR solely because its description reports a green historical run.
 
 
 ### Additional Prompt 13 security correction found during 9 November review
