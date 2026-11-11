@@ -661,10 +661,7 @@ export function runTestHistory(
     let lastPageSize = 0;
     let pageSize = 0;
 
-    while (
-      reportRows.length < targetReports &&
-      scannedNodes < MAX_FLARE_HISTORY_RECORDS
-    ) {
+    while (reportRows.length < targetReports && scannedNodes < MAX_FLARE_HISTORY_RECORDS) {
       pageSize = Math.min(
         FLARE_HISTORY_PAGE_SIZE,
         MAX_FLARE_HISTORY_RECORDS - scannedNodes,
