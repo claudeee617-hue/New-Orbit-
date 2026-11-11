@@ -10,7 +10,7 @@ const databases: OrbitDatabase[] = [];
 const servers: Array<ReturnType<typeof buildServer>> = [];
 const API_TOKEN = 'orbit-test-token-'.padEnd(48, 'x');
 
-function setup(): {
+function setup(env: Record<string, string | undefined> = {}): {
   database: OrbitDatabase;
   server: ReturnType<typeof buildServer>;
   repositoryId: string;
@@ -21,7 +21,7 @@ function setup(): {
   const repository = store.repositories.register({ key: 'example', displayName: 'Example' }).record;
   const sink = new Writable({ write: (_chunk, _enc, cb) => cb() });
   const logger = createLogger({ name: 'test', level: 'silent', destination: sink });
-  const server = buildServer({ database, logger, apiToken: API_TOKEN });
+  const server = buildServer({ database, logger, apiToken: API_TOKEN, env });
   servers.push(server);
   return { database, server, repositoryId: repository.id };
 }
@@ -89,6 +89,90 @@ describe('authenticated local API', () => {
     expect(missing.statusCode).toBe(401);
     expect(incorrect.statusCode).toBe(401);
     expect(missing.json()).toMatchObject({ error: 'UNAUTHENTICATED' });
+  });
+
+  it('previews selected evidence for AI without sending a provider request', async () => {
+    const { server } = setup({ ORBIT_AI_ENABLED: 'false' });
+    const ingested = await server.inject({
+      method: 'POST',
+      url: '/api/v1/repositories/example/ingest/ci',
+      headers: { host: 'localhost', ...auth },
+      payload: {
+        status: 'failure',
+        source: 'github-actions:build',
+        commitSha: 'b'.repeat(40),
+        runId: 'ai-preview-run',
+        workflow: 'CI',
+      },
+    });
+    const evidenceId = ingested.json<{ evidence: { id: string } }>().evidence.id;
+    const preview = await server.inject({
+      method: 'POST',
+      url: '/api/v1/repositories/example/ai/preview',
+      headers: { host: 'localhost', ...auth },
+      payload: {
+        provider: 'ollama',
+        model: 'test-model',
+        prompt: 'Summarise the selected CI evidence.',
+        evidenceIds: [evidenceId],
+      },
+    });
+    expect(preview.statusCode).toBe(200);
+    expect(preview.json()).toMatchObject({
+      preview: {
+        provider: 'ollama',
+        destination: 'http://127.0.0.1:11434/api/chat',
+        evidenceIds: [evidenceId],
+      },
+    });
+    expect(preview.json<{ preview: { text: string } }>().preview.text).toContain(evidenceId);
+    expect(preview.json<{ notice: string }>().notice).toContain('No provider request was sent');
+  });
+
+  it('requires confirmation and keeps AI disabled unless explicitly enabled by the local operator', async () => {
+    const { server } = setup({ ORBIT_AI_ENABLED: 'false' });
+    const ingested = await server.inject({
+      method: 'POST',
+      url: '/api/v1/repositories/example/ingest/ci',
+      headers: { host: 'localhost', ...auth },
+      payload: {
+        status: 'failure',
+        source: 'github-actions:build',
+        commitSha: 'c'.repeat(40),
+        runId: 'ai-disabled-run',
+        workflow: 'CI',
+      },
+    });
+    const evidenceId = ingested.json<{ evidence: { id: string } }>().evidence.id;
+    const body = {
+      provider: 'ollama',
+      model: 'test-model',
+      prompt: 'Summarise the selected CI evidence.',
+      evidenceIds: [evidenceId],
+    };
+    const preview = await server.inject({
+      method: 'POST',
+      url: '/api/v1/repositories/example/ai/preview',
+      headers: { host: 'localhost', ...auth },
+      payload: body,
+    });
+    const sha = preview.json<{ preview: { sha256: string } }>().preview.sha256;
+    const unconfirmed = await server.inject({
+      method: 'POST',
+      url: '/api/v1/repositories/example/ai/analyse',
+      headers: { host: 'localhost', ...auth },
+      payload: { ...body, approvedContextSha256: sha, confirmed: false },
+    });
+    expect(unconfirmed.statusCode).toBe(403);
+    expect(unconfirmed.json()).toMatchObject({ error: 'APPROVAL_REQUIRED' });
+    const disabled = await server.inject({
+      method: 'POST',
+      url: '/api/v1/repositories/example/ai/analyse',
+      headers: { host: 'localhost', ...auth },
+      payload: { ...body, approvedContextSha256: sha, confirmed: true },
+    });
+    expect(disabled.statusCode).toBe(403);
+    expect(disabled.json()).toMatchObject({ error: 'AI_DISABLED' });
   });
 
   it('paginates evidence and returns page metadata', async () => {

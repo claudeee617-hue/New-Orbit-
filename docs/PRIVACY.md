@@ -19,14 +19,16 @@ The local workspace database may contain repository paths, symbol names, depende
 
 GitHub Actions, GitHub API access, MCP clients and optional AI providers may create network traffic when configured. Each integration must state what data leaves the machine, why it is sent, and which credentials are used.
 
-For optional AI analysis:
-1. AI is off by default.
-2. The user chooses the provider and model.
-3. The UI shows the exact context bundle before sending.
-4. Secret redaction and context-size limits run before transmission.
-5. Only the explicitly selected evidence and source excerpts are sent.
-6. The user can cancel before sending.
-7. Provider responses are advisory and must cite ORBIT evidence IDs; they do not change the graph or apply patches automatically.
+For optional AI analysis in the experimental Prompt 14 branch:
+1. AI is disabled unless the local API process has `ORBIT_AI_ENABLED=true`.
+2. The user chooses the provider, model and question in the Command Center.
+3. The local API preview endpoint returns the exact context, destination, evidence IDs, redaction count, size and SHA-256 without contacting the provider.
+4. The current UI selects evidence metadata only; it does not read source files. The API supports explicit excerpts, but the UI does not expose excerpt entry yet.
+5. Best-effort secret redaction and context/response limits run before transmission.
+6. The user must inspect the preview and check an explicit approval box. The analysis endpoint rebuilds the context and checks the preview hash before sending.
+7. Provider keys are read from the local API process environment and are never returned to the browser.
+8. Provider responses are advisory and citation status is checked against selected evidence IDs; they do not change the graph or apply patches automatically.
+9. The current integration does not persist AI results as evidence or provide a saved-note/history feature.
 
 ## Retention and deletion
 
