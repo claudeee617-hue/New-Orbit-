@@ -1,11 +1,11 @@
 # ORBIT — Build State
 
 Durable progress log. Update after every implementation phase.
-Last updated: 2026-11-11
+Last updated: 2026-11-11 (late)
 
 ## Current phase
 
-**Engineering roadmap Prompts 0–11 and App Business Module sub-prompts 0–4 are on `main` (PRs #5, #9, #11). `main` also contains the git-based WITNESS package (PR #32), ATLAS 0.2.0, MCP acceptance tests (PR #26), parser regression tests (PR #31) and the prototype GitHub Action (PR #25). Open and not merged: Command Center (PR #23), ORBIT AI (PR #24), ACCELQ (PR #27) and durable FLARE history (PRs #29, #30). ORBIT is pre-release.**
+**Engineering roadmap Prompts 0–11 and App Business Module sub-prompts 0–4 are on `main` (PRs #5, #9, #11). `main` also contains the git-based WITNESS package (PR #32), ATLAS 0.2.0, MCP acceptance tests (PR #26), parser regression tests (PR #31) and the prototype GitHub Action (PR #25). Also merged on 2026-11-11: Command Center (PR #23), durable FLARE history (PRs #29, #38), ORBIT AI preview (PR #39), opt-in ACCELQ regression plus local API E2E (PR #40) and a dependency-audit CI gate (PR #41). No product PRs are open. ORBIT is pre-release.**
 
 ## Phase checklist
 
@@ -18,14 +18,14 @@ Last updated: 2026-11-11
 | 4      | ATLAS scanning                                 | Done (see results below)                       |
 | 5      | ATLAS memory and MCP                           | Implemented on `main` via PR #5; CI run #109 passed on Ubuntu, macOS and Windows |
 | 6      | WITNESS                                        | Prototype on `main` via PR #5; full git-based verifier in `packages/witness` merged via PR #32 (see Prompt 6 section) |
-| 7      | FLARE                                          | Merged to `main` via PR #5: pytest/Jest/Go adapters and reliability analytics/CLI; durable history remains outstanding |
+| 7      | FLARE                                          | Merged to `main` via PR #5; durable per-test history via PR #29 and Command Center view via PR #38 |
 | 8      | CAPSULE                                        | Merged to `main` via PR #5: polyglot manifest inspection and CLI; build replay remains out of scope |
 | 9      | FLIGHT RECORDER                                | Merged to `main` via PR #5: recorded-log analysis + hash-verified graph persistence; no physical serial connection |
 | 10     | Change Passport and Replay Room                | Merged to `main` via PR #5: commit-scoped evidence correlation, immutable history, comparison and non-executing reproduction plan; no visual Replay Room UI |
 | 11     | API and CLI (full)                             | Done on `main` via PR #11: local API and engine CLI commands; full Ubuntu/macOS/Windows CI passed |
-| 12     | Command Center (full)                          | Not on `main` (shell exists); in open PR #23   |
+| 12     | Command Center (full)                          | Done on `main` via PR #23: dashboard reads real API data with honest empty states; Chromium E2E in CI; durable FLARE history view via PR #38 |
 | 13     | GitHub Action                                  | Prototype on `main` via PR #25 (`docs/GITHUB_ACTION.md`); not published to the Marketplace |
-| 14     | ORBIT AI                                       | Not on `main`; provider/privacy design in `docs/AI_PROVIDER_POLICY.md`; implementation in open PR #24 |
+| 14     | ORBIT AI                                       | Opt-in preview on `main` via PR #39 (policy in `docs/AI_PROVIDER_POLICY.md`); core works without an API key; tested with a fake provider only, no live-provider results claimed |
 | 15     | Security review                                | Partial: SECURITY.md, privacy policy, CodeQL workflow and Dependabot config added; independent review and security tests pending |
 | 16     | Testing and validation                         | Partial: existing unit/API/CLI tests plus validation-gap checklist; browser E2E, fuzz, migration and action tests pending |
 | 17     | Release polish                                 | Partial: contributor docs, Apache-2.0 license, citation metadata, issue templates and release checklist added; clean-machine validation and release approval pending |
@@ -83,6 +83,10 @@ Known Prompt 5 limitations:
 - Conflict detection is limited to explicit document metadata. Semantic contradictions and unreferenced decisions require human review.
 - MCP reads only data already present in the local ORBIT database. The server does not index the repository or create/migrate a database when launched.
 - MCP transport currently supports stdio only; remote HTTP transport, authentication and hosted multi-tenant operation are not included.
+
+## Merge note (2026-11-11)
+
+While merging #23 the squash silently reverted the evidence tie-break fix from #36 (same-millisecond evidence listed by hash instead of insertion order, which made MCP "newest history first" flaky on macOS). It was caught by CI on #40 and restored with its regression test. Playwright's `--with-deps` apt step failed once on a hosted runner (mirror error); the step now retries three times. macOS runner capacity also caused two cancelled jobs on #41 that were unrelated to the code.
 
 ## Prompt 6 summary (WITNESS: git-based PR verification, `packages/witness`)
 
@@ -183,9 +187,9 @@ Created: root config (pnpm workspace, Turborepo, strict tsconfig, ESLint 10 flat
 
 | Check                | Result                                   |
 | -------------------- | ---------------------------------------- |
-| `pnpm run build`     | 8/8 tasks pass                           |
-| `pnpm run typecheck` | 13/13 tasks pass                         |
-| `pnpm run test`      | 500 tests pass (shared 36, core 66, database 45, graph 14, atlas 164, mcp 5, witness 63, api 39, cli 41, web 27) |
+| `pnpm run build`     | passes (part of 19/19 `check` tasks)     |
+| `pnpm run typecheck` | passes                                   |
+| `pnpm run test`      | 546 tests pass (shared 36, core 66, database 47, graph 14, atlas 168, mcp 16, witness 63, ai 9, api 36, cli 47, web 44) — counts from the last local `pnpm run check`, 19/19 tasks |
 | `pnpm run lint`      | clean                                    |
 | `pnpm run format:check` | clean (Markdown excluded)             |
 
@@ -224,7 +228,7 @@ node apps/cli/dist/index.js verify --base main --head HEAD --coverage lcov.info 
 
 ## Next step
 
-Next engineering work: review and merge the open Command Center, AI, ACCELQ and FLARE-history pull requests, then close the remaining Prompt 15–17 gates: independent security review, browser E2E and fuzz validation, and release polish. Physical serial capture remains a separately scoped future capability.
+Next engineering work: close the remaining Prompt 15–17 gates: independent security review, browser E2E and fuzz validation, and release polish. Physical serial capture remains a separately scoped future capability.
 
 
 ## Prompt 6–8 extension work merged via PR #5 (CI passed)

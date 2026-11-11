@@ -134,7 +134,16 @@ jobs:
         run: pnpm dlx --package=@playwright/test playwright --version
 
       - name: Install Chromium
-        run: pnpm dlx --package=@playwright/test playwright install --with-deps chromium
+        # apt mirrors occasionally fail on hosted runners; retry before failing the job.
+        run: |
+          for attempt in 1 2 3; do
+            if pnpm dlx --package=@playwright/test playwright install --with-deps chromium; then
+              exit 0
+            fi
+            echo "Chromium install attempt $attempt failed; retrying" >&2
+            sleep 15
+          done
+          exit 1
 
       - name: Run resilient browser E2E
         env:
