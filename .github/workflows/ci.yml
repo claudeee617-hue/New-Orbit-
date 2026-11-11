@@ -35,6 +35,13 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      # Temporary formatting diagnostic; remove after capturing the exact Prettier diff.
+      - name: Temporary Prettier diff for FLARE CLI
+        if: runner.os == 'Linux'
+        run: |
+          pnpm exec prettier --write apps/cli/src/operations.ts
+          git diff -- apps/cli/src/operations.ts
+
       # format:check, lint, typecheck, test, build
       - name: Check
         run: pnpm run check
