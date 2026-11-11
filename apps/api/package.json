@@ -22,11 +22,12 @@
     "start": "node dist/main.js"
   },
   "dependencies": {
+    "@fastify/rate-limit": "11.2.2",
+    "@orbit/atlas": "workspace:*",
+    "@orbit/core": "workspace:*",
     "@orbit/database": "workspace:*",
     "@orbit/shared": "workspace:*",
     "fastify": "5.12.8",
-    "@orbit/atlas": "workspace:*",
-    "@orbit/core": "workspace:*",
     "@orbit/ai": "workspace:*"
   },
   "devDependencies": {
