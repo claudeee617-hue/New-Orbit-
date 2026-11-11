@@ -1,6 +1,6 @@
 # ORBIT Prompt 11 — Local API and CLI
 
-**Status:** Implemented on `feat/prompt-11-api-cli`; full format/lint/typecheck/test/build CI passed on Ubuntu, macOS and Windows (run #136). Ready for review; not merged.
+**Status:** Prompt 11 is merged to `main` via PR #11. This branch adds durable per-test FLARE history to the CLI test-report ingestion; this extension is proposed separately and is not merged yet.
 
 Prompt 11 connects the existing ORBIT graph and evidence engines to a safe local HTTP API and practical workspace CLI commands. The API remains local-first, loopback-bound by default and bearer-token authenticated outside the public health endpoint.
 
@@ -42,7 +42,7 @@ Keep `api.token` private. Do not commit it, paste it into issues, or expose it t
 | POST | `/api/v1/repositories/:key/ingest/environment` | Append explicitly whitelisted manifest metadata as PARTIAL evidence |
 | POST | `/api/v1/repositories/:key/ingest/telemetry` | Parse recorded telemetry and append observational evidence |
 
-CI summary and environment snapshot schemas accept only allowlisted metadata fields. Unknown fields—including arbitrary credential-like fields—are rejected rather than persisted. Environment evidence is marked PARTIAL because a supplied manifest snapshot is not proof of the actual installed runner image. Test and telemetry ingestion store hashes and bounded summaries, not raw reports/logs as graph attributes. Telemetry ingestion parses recorded data only and does not connect to hardware.
+CI summary and environment snapshot schemas accept only allowlisted metadata fields. Unknown fields—including arbitrary credential-like fields—are rejected rather than persisted. Environment evidence is marked PARTIAL because a supplied manifest snapshot is not proof of the actual installed runner image. The API test/telemetry ingestion paths store hashes and bounded summaries, not raw reports/logs. CLI test ingestion additionally persists each parsed test outcome as an append-only TestRun graph record; failure messages are capped and pattern-redacted on a best-effort basis. Telemetry ingestion parses recorded data only and does not connect to hardware.
 
 ## CLI additions
 
@@ -69,11 +69,12 @@ node apps/cli/dist/index.js graph nodes --repo local/my-project --type Function 
 
 ```bash
 node apps/cli/dist/index.js ci ingest ci-result.json --repo local/my-project
-node apps/cli/dist/index.js tests ingest junit.xml --repo local/my-project --format junit
+node apps/cli/dist/index.js tests ingest junit.xml --repo local/my-project --format junit --run-id ci-12345
 node apps/cli/dist/index.js tests history --repo local/my-project --json
+node apps/cli/dist/index.js flare history --repo local/my-project --json
 ```
 
-Supported test report formats: `junit`, `pytest-json`, `jest-json`, and `go-json`. Report inputs are capped at 2 MiB. Historical flaky-test classification still needs repeated executions; one ingested run is not enough.
+Supported test report formats: `junit`, `pytest-json`, `jest-json`, and `go-json`. Report inputs are capped at 2 MiB and at most 50,000 test cases are persisted per report. Each test-case outcome is appended to the graph as a bounded TestRun record alongside the aggregate report record. Supply a stable external --run-id to distinguish identical report contents from separate CI executions; without it, identical report bytes are idempotently deduplicated. Reusing a run ID with different report content is rejected. orbit flare history analyses persisted outcomes across ingested runs using the default 8-sample / 3-flip gates; one run is never enough to label a test flaky. Failure-message redaction is pattern-based and best-effort, not a guarantee that all secrets are removed.
 
 ## Validation scope and limitations
 

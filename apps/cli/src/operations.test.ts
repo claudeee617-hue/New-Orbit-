@@ -7,6 +7,7 @@ import {
   runGraphSummary,
   runInit,
   runTestHistory,
+  runFlareHistory,
   ingestCiReport,
   ingestTestReport,
 } from './operations.js';
@@ -97,6 +98,145 @@ describe('Prompt 11 evidence ingestion', () => {
     const history = runTestHistory(database, 'local/sample', 10, 0);
     expect(history.runs).toHaveLength(1);
     expect(history.runs[0]?.attrs['failed']).toBe(1);
+  });
+
+  it('paginates aggregate test reports independently of their per-case graph records', async () => {
+    const { directory, database } = workspace();
+    runInit(database, 'local/sample');
+    const reportFile = join(directory, 'junit.xml');
+    const makeReport = (run: number) => {
+      const cases = Array.from(
+        { length: 40 },
+        (_, index) => `<testcase classname="api" name="case-${index}" time="0.01"/>`,
+      ).join('');
+      return `<testsuite name="unit-${run}">${cases}</testsuite>`;
+    };
+
+    writeFileSync(reportFile, makeReport(1));
+    await ingestTestReport(database, 'local/sample', reportFile, 'junit', 'page-run-1');
+    writeFileSync(reportFile, makeReport(2));
+    await ingestTestReport(database, 'local/sample', reportFile, 'junit', 'page-run-2');
+
+    const firstPage = runTestHistory(database, 'local/sample', 1, 0);
+    expect(firstPage.runs).toHaveLength(1);
+    expect(firstPage.page).toMatchObject({ limit: 1, offset: 0, hasMore: true, truncated: false });
+
+    const secondPage = runTestHistory(database, 'local/sample', 1, 1);
+    expect(secondPage.runs).toHaveLength(1);
+    expect(secondPage.page).toMatchObject({
+      limit: 1,
+      offset: 1,
+      hasMore: false,
+      truncated: false,
+    });
+    expect(secondPage.runs[0]?.attrs['runId']).toBe('page-run-2');
+  });
+
+  it('persists per-test outcomes and detects a flaky test across separate CLI ingestions', async () => {
+    const { directory, database } = workspace();
+    runInit(database, 'local/sample');
+    const reportFile = join(directory, 'junit.xml');
+    for (let index = 0; index < 8; index += 1) {
+      const failed = index % 2 === 1;
+      writeFileSync(
+        reportFile,
+        failed
+          ? '<testsuite name="unit"><testcase classname="api" name="flaky"><failure message="intermittent failure"/></testcase></testsuite>'
+          : '<testsuite name="unit"><testcase classname="api" name="flaky" time="0.1"/></testsuite>',
+      );
+      await ingestTestReport(database, 'local/sample', reportFile, 'junit', `ci-run-${index}`);
+    }
+
+    const reportHistory = runTestHistory(database, 'local/sample', 20, 0);
+    expect(reportHistory.runs).toHaveLength(8);
+    const flare = runFlareHistory(database, 'local/sample');
+    expect(flare).toMatchObject({
+      repository: 'local/sample',
+      testExecutions: 8,
+      distinctRuns: 8,
+      tests: 1,
+      truncated: false,
+    });
+    expect(flare.summaries[0]).toMatchObject({
+      testId: 'api::flaky',
+      samples: 8,
+      passed: 4,
+      failed: 4,
+      flipCount: 7,
+      classification: 'suspected-flaky',
+    });
+    expect(flare.limitations.join(' ').toLowerCase()).toContain(
+      'legacy aggregate-only testrun records',
+    );
+  });
+
+  it('deduplicates identical reports unless a distinct external run ID is supplied', async () => {
+    const { directory, database } = workspace();
+    runInit(database, 'local/sample');
+    const reportFile = join(directory, 'junit.xml');
+    writeFileSync(
+      reportFile,
+      '<testsuite name="unit"><testcase classname="api" name="stable"/></testsuite>',
+    );
+    const first = await ingestTestReport(database, 'local/sample', reportFile, 'junit');
+    const second = await ingestTestReport(database, 'local/sample', reportFile, 'junit');
+    expect(first.runId).toBe(second.runId);
+    expect(first.idempotent).toBe(false);
+    expect(second.idempotent).toBe(true);
+    const history = runFlareHistory(database, 'local/sample');
+    expect(history.testExecutions).toBe(1);
+    expect(history.distinctRuns).toBe(1);
+    expect(history.summaries[0]?.classification).toBe('insufficient-data');
+  });
+
+  it('rejects reusing an external run ID for different report content', async () => {
+    const { directory, database } = workspace();
+    runInit(database, 'local/sample');
+    const reportFile = join(directory, 'junit.xml');
+    writeFileSync(
+      reportFile,
+      '<testsuite name="unit"><testcase classname="api" name="same"/></testsuite>',
+    );
+    await ingestTestReport(database, 'local/sample', reportFile, 'junit', 'ci-duplicate');
+    writeFileSync(
+      reportFile,
+      '<testsuite name="unit"><testcase classname="api" name="same"><failure message="changed"/></testcase></testsuite>',
+    );
+    await expect(
+      ingestTestReport(database, 'local/sample', reportFile, 'junit', 'ci-duplicate'),
+    ).rejects.toThrow(/already exists with different report content/);
+    expect(runFlareHistory(database, 'local/sample').testExecutions).toBe(1);
+  });
+
+  it('marks an empty test report PARTIAL instead of treating it as a pass', async () => {
+    const { directory, database } = workspace();
+    runInit(database, 'local/sample');
+    const reportFile = join(directory, 'empty.xml');
+    writeFileSync(reportFile, '<testsuite name="empty"></testsuite>');
+    const result = await ingestTestReport(database, 'local/sample', reportFile, 'junit');
+    expect(result.summary.total).toBe(0);
+    expect(result.evidence.status).toBe('PARTIAL');
+    expect(result.evidence.limitations).toContain(
+      'The report contained no test cases; no test execution was measured.',
+    );
+    expect(runFlareHistory(database, 'local/sample').testExecutions).toBe(0);
+  });
+
+  it('redacts common credentials from persisted failure messages', async () => {
+    const { directory, database } = workspace();
+    runInit(database, 'local/sample');
+    const reportFile = join(directory, 'junit.xml');
+    writeFileSync(
+      reportFile,
+      '<testsuite name="unit"><testcase classname="api" name="failure"><failure message="Authorization: Bearer abcdefghijklmnopqrstuvwxyz API_KEY=super-secret-value"/></testcase></testsuite>',
+    );
+    await ingestTestReport(database, 'local/sample', reportFile, 'junit', 'ci-redaction-1');
+    const history = runFlareHistory(database, 'local/sample', { minSamples: 2 });
+    const serialized = JSON.stringify(history);
+    expect(serialized).not.toContain('abcdefghijklmnopqrstuvwxyz');
+    expect(serialized).not.toContain('super-secret-value');
+    expect(serialized.toLowerCase()).toContain('[redacted]');
+    expect(history.limitations.join(' ')).toContain('best-effort');
   });
 
   it('rejects unsupported test-report formats', async () => {
