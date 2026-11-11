@@ -61,6 +61,19 @@ describe('local ORBIT API client', () => {
     );
   });
 
+  it('requests bounded FLARE history using the selected sample and flip thresholds', async () => {
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(jsonResponse({ repository: {}, history: { testExecutions: 0 } }));
+    const client = createOrbitApiClient({ token: TOKEN, fetchImpl });
+
+    await client.getFlareHistory('repo/a', { minSamples: 9, minFlips: 4 });
+
+    expect(String(fetchImpl.mock.calls[0]?.[0])).toBe(
+      '/api/v1/repositories/repo%2Fa/reports/flare/history?minSamples=9&minFlips=4',
+    );
+  });
+
   it('loads passport history using encoded repository and passport identifiers', async () => {
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ history: [] }));
     const client = createOrbitApiClient({ token: TOKEN, fetchImpl });

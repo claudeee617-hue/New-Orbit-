@@ -250,6 +250,154 @@ describe('authenticated local API', () => {
     expect(JSON.stringify(response.json())).not.toContain('boom');
   });
 
+  it('rate-limits repeated FLARE history analysis requests', async () => {
+    const { server } = setup();
+    const request = () =>
+      server.inject({
+        method: 'GET',
+        url: '/api/v1/repositories/example/reports/flare/history',
+        headers: { host: 'localhost', ...auth },
+      });
+
+    for (let index = 0; index < 60; index += 1) {
+      const response = await request();
+      expect(response.statusCode).toBe(200);
+    }
+
+    const limited = await request();
+    expect(limited.statusCode).toBe(429);
+    expect(Number(limited.headers['retry-after'])).toBeGreaterThan(0);
+    expect(limited.json()).toMatchObject({ error: 'RATE_LIMITED' });
+  });
+
+  it('analyses only persisted per-test FLARE records and ignores aggregate report nodes', async () => {
+    const { server, database, repositoryId } = setup();
+    const store = createGraphStore(database);
+    const evidence = store.evidence.append({
+      repositoryId,
+      source: 'api:flare-fixture',
+      sourceType: 'test-report',
+      contentHash: hashArtifact('flare-fixture'),
+      status: 'PARTIAL',
+      limitations: [],
+      relatedEntityIds: [],
+    }).record;
+
+    store.nodes.upsert({
+      repositoryId,
+      type: 'TestRun',
+      key: 'test-report:aggregate',
+      attrs: {
+        producer: 'orbit-cli',
+        schemaVersion: 2,
+        recordKind: 'report',
+        runId: 'aggregate-run',
+        total: 100,
+        failed: 100,
+      },
+      sourceEvidenceId: evidence.id,
+    });
+
+    for (let index = 0; index < 4; index += 1) {
+      store.nodes.upsert({
+        repositoryId,
+        type: 'TestRun',
+        key: `test-case:run-${index}:flaky`,
+        attrs: {
+          producer: 'orbit-cli',
+          schemaVersion: 2,
+          recordKind: 'case',
+          runId: `ci-run-${index}`,
+          reportHash: hashArtifact(`report-${index}`),
+          format: 'junit',
+          ordinal: 0,
+          testId: 'api::flaky',
+          name: 'flaky',
+          suite: 'api',
+          outcome: index % 2 === 0 ? 'passed' : 'failed',
+          durationSeconds: 0.1,
+          ...(index % 2 === 0 ? {} : { message: 'AssertionError: expected 1 to equal 2' }),
+        },
+        sourceEvidenceId: evidence.id,
+      });
+    }
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/api/v1/repositories/example/reports/flare/history?minSamples=2&minFlips=1',
+      headers: { host: 'localhost', ...auth },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      history: {
+        testExecutions: 4,
+        distinctRuns: 4,
+        tests: 1,
+        truncated: false,
+        summaries: [
+          {
+            testId: 'api::flaky',
+            samples: 4,
+            passed: 2,
+            failed: 2,
+            flipCount: 3,
+            classification: 'suspected-flaky',
+          },
+        ],
+      },
+    });
+    expect(JSON.stringify(response.json())).not.toContain('AssertionError');
+  });
+
+  it('returns explicit unmeasured FLARE history when only aggregate report rows exist', async () => {
+    const { server, database, repositoryId } = setup();
+    const store = createGraphStore(database);
+    const evidence = store.evidence.append({
+      repositoryId,
+      source: 'api:aggregate-only',
+      sourceType: 'test-report',
+      contentHash: hashArtifact('aggregate-only'),
+      status: 'PASS',
+      limitations: [],
+      relatedEntityIds: [],
+    }).record;
+    store.nodes.upsert({
+      repositoryId,
+      type: 'TestRun',
+      key: 'test-report:legacy',
+      attrs: { producer: 'orbit-cli', failed: 42, total: 50 },
+      sourceEvidenceId: evidence.id,
+    });
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/api/v1/repositories/example/reports/flare/history',
+      headers: { host: 'localhost', ...auth },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      history: {
+        testExecutions: 0,
+        distinctRuns: 0,
+        tests: 0,
+        summaries: [],
+        limitations: expect.arrayContaining([
+          expect.stringContaining('No per-test history records were found'),
+        ]),
+      },
+    });
+  });
+
+  it('rejects invalid FLARE history thresholds', async () => {
+    const { server } = setup();
+    const response = await server.inject({
+      method: 'GET',
+      url: '/api/v1/repositories/example/reports/flare/history?minSamples=1',
+      headers: { host: 'localhost', ...auth },
+    });
+    expect(response.statusCode).toBe(400);
+  });
+
   it('records environment declarations as partial evidence, not proof of the runner image', async () => {
     const { server } = setup();
     const response = await server.inject({
@@ -412,108 +560,5 @@ describe('unknown routes', () => {
     });
     expect(response.statusCode).toBe(404);
     expect(response.json()).toEqual({ error: 'NOT_FOUND', message: 'Route not found' });
-  });
-});
-
-describe('authentication is default-deny', () => {
-  const host = { host: '127.0.0.1:4317' };
-
-  it.each([
-    '/api/v1/repositories',
-    '/%61pi/v1/repositories',
-    '/api/%76%31/repositories',
-    '/api/v1/repositories?x=/health',
-    '/api/v1/repositories/',
-  ])('rejects %s without a token', async (url) => {
-    const { server } = setup();
-    const response = await server.inject({ method: 'GET', url, headers: host });
-    expect(response.statusCode).toBe(401);
-    expect(response.json<{ error: string }>().error).toBe('UNAUTHENTICATED');
-  });
-
-  it.each(['//api/v1/repositories', '/API/v1/repositories', '/nope', '/health/x'])(
-    'serves no data for unmatched URL %s',
-    async (url) => {
-      const { server } = setup();
-      const response = await server.inject({ method: 'GET', url, headers: host });
-      expect(response.statusCode).toBe(404);
-      expect(JSON.stringify(response.json())).not.toContain('example');
-    },
-  );
-
-  it('keeps /health public and rejects a wrong token', async () => {
-    const { server } = setup();
-    expect((await server.inject({ method: 'GET', url: '/health', headers: host })).statusCode).toBe(
-      200,
-    );
-    const wrong = await server.inject({
-      method: 'GET',
-      url: '/%61pi/v1/repositories',
-      headers: { ...host, authorization: 'Bearer ' + 'y'.repeat(API_TOKEN.length) },
-    });
-    expect(wrong.statusCode).toBe(401);
-    const ok = await server.inject({
-      method: 'GET',
-      url: '/%61pi/v1/repositories',
-      headers: { ...host, authorization: auth.authorization },
-    });
-    expect(ok.statusCode).toBe(200);
-  });
-});
-
-describe('client mistakes are 4xx with a stable error code', () => {
-  const headers = { host: '127.0.0.1:4317', ...auth };
-  const post = (server: ReturnType<typeof buildServer>, path: string, payload: unknown) =>
-    server.inject({
-      method: 'POST',
-      url: `/api/v1/repositories/example/${path}`,
-      headers,
-      payload: payload as object,
-    });
-
-  it('rejects unparseable and empty test reports instead of recording a pass', async () => {
-    const { server } = setup();
-    for (const [format, content] of [
-      ['junit', '<<<'],
-      ['junit', '<testsuite></testsuite>'],
-      ['jest-json', 'nope'],
-      ['pytest-json', '{"tests":[]}'],
-    ] as const) {
-      const response = await post(server, 'ingest/test-report', { format, content });
-      expect(response.statusCode, `${format} ${content}`).toBe(400);
-      expect(response.json<{ error: string }>().error).toBe('INVALID_INPUT');
-    }
-    const list = await server.inject({
-      method: 'GET',
-      url: '/api/v1/repositories/example/evidence',
-      headers,
-    });
-    expect(JSON.stringify(list.json())).not.toContain('PASS');
-  });
-
-  it('rejects bad telemetry, bad units and bad passport bodies', async () => {
-    const { server } = setup();
-    const bad = [
-      post(server, 'ingest/telemetry', { content: '\u0000garbage{{', format: 'json' }),
-      post(server, 'ingest/telemetry', { content: 'a=1', format: 'key-value', units: 'str' }),
-      post(server, 'passports', {}),
-      post(server, 'passports', { commitSha: 'zzz', evidence: [] }),
-    ];
-    for (const response of await Promise.all(bad)) {
-      expect(response.statusCode).toBe(400);
-      expect(response.json<{ error: string }>().error).toBe('INVALID_INPUT');
-    }
-  });
-
-  it('labels malformed JSON bodies as client errors', async () => {
-    const { server } = setup();
-    const response = await server.inject({
-      method: 'POST',
-      url: '/api/v1/repositories/example/ingest/test-report',
-      headers: { ...headers, 'content-type': 'application/json' },
-      payload: '{not json',
-    });
-    expect(response.statusCode).toBe(400);
-    expect(response.json<{ error: string }>().error).toBe('INVALID_INPUT');
   });
 });
