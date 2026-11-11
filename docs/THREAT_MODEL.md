@@ -28,9 +28,9 @@ ORBIT is not a security certification and does not guarantee correctness of the 
 
 | # | Threat | Mitigation | Test |
 |---|---|---|---|
-| T1 | Path traversal via file paths in reports/diffs (`../../etc/passwd`, absolute paths, symlinks) | Central path resolver confined to registered roots; reject escapes; do not follow symlinks outside root | Security suite |
-| T2 | XML external entity / entity expansion in Cobertura/JUnit | Parser with DTD and external entities disabled; entity-expansion limits | Malicious XML fixtures |
-| T3 | Decompression/size bombs, huge reports | File-size, depth, element and line limits with clear errors | Oversized fixtures |
+| T1 | Path traversal via file paths in reports/diffs (`../../etc/passwd`, absolute paths, symlinks) | Central path resolver confined to registered roots; reject escapes; do not follow symlinks outside root | `packages/atlas/src/engines.test.ts` (diff + coverage labels); `packages/atlas/src/scan.test.ts` (symlink escape) |
+| T2 | XML external entity / entity expansion in Cobertura/JUnit | Parser with DTD and external entities disabled; bounded input size | `packages/atlas/src/engines.test.ts` malicious JUnit/Cobertura fixtures |
+| T3 | Decompression/size bombs, huge reports | File-size, depth, element and line limits with clear errors | `packages/atlas/src/engines.test.ts` 10 MiB boundaries; CLI/JSON adapters have separate report limits |
 | T4 | Malicious repo runs code during analysis | No automatic execution; replay requires approval and isolation | Unit tests asserting no spawn in analysis paths |
 | T5 | GitHub Action abuse via forked PRs / `pull_request_target` | Use `pull_request`; analyse artifacts and diffs only; minimal permissions; never check out and run untrusted code with secrets | Workflow lint test |
 | T6 | Secret leakage in reports (env values, tokens in logs) | Store env names only; redaction on ingest and export; secret-pattern scanner | Redaction tests |

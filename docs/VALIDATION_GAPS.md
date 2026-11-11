@@ -40,7 +40,7 @@
 ## Prompt 15 — Security
 
 - Independent review of API Host/Origin/CSRF/DNS-rebinding behavior.
-- Path traversal, symlink escape, XML entity, decompression and parser resource tests.
+- Extend the new unit regressions (unified-diff traversal, absolute paths, LCOV labels, Cobertura/JUnit DTD/entity and 10 MiB boundaries) with property-based fuzzing, API report-ingestion path tests and cross-platform path cases.
 - Secret redaction and report export review.
 - MCP prompt-injection boundary and output caps.
 - Local API token file permissions and Windows ACL review.

@@ -60,6 +60,68 @@ describe('WITNESS changed-line verification', () => {
   });
 });
 
+describe('untrusted parser input boundaries', () => {
+  it('rejects path traversal and absolute paths in unified diffs', () => {
+    const traversal = [
+      'diff --git a/safe.ts b/safe.ts',
+      '--- a/safe.ts',
+      '+++ b/../../etc/passwd',
+      '@@ -0,0 +1 @@',
+      '+leak',
+    ].join('\n');
+    const absolute = [
+      'diff --git a/safe.ts b/safe.ts',
+      '--- a/safe.ts',
+      '+++ b/C:/Windows/win.ini',
+      '@@ -0,0 +1 @@',
+      '+leak',
+    ].join('\n');
+    expect(() => parseUnifiedDiff(traversal)).toThrow(/Unsafe repository path/);
+    expect(() => parseUnifiedDiff(absolute)).toThrow(/repository-relative path/);
+  });
+
+  it('keeps untrusted coverage paths as inert repository labels', () => {
+    const lcov = parseLcov(
+      [
+        'SF:../../etc/passwd',
+        'DA:1,1',
+        'end_of_record',
+        String.raw`SF:C:\Windows\win.ini`,
+        'DA:2,1',
+        'end_of_record',
+      ].join('\n'),
+    );
+    expect(lcov.map((item) => item.path)).toEqual(['passwd', 'Windows/win.ini']);
+    expect(lcov.some((item) => item.path.startsWith('/') || item.path.includes('..'))).toBe(false);
+
+    const cobertura = parseCobertura(
+      '<coverage><packages><package><classes><class filename="../../etc/passwd"><lines><line number="1" hits="1"/></lines></class><class filename="src/safe.ts"><lines><line number="2" hits="1"/></lines></class></classes></package></packages></coverage>',
+    );
+    expect(cobertura.map((item) => item.path)).toEqual(['src/safe.ts']);
+  });
+
+  it('rejects oversized diff and XML reports before parsing', () => {
+    const oversized = 'x'.repeat(10 * 1024 * 1024 + 1);
+    expect(() => parseUnifiedDiff(oversized)).toThrow(/10 MiB parser limit/);
+    expect(() => parseCobertura(oversized)).toThrow(/10 MiB parser limit/);
+    expect(() => parseJunitXml(oversized)).toThrow(/10 MiB parser limit/);
+  });
+
+  it('rejects external entities in JUnit and Cobertura XML', () => {
+    const external =
+      '<!DOCTYPE x [<!ENTITY secret SYSTEM "file:///etc/passwd">]><testsuite><testcase name="x">&secret;</testcase></testsuite>';
+    expect(() => parseJunitXml(external)).toThrow(/DTD\/entity/);
+    expect(() =>
+      parseCobertura(
+        external.replace(
+          '<testsuite><testcase name="x">&secret;</testcase></testsuite>',
+          '<coverage>&secret;</coverage>',
+        ),
+      ),
+    ).toThrow(/DTD or entity/);
+  });
+});
+
 describe('FLARE test history', () => {
   it('parses JUnit outcomes and durations', () => {
     const xml =
