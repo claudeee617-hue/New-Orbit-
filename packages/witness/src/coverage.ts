@@ -23,10 +23,17 @@ export interface CoverageParse {
   problems: string[];
 }
 
+/** Linear-time replacement for `.replace(/\/+$/, '')`, which CodeQL flags as polynomial. */
+function trimTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value[end - 1] === '/') end -= 1;
+  return value.slice(0, end);
+}
+
 export function normalizeReportPath(path: string, rootPath?: string): string {
   let p = path.replace(/\\/g, '/').trim();
   if (rootPath) {
-    const root = rootPath.replace(/\\/g, '/').replace(/\/+$/, '');
+    const root = trimTrailingSlashes(rootPath.replace(/\\/g, '/'));
     if (p.toLowerCase().startsWith(`${root.toLowerCase()}/`)) p = p.slice(root.length + 1);
   }
   while (p.startsWith('./')) p = p.slice(2);
@@ -114,7 +121,7 @@ export function parseCobertura(text: string, rootPath?: string): CoverageParse {
       const keys = [normalizeReportPath(filename, rootPath)];
       for (const s of sources) {
         const joined = normalizeReportPath(
-          `${s.replace(/\\/g, '/').replace(/\/+$/, '')}/${filename}`,
+          `${trimTrailingSlashes(s.replace(/\\/g, '/'))}/${filename}`,
           rootPath,
         );
         if (!keys.includes(joined)) keys.push(joined);

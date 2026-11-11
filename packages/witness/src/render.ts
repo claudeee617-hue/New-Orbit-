@@ -5,7 +5,8 @@ export function renderJson(report: VerificationReport): string {
   return `${JSON.stringify(report, null, 2)}\n`;
 }
 
-const cell = (s: string): string => s.replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
+const cell = (s: string): string =>
+  s.replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
 const short = (sha: string): string => sha.slice(0, 10);
 
 export function renderMarkdown(r: VerificationReport): string {

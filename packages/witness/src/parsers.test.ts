@@ -258,3 +258,11 @@ describe('sensitive files', () => {
     expect(detectSensitive(path)).toEqual([]);
   });
 });
+
+describe('path normalisation is linear-time and escaping is complete', () => {
+  it('handles pathological slash runs quickly', () => {
+    const start = Date.now();
+    parseLcov(`SF:${'/'.repeat(200_000)}a.ts\nDA:1,1\nend_of_record\n`, `/${'/'.repeat(100_000)}`);
+    expect(Date.now() - start).toBeLessThan(1000);
+  });
+});

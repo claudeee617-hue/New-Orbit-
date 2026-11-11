@@ -185,7 +185,7 @@ Created: root config (pnpm workspace, Turborepo, strict tsconfig, ESLint 10 flat
 | -------------------- | ---------------------------------------- |
 | `pnpm run build`     | 8/8 tasks pass                           |
 | `pnpm run typecheck` | 13/13 tasks pass                         |
-| `pnpm run test`      | 499 tests pass (shared 36, core 66, database 45, graph 14, atlas 164, mcp 5, witness 62, api 39, cli 41, web 27) |
+| `pnpm run test`      | 500 tests pass (shared 36, core 66, database 45, graph 14, atlas 164, mcp 5, witness 63, api 39, cli 41, web 27) |
 | `pnpm run lint`      | clean                                    |
 | `pnpm run format:check` | clean (Markdown excluded)             |
 
