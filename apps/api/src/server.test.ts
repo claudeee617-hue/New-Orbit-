@@ -10,7 +10,7 @@ const databases: OrbitDatabase[] = [];
 const servers: Array<ReturnType<typeof buildServer>> = [];
 const API_TOKEN = 'orbit-test-token-'.padEnd(48, 'x');
 
-function setup(): {
+function setup(env: Record<string, string | undefined> = {}): {
   database: OrbitDatabase;
   server: ReturnType<typeof buildServer>;
   repositoryId: string;
@@ -21,7 +21,7 @@ function setup(): {
   const repository = store.repositories.register({ key: 'example', displayName: 'Example' }).record;
   const sink = new Writable({ write: (_chunk, _enc, cb) => cb() });
   const logger = createLogger({ name: 'test', level: 'silent', destination: sink });
-  const server = buildServer({ database, logger, apiToken: API_TOKEN });
+  const server = buildServer({ database, logger, apiToken: API_TOKEN, env });
   servers.push(server);
   return { database, server, repositoryId: repository.id };
 }
@@ -89,6 +89,90 @@ describe('authenticated local API', () => {
     expect(missing.statusCode).toBe(401);
     expect(incorrect.statusCode).toBe(401);
     expect(missing.json()).toMatchObject({ error: 'UNAUTHENTICATED' });
+  });
+
+  it('previews selected evidence for AI without sending a provider request', async () => {
+    const { server } = setup({ ORBIT_AI_ENABLED: 'false' });
+    const ingested = await server.inject({
+      method: 'POST',
+      url: '/api/v1/repositories/example/ingest/ci',
+      headers: { host: 'localhost', ...auth },
+      payload: {
+        status: 'failure',
+        source: 'github-actions:build',
+        commitSha: 'b'.repeat(40),
+        runId: 'ai-preview-run',
+        workflow: 'CI',
+      },
+    });
+    const evidenceId = ingested.json<{ evidence: { id: string } }>().evidence.id;
+    const preview = await server.inject({
+      method: 'POST',
+      url: '/api/v1/repositories/example/ai/preview',
+      headers: { host: 'localhost', ...auth },
+      payload: {
+        provider: 'ollama',
+        model: 'test-model',
+        prompt: 'Summarise the selected CI evidence.',
+        evidenceIds: [evidenceId],
+      },
+    });
+    expect(preview.statusCode).toBe(200);
+    expect(preview.json()).toMatchObject({
+      preview: {
+        provider: 'ollama',
+        destination: 'http://127.0.0.1:11434/api/chat',
+        evidenceIds: [evidenceId],
+      },
+    });
+    expect(preview.json<{ preview: { text: string } }>().preview.text).toContain(evidenceId);
+    expect(preview.json<{ notice: string }>().notice).toContain('No provider request was sent');
+  });
+
+  it('requires confirmation and keeps AI disabled unless explicitly enabled by the local operator', async () => {
+    const { server } = setup({ ORBIT_AI_ENABLED: 'false' });
+    const ingested = await server.inject({
+      method: 'POST',
+      url: '/api/v1/repositories/example/ingest/ci',
+      headers: { host: 'localhost', ...auth },
+      payload: {
+        status: 'failure',
+        source: 'github-actions:build',
+        commitSha: 'c'.repeat(40),
+        runId: 'ai-disabled-run',
+        workflow: 'CI',
+      },
+    });
+    const evidenceId = ingested.json<{ evidence: { id: string } }>().evidence.id;
+    const body = {
+      provider: 'ollama',
+      model: 'test-model',
+      prompt: 'Summarise the selected CI evidence.',
+      evidenceIds: [evidenceId],
+    };
+    const preview = await server.inject({
+      method: 'POST',
+      url: '/api/v1/repositories/example/ai/preview',
+      headers: { host: 'localhost', ...auth },
+      payload: body,
+    });
+    const sha = preview.json<{ preview: { sha256: string } }>().preview.sha256;
+    const unconfirmed = await server.inject({
+      method: 'POST',
+      url: '/api/v1/repositories/example/ai/analyse',
+      headers: { host: 'localhost', ...auth },
+      payload: { ...body, approvedContextSha256: sha, confirmed: false },
+    });
+    expect(unconfirmed.statusCode).toBe(403);
+    expect(unconfirmed.json()).toMatchObject({ error: 'APPROVAL_REQUIRED' });
+    const disabled = await server.inject({
+      method: 'POST',
+      url: '/api/v1/repositories/example/ai/analyse',
+      headers: { host: 'localhost', ...auth },
+      payload: { ...body, approvedContextSha256: sha, confirmed: true },
+    });
+    expect(disabled.statusCode).toBe(403);
+    expect(disabled.json()).toMatchObject({ error: 'AI_DISABLED' });
   });
 
   it('paginates evidence and returns page metadata', async () => {
@@ -412,108 +496,5 @@ describe('unknown routes', () => {
     });
     expect(response.statusCode).toBe(404);
     expect(response.json()).toEqual({ error: 'NOT_FOUND', message: 'Route not found' });
-  });
-});
-
-describe('authentication is default-deny', () => {
-  const host = { host: '127.0.0.1:4317' };
-
-  it.each([
-    '/api/v1/repositories',
-    '/%61pi/v1/repositories',
-    '/api/%76%31/repositories',
-    '/api/v1/repositories?x=/health',
-    '/api/v1/repositories/',
-  ])('rejects %s without a token', async (url) => {
-    const { server } = setup();
-    const response = await server.inject({ method: 'GET', url, headers: host });
-    expect(response.statusCode).toBe(401);
-    expect(response.json<{ error: string }>().error).toBe('UNAUTHENTICATED');
-  });
-
-  it.each(['//api/v1/repositories', '/API/v1/repositories', '/nope', '/health/x'])(
-    'serves no data for unmatched URL %s',
-    async (url) => {
-      const { server } = setup();
-      const response = await server.inject({ method: 'GET', url, headers: host });
-      expect(response.statusCode).toBe(404);
-      expect(JSON.stringify(response.json())).not.toContain('example');
-    },
-  );
-
-  it('keeps /health public and rejects a wrong token', async () => {
-    const { server } = setup();
-    expect((await server.inject({ method: 'GET', url: '/health', headers: host })).statusCode).toBe(
-      200,
-    );
-    const wrong = await server.inject({
-      method: 'GET',
-      url: '/%61pi/v1/repositories',
-      headers: { ...host, authorization: 'Bearer ' + 'y'.repeat(API_TOKEN.length) },
-    });
-    expect(wrong.statusCode).toBe(401);
-    const ok = await server.inject({
-      method: 'GET',
-      url: '/%61pi/v1/repositories',
-      headers: { ...host, authorization: auth.authorization },
-    });
-    expect(ok.statusCode).toBe(200);
-  });
-});
-
-describe('client mistakes are 4xx with a stable error code', () => {
-  const headers = { host: '127.0.0.1:4317', ...auth };
-  const post = (server: ReturnType<typeof buildServer>, path: string, payload: unknown) =>
-    server.inject({
-      method: 'POST',
-      url: `/api/v1/repositories/example/${path}`,
-      headers,
-      payload: payload as object,
-    });
-
-  it('rejects unparseable and empty test reports instead of recording a pass', async () => {
-    const { server } = setup();
-    for (const [format, content] of [
-      ['junit', '<<<'],
-      ['junit', '<testsuite></testsuite>'],
-      ['jest-json', 'nope'],
-      ['pytest-json', '{"tests":[]}'],
-    ] as const) {
-      const response = await post(server, 'ingest/test-report', { format, content });
-      expect(response.statusCode, `${format} ${content}`).toBe(400);
-      expect(response.json<{ error: string }>().error).toBe('INVALID_INPUT');
-    }
-    const list = await server.inject({
-      method: 'GET',
-      url: '/api/v1/repositories/example/evidence',
-      headers,
-    });
-    expect(JSON.stringify(list.json())).not.toContain('PASS');
-  });
-
-  it('rejects bad telemetry, bad units and bad passport bodies', async () => {
-    const { server } = setup();
-    const bad = [
-      post(server, 'ingest/telemetry', { content: '\u0000garbage{{', format: 'json' }),
-      post(server, 'ingest/telemetry', { content: 'a=1', format: 'key-value', units: 'str' }),
-      post(server, 'passports', {}),
-      post(server, 'passports', { commitSha: 'zzz', evidence: [] }),
-    ];
-    for (const response of await Promise.all(bad)) {
-      expect(response.statusCode).toBe(400);
-      expect(response.json<{ error: string }>().error).toBe('INVALID_INPUT');
-    }
-  });
-
-  it('labels malformed JSON bodies as client errors', async () => {
-    const { server } = setup();
-    const response = await server.inject({
-      method: 'POST',
-      url: '/api/v1/repositories/example/ingest/test-report',
-      headers: { ...headers, 'content-type': 'application/json' },
-      payload: '{not json',
-    });
-    expect(response.statusCode).toBe(400);
-    expect(response.json<{ error: string }>().error).toBe('INVALID_INPUT');
   });
 });

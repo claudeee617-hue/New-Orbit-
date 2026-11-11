@@ -40,12 +40,42 @@ function apiPayload(pathname, options = {}) {
     };
   }
   if (pathname.endsWith('/evidence')) {
+    const evidence = options.aiEvidence ?? [];
     return {
       repository,
-      evidence: [],
-      returned: 0,
+      evidence,
+      returned: evidence.length,
       limit: 100,
       page: { limit: 100, offset: 0, hasMore: false },
+    };
+  }
+  if (pathname.endsWith('/ai/preview')) {
+    return {
+      preview: {
+        provider: 'ollama',
+        model: 'test-model',
+        destination: 'http://127.0.0.1:11434/api/chat',
+        text: 'Previewed evidence metadata only.',
+        sha256: 'a'.repeat(64),
+        bytes: 128,
+        evidenceIds: ['evidence-1'],
+        redactions: 0,
+        limitations: [],
+      },
+      notice: 'No provider request was sent. Review the exact destination and context.',
+    };
+  }
+  if (pathname.endsWith('/ai/analyse')) {
+    return {
+      analysis: {
+        provider: 'ollama',
+        model: 'test-model',
+        text: 'Mock advisory analysis for the approved test context.',
+        contextSha256: 'a'.repeat(64),
+        evidenceIds: ['evidence-1'],
+        citationStatus: 'CITED',
+        limitations: ['Mocked browser test response.'],
+      },
     };
   }
   if (pathname.endsWith('/passports')) {
@@ -68,6 +98,7 @@ async function mockApi(page, options = {}) {
     const url = new URL(request.url());
     seen.push({
       pathname: url.pathname,
+      method: request.method(),
       authorization: request.headers().authorization,
     });
 
@@ -158,6 +189,57 @@ test('switches repositories and navigates dashboard and engine workbench views',
     'aria-pressed',
     'true',
   );
+});
+
+test('AI preview stays local and requires explicit approval before analysis', async ({ page }) => {
+  const seen = await mockApi(page, {
+    aiEvidence: [
+      {
+        id: 'evidence-1',
+        source: 'github-actions:smoke',
+        sourceType: 'ci',
+        status: 'PASS',
+      },
+    ],
+  });
+  const externalRequests = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (!['127.0.0.1', 'localhost'].includes(url.hostname)) {
+      externalRequests.push(url.hostname);
+    }
+  });
+
+  await page.goto('/');
+  await connect(page);
+  await page
+    .getByRole('navigation', { name: 'Engineering dashboard views' })
+    .getByRole('button', { name: 'AI Analysis', exact: true })
+    .click();
+
+  await page.getByLabel('Model identifier').fill('test-model');
+  await page.getByRole('checkbox').first().check();
+  await page.getByRole('button', { name: 'Preview exact context' }).click();
+
+  await expect(page.getByText('Exact provider-bound preview')).toBeVisible();
+  await expect(
+    page.getByText('No provider request was sent. Review the exact destination and context.'),
+  ).toBeVisible();
+  expect(
+    seen.some((request) => request.pathname.endsWith('/ai/preview') && request.method === 'POST'),
+  ).toBe(true);
+  expect(seen.filter((request) => request.pathname.endsWith('/ai/analyse'))).toHaveLength(0);
+  expect(externalRequests).toEqual([]);
+
+  const approval = page.getByRole('checkbox').nth(1);
+  await approval.check();
+  const send = page.getByRole('button', { name: 'Send approved context to provider' });
+  await expect(send).toBeEnabled();
+  await send.click();
+
+  await expect(page.getByRole('heading', { name: 'Advisory analysis' })).toBeVisible();
+  expect(seen.filter((request) => request.pathname.endsWith('/ai/analyse'))).toHaveLength(1);
+  expect(externalRequests).toEqual([]);
 });
 
 test('shows a useful API failure and an honest empty-workspace state', async ({ page }) => {

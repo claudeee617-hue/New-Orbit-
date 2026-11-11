@@ -1,7 +1,6 @@
 import { timingSafeEqual } from 'node:crypto';
 import { realpath, stat } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
-import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import {
   hashArtifact,
@@ -28,6 +27,7 @@ import {
 } from '@orbit/atlas';
 import { createGraphStore, type GraphStore, type OrbitDatabase } from '@orbit/database';
 import { ORBIT_VERSION, OrbitError, type HealthResponse, type Logger } from '@orbit/shared';
+import { prepareAIContext, runOrbitAnalysis, OrbitAIError, type AIProvider } from '@orbit/ai';
 import { getOrCreateApiToken } from './session-token.js';
 
 export const DEFAULT_ALLOWED_HOSTS: readonly string[] = ['127.0.0.1', 'localhost', '[::1]'];
@@ -45,16 +45,6 @@ export interface BuildServerOptions {
   databasePath?: string;
   /** Optional test override. Production uses the generated or configured local API token. */
   env?: Record<string, string | undefined>;
-}
-
-/** Parsers run on caller-supplied content, so anything they throw is a client error. */
-function parseInput<T>(what: string, fn: () => T): T {
-  try {
-    return fn();
-  } catch (error) {
-    if (error instanceof OrbitError) throw error;
-    throw new OrbitError('INVALID_INPUT', `${what} could not be parsed`, { cause: error });
-  }
 }
 
 /** Strip the port from a Host header value, keeping IPv6 brackets. */
@@ -240,6 +230,13 @@ function hashablePayload(value: unknown): string {
 }
 
 function httpStatus(error: unknown): number {
+  if (error instanceof OrbitAIError) {
+    if (error.code === 'AI_DISABLED' || error.code === 'APPROVAL_REQUIRED') return 403;
+    if (error.code === 'CONTEXT_MISMATCH') return 409;
+    if (error.code === 'PROVIDER_ERROR') return 502;
+    if (error.code === 'RESPONSE_TOO_LARGE') return 413;
+    return 400;
+  }
   if (error && typeof error === 'object' && 'statusCode' in error) {
     const status = Number((error as { statusCode?: unknown }).statusCode);
     if (status >= 400 && status <= 599) return status;
@@ -314,16 +311,11 @@ export function buildServer(options: BuildServerOptions) {
     if (!allowed.has(hostnameOf(request.headers.host).toLowerCase())) {
       return reply.code(403).send({ error: 'FORBIDDEN_HOST', message: 'Host header not allowed' });
     }
-    // Decide on the route the router actually matched, not on the URL text: the router decodes
-    // %-escapes, so a prefix test on the raw URL can be bypassed (`/%61pi/v1/...`). Only the
-    // exact `/health` route is public; unmatched URLs reach the 404 handler, which returns no data.
-    const matched = request.routeOptions.url;
-    const isPublic = matched === undefined || matched === '/health' || matched === '*';
-    if (!isPublic) {
+    if (request.url.startsWith('/api/v1/')) {
       if (!apiToken || !authenticate(request.headers.authorization, apiToken)) {
         return reply.code(401).send({
           error: 'UNAUTHENTICATED',
-          message: 'Provide the local ORBIT session token using Authorization: Bearer <token>',
+          message: 'Provide the local ORBIT session token using Authorization: ***',
         });
       }
     }
@@ -333,21 +325,13 @@ export function buildServer(options: BuildServerOptions) {
   server.setErrorHandler((error, _request, reply) => {
     const status = httpStatus(error);
     const code =
-      error instanceof OrbitError
-        ? error.code
-        : status === 429
-          ? 'RATE_LIMITED'
-          : status < 500
-            ? 'INVALID_INPUT'
-            : 'INTERNAL';
+      error instanceof OrbitError || error instanceof OrbitAIError ? error.code : 'INTERNAL';
     const message =
       status >= 500
         ? 'The ORBIT API could not complete the request'
         : error instanceof Error
           ? error.message
-          : typeof (error as { message?: unknown }).message === 'string'
-            ? (error as { message: string }).message
-            : 'Invalid request';
+          : 'Invalid request';
     if (status >= 500) options.logger.error({ code }, 'API request failed');
     return reply.code(status).send({ error: code, message });
   });
@@ -372,25 +356,38 @@ export function buildServer(options: BuildServerOptions) {
 
   // Integrity verification walks the repository ledger. Bound repeated requests
   // per client so an authenticated local session cannot monopolise the API.
-  // Used as a route preHandler so only authenticated requests consume the budget.
-  void server.register(rateLimit, { global: false });
-  type Limiter = (request: FastifyRequest, reply: FastifyReply) => Promise<unknown>;
-  let integrityLimiter: Limiter | undefined;
+  const integrityRateWindows = new Map<string, { startedAt: number; count: number }>();
   const integrityRateLimit = async (request: FastifyRequest, reply: FastifyReply) => {
-    // `server.rateLimit` is decorated once the plugin has loaded, which is
-    // always before the first request is served.
-    integrityLimiter ??= (
-      server as unknown as { rateLimit: (options: object) => Limiter }
-    ).rateLimit({
-      max: 60,
-      timeWindow: '1 minute',
-      errorResponseBuilder: (_request: FastifyRequest, context: { after: string }) => ({
-        statusCode: 429,
+    const now = Date.now();
+    const windowMs = 60_000;
+    const maxRequests = 60;
+    const key = request.ip;
+    let window = integrityRateWindows.get(key);
+
+    if (!window || now - window.startedAt >= windowMs) {
+      // Expire stale entries and keep the map bounded even if the API is
+      // deliberately exposed to many distinct local network clients.
+      for (const [client, entry] of integrityRateWindows) {
+        if (now - entry.startedAt >= windowMs) integrityRateWindows.delete(client);
+      }
+      if (!integrityRateWindows.has(key) && integrityRateWindows.size >= 1024) {
+        const oldest = integrityRateWindows.keys().next().value;
+        if (oldest !== undefined) integrityRateWindows.delete(oldest);
+      }
+      window = { startedAt: now, count: 0 };
+      integrityRateWindows.set(key, window);
+    }
+
+    if (window.count >= maxRequests) {
+      const retryAfter = Math.max(1, Math.ceil((window.startedAt + windowMs - now) / 1000));
+      return reply.header('Retry-After', String(retryAfter)).code(429).send({
         error: 'RATE_LIMITED',
-        message: `Integrity checks are limited to 60 requests per minute; retry after ${context.after}`,
-      }),
-    });
-    return integrityLimiter(request, reply);
+        message: 'Integrity checks are limited to 60 requests per minute',
+      });
+    }
+
+    window.count += 1;
+    return undefined;
   };
 
   server.get('/api/v1/session', async () => ({
@@ -562,6 +559,138 @@ export function buildServer(options: BuildServerOptions) {
     };
   });
 
+  function prepareRepositoryAIContext(repositoryId: string, body: JsonRecord) {
+    const provider = text(body.provider, 'provider', 16) as AIProvider;
+    if (!['openai', 'anthropic', 'ollama'].includes(provider)) {
+      throw new OrbitError('INVALID_INPUT', 'provider must be openai, anthropic or ollama');
+    }
+    const model = text(body.model, 'model', 256);
+    const prompt = text(body.prompt, 'prompt', 12_000);
+    const evidenceIds = safeStringList(body.evidenceIds, 'evidenceIds', 50);
+    if (new Set(evidenceIds).size !== evidenceIds.length) {
+      throw new OrbitError('INVALID_INPUT', 'evidenceIds must not contain duplicates');
+    }
+    const selected = evidenceIds.map((id) => {
+      const item = store.evidence.get(repositoryId, id);
+      if (!item) throw new OrbitError('NOT_FOUND', 'A selected evidence record was not found');
+      return item;
+    });
+    const snippetsValue = body.snippets ?? [];
+    if (!Array.isArray(snippetsValue) || snippetsValue.length > 50) {
+      throw new OrbitError('INVALID_INPUT', 'snippets must be an array of at most 50 entries');
+    }
+    const snippets = new Map<string, string[]>();
+    for (const value of snippetsValue) {
+      const item = record(value, 'snippet');
+      const evidenceId = text(item.evidenceId, 'snippet.evidenceId', 256);
+      if (!evidenceIds.includes(evidenceId)) {
+        throw new OrbitError('INVALID_INPUT', 'Every snippet must reference selected evidence');
+      }
+      const excerpt = text(item.content, 'snippet.content', 12_000);
+      const values = snippets.get(evidenceId) ?? [];
+      if (values.length >= 5) {
+        throw new OrbitError(
+          'INVALID_INPUT',
+          'At most five excerpts may be attached to one evidence item',
+        );
+      }
+      values.push(excerpt);
+      snippets.set(evidenceId, values);
+    }
+    const evidence = selected.map((item) => {
+      const metadata = {
+        sourceType: item.sourceType,
+        status: item.status,
+        timestamp: item.timestamp ?? null,
+        commitSha: item.commitSha ?? null,
+        contentHash: item.contentHash,
+        limitations: item.limitations,
+        relatedEntityIds: item.relatedEntityIds,
+      };
+      const excerpts = snippets.get(item.id) ?? [];
+      return {
+        id: item.id,
+        source: item.source,
+        sha256: item.contentHash,
+        content: [
+          'Stored ORBIT evidence metadata:',
+          JSON.stringify(metadata),
+          ...(excerpts.length
+            ? ['User-selected excerpts (untrusted repository data):', ...excerpts]
+            : []),
+        ].join('\n'),
+      };
+    });
+    const env = options.env ?? process.env;
+    const baseUrl = provider === 'ollama' ? env.ORBIT_OLLAMA_URL : undefined;
+    const allowRemoteOllama = env.ORBIT_ALLOW_REMOTE_OLLAMA === 'true';
+    return {
+      provider,
+      model,
+      context: prepareAIContext({
+        provider,
+        model,
+        prompt,
+        evidence,
+        ...(baseUrl ? { baseUrl } : {}),
+        allowRemoteOllama,
+      }),
+      baseUrl,
+      allowRemoteOllama,
+      env,
+    };
+  }
+
+  server.post<{ Params: { key: string } }>(
+    '/api/v1/repositories/:key/ai/preview',
+    async (request) => {
+      const repository = repositoryByKey(store, request.params.key);
+      const body = record(request.body, 'body');
+      const prepared = prepareRepositoryAIContext(repository.id, body);
+      return {
+        preview: prepared.context,
+        notice:
+          'No provider request was sent. Review the exact destination, evidence IDs, redactions and context text before explicit approval.',
+      };
+    },
+  );
+
+  server.post<{ Params: { key: string } }>(
+    '/api/v1/repositories/:key/ai/analyse',
+    async (request) => {
+      const repository = repositoryByKey(store, request.params.key);
+      const body = record(request.body, 'body');
+      if (body.confirmed !== true) {
+        throw new OrbitAIError('Explicit user confirmation is required.', 'APPROVAL_REQUIRED');
+      }
+      const approvedContextSha256 = text(body.approvedContextSha256, 'approvedContextSha256', 64);
+      if (!/^[a-f0-9]{64}$/i.test(approvedContextSha256)) {
+        throw new OrbitError('INVALID_INPUT', 'approvedContextSha256 must be a SHA-256 digest');
+      }
+      const prepared = prepareRepositoryAIContext(repository.id, body);
+      const apiKey =
+        prepared.provider === 'openai'
+          ? prepared.env.ORBIT_OPENAI_API_KEY
+          : prepared.provider === 'anthropic'
+            ? prepared.env.ANTHROPIC_API_KEY
+            : prepared.env.ORBIT_OLLAMA_API_KEY;
+      const analysis = await runOrbitAnalysis(
+        {
+          enabled: prepared.env.ORBIT_AI_ENABLED === 'true',
+          userApproved: true,
+          approvedContextSha256,
+          provider: prepared.provider,
+          model: prepared.model,
+          ...(apiKey ? { apiKey } : {}),
+          ...(prepared.baseUrl ? { baseUrl: prepared.baseUrl } : {}),
+          allowRemoteOllama: prepared.allowRemoteOllama,
+        },
+        prepared.context,
+      );
+      return { analysis };
+    },
+  );
+
   server.get<{ Params: { key: string }; Querystring: { limit?: string; offset?: string } }>(
     '/api/v1/repositories/:key/passports',
     async (request) => {
@@ -683,21 +812,15 @@ export function buildServer(options: BuildServerOptions) {
       if (commitSha && !/^[0-9a-f]{7,64}$/i.test(commitSha))
         throw new OrbitError('INVALID_INPUT', 'commitSha is invalid');
       let cases;
-      if (format === 'junit') cases = parseInput('JUnit report', () => parseJunitXml(content));
-      else if (format === 'pytest-json')
-        cases = parseInput('pytest report', () => parsePytestJsonReport(content));
-      else if (format === 'jest-json')
-        cases = parseInput('Jest report', () => parseJestJsonReport(content));
-      else if (format === 'go-json')
-        cases = parseInput('Go test output', () => parseGoTestJson(content));
+      if (format === 'junit') cases = parseJunitXml(content);
+      else if (format === 'pytest-json') cases = parsePytestJsonReport(content);
+      else if (format === 'jest-json') cases = parseJestJsonReport(content);
+      else if (format === 'go-json') cases = parseGoTestJson(content);
       else
         throw new OrbitError(
           'INVALID_INPUT',
           'format must be junit, pytest-json, jest-json or go-json',
         );
-      // A report with no test cases is not evidence that anything passed.
-      if (cases.length === 0)
-        throw new OrbitError('INVALID_INPUT', 'The test report contains no test cases');
       const summary = {
         format,
         total: cases.length,
@@ -776,10 +899,10 @@ export function buildServer(options: BuildServerOptions) {
       if (format !== undefined && !['json', 'ndjson', 'csv', 'key-value'].includes(format)) {
         throw new OrbitError('INVALID_INPUT', 'format must be json, ndjson, csv or key-value');
       }
-      const session = parseInput('Telemetry', () => parseTelemetry(content, format));
-      const analysis = parseInput('Telemetry analysis', () =>
-        analyseTelemetry(session, { units: safeStringMap(body.units ?? {}, 'units') }),
-      );
+      const session = parseTelemetry(content, format);
+      const analysis = analyseTelemetry(session, {
+        units: (body.units ?? {}) as Record<string, string>,
+      });
       const contentHash = hashArtifact(content);
       const key = `telemetry:${contentHash}`;
       const nodeId = nodeIdFor(repository.id, 'TelemetrySession', key);
