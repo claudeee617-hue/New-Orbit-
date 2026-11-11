@@ -12,10 +12,12 @@ import {
   type NodeType,
 } from '@orbit/core';
 import {
+  analyseTestHistory,
   parseGoTestJson,
   parseJestJsonReport,
   parseJunitXml,
   parsePytestJsonReport,
+  type TestCaseResult,
 } from '@orbit/atlas';
 import { createGraphStore, openDatabase, type GraphStore } from '@orbit/database';
 import { loadConfig, OrbitError } from '@orbit/shared';
@@ -24,6 +26,9 @@ import type { CliIo } from './program.js';
 
 const MAX_REPORT_BYTES = 2 * 1024 * 1024;
 const MAX_PAGE = 1000;
+const MAX_PERSISTED_TEST_CASES = 50_000;
+const FLARE_HISTORY_PAGE_SIZE = 10_000;
+const MAX_FLARE_HISTORY_RECORDS = 100_000;
 
 function parsePositive(value: string, label: string, max = 100_000): number {
   const number = Number(value);
@@ -263,6 +268,27 @@ function ingestionRepository(store: GraphStore, key: string | undefined) {
   return pickRepository(store, key);
 }
 
+function sanitizeTestFailureMessage(message: string): string {
+  return message
+    .replace(
+      /\b(authorization|proxy-authorization|x-api-key)\b\s*[:=]\s*(?:Bearer\s+)?(?:"[^"]*"|'[^']*'|[^\s,;]+)/gi,
+      '$1=[REDACTED]',
+    )
+    .replace(
+      /\b(api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret)\b\s*[:=]\s*(?:"[^"]*"|'[^']*'|[^\s,;]+)/gi,
+      '$1=[REDACTED]',
+    )
+    .replace(
+      /\b(password|passwd|secret|private[_-]?key)\b\s*[:=]\s*(?:"[^"]*"|'[^']*'|[^\s,;]+)/gi,
+      '$1=[REDACTED]',
+    )
+    .replace(/\bBearer\s+[A-Za-z0-9._~+/-]{12,}\b/gi, 'Bearer [REDACTED]')
+    .replace(/\bgh[pousr]_[A-Za-z0-9]{20,}\b/g, '[REDACTED]')
+    .replace(/\bsk-[A-Za-z0-9_-]{16,}\b/g, '[REDACTED]')
+    .replace(/\bAKIA[0-9A-Z]{16}\b/g, '[REDACTED]')
+    .slice(0, 2000);
+}
+
 function sanitizeCiSummary(value: unknown): Record<string, JsonValue> {
   if (value === undefined) return {};
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -372,6 +398,7 @@ export async function ingestTestReport(
   repositoryKey: string | undefined,
   path: string,
   format: string,
+  runIdInput?: string,
 ) {
   if (!['junit', 'pytest-json', 'jest-json', 'go-json'].includes(format)) {
     throw new OrbitError(
@@ -380,16 +407,31 @@ export async function ingestTestReport(
     );
   }
   const content = await readBounded(path);
-  let cases;
+  let cases: TestCaseResult[];
   if (format === 'junit') cases = parseJunitXml(content);
   else if (format === 'pytest-json') cases = parsePytestJsonReport(content);
   else if (format === 'jest-json') cases = parseJestJsonReport(content);
-  else if (format === 'go-json') cases = parseGoTestJson(content);
-  else
+  else cases = parseGoTestJson(content);
+  if (cases.length > MAX_PERSISTED_TEST_CASES) {
     throw new OrbitError(
       'INVALID_INPUT',
-      'format must be junit, pytest-json, jest-json or go-json',
+      `report contains more than ${MAX_PERSISTED_TEST_CASES} test cases; split it before ingestion`,
     );
+  }
+  const runId = runIdInput?.trim();
+  if (
+    runIdInput !== undefined &&
+    (!runId || runId.length > 128 || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(runId))
+  ) {
+    throw new OrbitError(
+      'INVALID_INPUT',
+      'runId must be 1–128 URL-safe letters, numbers, dots, underscores, colons or hyphens',
+    );
+  }
+  const hash = hashArtifact(content);
+  // Without an explicit CI run ID, identical report content is an idempotent re-ingest.
+  // Supply --run-id with the external CI job/run identifier to keep identical runs distinct.
+  const persistedRunId = runId ?? hash;
   const summary = {
     format,
     total: cases.length,
@@ -397,31 +439,207 @@ export async function ingestTestReport(
     failed: cases.filter((item) => item.outcome === 'failed').length,
     skipped: cases.filter((item) => item.outcome === 'skipped').length,
   };
-  const status: EvidenceStatus = summary.failed > 0 ? 'FAIL' : 'PASS';
-  const hash = hashArtifact(content);
-  const key = `test-report:${hash}`;
+  // An empty report is not a successful test run: it contains no test evidence.
+  const status: EvidenceStatus =
+    summary.failed > 0 ? 'FAIL' : summary.total === 0 ? 'PARTIAL' : 'PASS';
+  const key = `test-report:${persistedRunId}`;
   const database = openDatabase({ path: resolve(dbPath), migrate: false });
   try {
     const store = createGraphStore(database);
     const repository = ingestionRepository(store, repositoryKey);
     const nodeId = nodeIdFor(repository.id, 'TestRun', key);
-    const evidence = store.evidence.append({
-      repositoryId: repository.id,
-      source: `cli:test-report:${format}`,
-      sourceType: 'test-report',
-      contentHash: hash,
-      status,
-      limitations: [],
-      relatedEntityIds: [nodeId],
-    }).record;
-    const node = store.nodes.upsert({
-      repositoryId: repository.id,
-      type: 'TestRun',
-      key,
-      attrs: { producer: 'orbit-cli', schemaVersion: 1, ...summary },
-      sourceEvidenceId: evidence.id,
+    const existing = store.nodes.get(repository.id, nodeId);
+    const existingHash = existing?.attrs['reportHash'];
+    if (typeof existingHash === 'string' && existingHash !== hash) {
+      throw new OrbitError(
+        'INVALID_INPUT',
+        `runId ${persistedRunId} already exists with different report content`,
+      );
+    }
+    const caseKeys = cases.map((item, index) => {
+      const ordinal = String(index).padStart(8, '0');
+      const idHash = hashArtifact(item.id).slice(0, 16);
+      return `test-case:${persistedRunId}:${ordinal}:${idHash}`;
     });
-    return { evidence, node: node.record, summary };
+    const evidence = store.transaction(() => {
+      const appended = store.evidence.append({
+        repositoryId: repository.id,
+        source: `cli:test-report:${format}`,
+        sourceType: 'test-report',
+        contentHash: hash,
+        status,
+        limitations:
+          summary.total === 0
+            ? ['The report contained no test cases; no test execution was measured.']
+            : [],
+        relatedEntityIds: [nodeId],
+      }).record;
+      store.nodes.upsert({
+        repositoryId: repository.id,
+        type: 'TestRun',
+        key,
+        attrs: {
+          producer: 'orbit-cli',
+          schemaVersion: 2,
+          recordKind: 'report',
+          runId: persistedRunId,
+          reportHash: hash,
+          ...summary,
+        },
+        sourceEvidenceId: appended.id,
+      });
+      for (let index = 0; index < cases.length; index += 1) {
+        const item = cases[index]!;
+        store.nodes.upsert({
+          repositoryId: repository.id,
+          type: 'TestRun',
+          key: caseKeys[index]!,
+          attrs: {
+            producer: 'orbit-cli',
+            schemaVersion: 2,
+            recordKind: 'case',
+            runId: persistedRunId,
+            reportHash: hash,
+            format,
+            ordinal: index,
+            testId: item.id,
+            name: item.name,
+            suite: item.suite,
+            outcome: item.outcome,
+            durationSeconds: item.durationSeconds,
+            ...(item.message ? { message: sanitizeTestFailureMessage(item.message) } : {}),
+          },
+          sourceEvidenceId: appended.id,
+        });
+      }
+      return appended;
+    });
+    const node = store.nodes.get(repository.id, nodeId);
+    if (!node) throw new OrbitError('DATABASE_ERROR', 'Test-run node was not persisted');
+    return {
+      evidence,
+      node,
+      summary,
+      runId: persistedRunId,
+      persistedCases: cases.length,
+      idempotent: existing?.attrs['reportHash'] === hash,
+    };
+  } finally {
+    database.close();
+  }
+}
+
+export function runFlareHistory(
+  dbPath: string,
+  repositoryKey: string | undefined,
+  options: { minSamples?: number; minFlips?: number } = {},
+) {
+  const { database, store } = openExisting(dbPath);
+  try {
+    const repository = pickRepository(store, repositoryKey);
+    const historyRows: Array<{
+      runId: string;
+      ordinal: number;
+      recordedAt: string;
+      result: TestCaseResult;
+    }> = [];
+    let offset = 0;
+    let scanned = 0;
+    let lastPageSize = 0;
+    while (scanned < MAX_FLARE_HISTORY_RECORDS) {
+      const page = store.nodes.find(repository.id, {
+        type: 'TestRun',
+        limit: FLARE_HISTORY_PAGE_SIZE,
+        offset,
+      });
+      lastPageSize = page.length;
+      if (page.length === 0) break;
+      scanned += page.length;
+      for (const node of page) {
+        if (
+          node.attrs['producer'] !== 'orbit-cli' ||
+          node.attrs['recordKind'] !== 'case' ||
+          typeof node.attrs['runId'] !== 'string' ||
+          typeof node.attrs['testId'] !== 'string' ||
+          typeof node.attrs['name'] !== 'string' ||
+          typeof node.attrs['suite'] !== 'string' ||
+          !['passed', 'failed', 'skipped'].includes(String(node.attrs['outcome']))
+        ) {
+          continue;
+        }
+        const duration = node.attrs['durationSeconds'];
+        if (
+          duration !== null &&
+          (typeof duration !== 'number' || !Number.isFinite(duration) || duration < 0)
+        ) {
+          continue;
+        }
+        historyRows.push({
+          runId: node.attrs['runId'],
+          ordinal:
+            typeof node.attrs['ordinal'] === 'number' && Number.isInteger(node.attrs['ordinal'])
+              ? node.attrs['ordinal']
+              : 0,
+          recordedAt: node.recordedAt,
+          result: {
+            id: node.attrs['testId'],
+            name: node.attrs['name'],
+            suite: node.attrs['suite'],
+            outcome: node.attrs['outcome'] as TestCaseResult['outcome'],
+            durationSeconds: duration as number | null,
+            ...(typeof node.attrs['message'] === 'string'
+              ? { message: node.attrs['message'] }
+              : {}),
+          },
+        });
+      }
+      offset += page.length;
+      if (page.length < FLARE_HISTORY_PAGE_SIZE) break;
+    }
+    historyRows.sort(
+      (a, b) =>
+        a.recordedAt.localeCompare(b.recordedAt) ||
+        a.runId.localeCompare(b.runId) ||
+        a.ordinal - b.ordinal,
+    );
+    const analysis = analyseTestHistory(
+      historyRows.map((item) => item.result),
+      options,
+    );
+    const hasMoreRecords =
+      scanned >= MAX_FLARE_HISTORY_RECORDS &&
+      lastPageSize === FLARE_HISTORY_PAGE_SIZE &&
+      store.nodes.find(repository.id, {
+        type: 'TestRun',
+        limit: 1,
+        offset: scanned,
+      }).length > 0;
+    const truncated = hasMoreRecords;
+    const limitations = [
+      ...analysis.limitations,
+      'FLARE history includes per-test outcomes ingested by the ORBIT CLI.',
+      'Legacy aggregate-only TestRun records do not contribute per-test samples.',
+      'Identical report content deduplicates unless a distinct --run-id is supplied.',
+      'Failure text is capped and pattern-redacted; redaction is best-effort, not a secret-scanning guarantee.',
+      ...(truncated
+        ? [
+            `The scan reached the ${MAX_FLARE_HISTORY_RECORDS} TestRun-node bound.`,
+            'Older or remaining records were not analysed.',
+          ]
+        : []),
+    ];
+    return {
+      repository: repository.key,
+      testExecutions: historyRows.length,
+      distinctRuns: new Set(historyRows.map((item) => item.runId)).size,
+      tests: analysis.summaries.length,
+      summaries: analysis.summaries,
+      failureClusters: analysis.failureClusters,
+      slowTests: analysis.slowTests,
+      truncated,
+      scannedTestRunNodes: scanned,
+      limitations,
+    };
   } finally {
     database.close();
   }
@@ -436,21 +654,56 @@ export function runTestHistory(
   const { database, store } = openExisting(dbPath);
   try {
     const repository = pickRepository(store, repositoryKey);
-    const rows = store.nodes.find(repository.id, {
-      type: 'TestRun',
-      limit: Math.min(limit, MAX_PAGE),
-      offset,
-    });
-    const runs = rows.filter(
-      (item) => item.attrs['producer'] === 'orbit-cli' || item.attrs['producer'] === 'orbit-api',
-    );
+    const safeLimit = Math.min(limit, MAX_PAGE);
+    const targetReports = offset + safeLimit + 1;
+    const reportRows: ReturnType<typeof store.nodes.find> = [];
+    let scannedNodes = 0;
+    let lastPageSize = 0;
+    let pageSize = 0;
+
+    while (
+      reportRows.length < targetReports &&
+      scannedNodes < MAX_FLARE_HISTORY_RECORDS
+    ) {
+      pageSize = Math.min(
+        FLARE_HISTORY_PAGE_SIZE,
+        MAX_FLARE_HISTORY_RECORDS - scannedNodes,
+      );
+      const rows = store.nodes.find(repository.id, {
+        type: 'TestRun',
+        limit: pageSize,
+        offset: scannedNodes,
+      });
+      lastPageSize = rows.length;
+      if (rows.length === 0) break;
+      for (const item of rows) {
+        if (
+          (item.attrs['producer'] === 'orbit-cli' ||
+            item.attrs['producer'] === 'orbit-api') &&
+          item.attrs['recordKind'] !== 'case'
+        ) {
+          reportRows.push(item);
+          if (reportRows.length >= targetReports) break;
+        }
+      }
+      scannedNodes += rows.length;
+      if (rows.length < pageSize) break;
+    }
+
+    const truncated =
+      scannedNodes >= MAX_FLARE_HISTORY_RECORDS &&
+      lastPageSize === pageSize &&
+      reportRows.length < targetReports;
+    const runs = reportRows.slice(offset, offset + safeLimit);
     return {
       repository: repository.key,
       runs,
       page: {
-        limit: Math.min(limit, MAX_PAGE),
+        limit: safeLimit,
         offset,
-        hasMore: rows.length === Math.min(limit, MAX_PAGE),
+        hasMore: reportRows.length > offset + safeLimit || truncated,
+        truncated,
+        scannedNodes,
       },
     };
   } finally {
@@ -578,17 +831,67 @@ export function attachOperationsCommands(program: Command, io: CliIo): void {
     .description('parse JUnit, pytest, Jest or Go JSON and append a test-run record')
     .requiredOption('--repo <key>', 'registered repository key')
     .requiredOption('--format <format>', 'junit, pytest-json, jest-json or go-json')
+    .option('--run-id <id>', 'external CI run ID; identical report bytes otherwise deduplicate')
     .option('--db <path>')
-    .action(async (file: string, options: { db?: string; repo: string; format: string }) => {
-      const config = loadConfig(io.env);
-      const result = await ingestTestReport(
-        options.db ?? config.dbPath,
-        options.repo,
-        file,
-        options.format,
-      );
-      io.stdout(`${JSON.stringify(result, null, 2)}\n`);
-    });
+    .action(
+      async (
+        file: string,
+        options: { db?: string; repo: string; format: string; runId?: string },
+      ) => {
+        const config = loadConfig(io.env);
+        const result = await ingestTestReport(
+          options.db ?? config.dbPath,
+          options.repo,
+          file,
+          options.format,
+          options.runId,
+        );
+        io.stdout(`${JSON.stringify(result, null, 2)}\n`);
+      },
+    );
+  const flare =
+    program.commands.find((command) => command.name() === 'flare') ?? program.command('flare');
+  flare
+    .command('history')
+    .description('analyse persisted per-test outcomes across ingested report runs')
+    .option('--db <path>')
+    .option('--repo <key>')
+    .option('--min-samples <n>', 'minimum test executions before reliability classification', '8')
+    .option('--min-flips <n>', 'minimum pass/fail flips before suspected-flaky', '3')
+    .option('--json', 'print machine-readable JSON')
+    .action(
+      (options: {
+        db?: string;
+        repo?: string;
+        minSamples: string;
+        minFlips: string;
+        json?: boolean;
+      }) => {
+        const config = loadConfig(io.env);
+        const minSamples = parsePositive(options.minSamples, '--min-samples', 100_000);
+        const minFlips = parsePositive(options.minFlips, '--min-flips', 100_000);
+        if (minSamples < 2) throw new Error('--min-samples must be at least 2');
+        const result = runFlareHistory(options.db ?? config.dbPath, options.repo, {
+          minSamples,
+          minFlips,
+        });
+        io.stdout(
+          options.json
+            ? `${JSON.stringify(result, null, 2)}\n`
+            : [
+                `Repository: ${result.repository}`,
+                `Test executions: ${result.testExecutions} across ${result.distinctRuns} runs`,
+                ...result.summaries.map(
+                  (item) =>
+                    `${item.suite} :: ${item.name} — ${item.samples} samples, ${item.classification}, ${item.failureRate * 100}% failures`,
+                ),
+                `Failure clusters: ${result.failureClusters.length}`,
+                ...result.limitations.map((item) => `Note: ${item}`),
+              ].join('\n') + '\n',
+        );
+      },
+    );
+
   tests
     .command('history')
     .description(
