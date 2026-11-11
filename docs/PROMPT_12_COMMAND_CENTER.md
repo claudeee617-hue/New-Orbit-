@@ -53,3 +53,14 @@ The browser E2E suite and cross-platform CI matrix passed in CI #325 on commit `
 
 - Rebased Prompt 12 onto the stabilized `main` commit `1157869e81507277282fbe3e4c7009a8a44f1dd2` after the test-timeout correction merged in PR #37.
 - A fresh CI and Security run is required for the rebased PR head; historical run numbers above are retained only as historical evidence and are not current-head acceptance.
+
+## Owner acceptance checklist (required before release)
+
+1. Start the local API and dashboard with `pnpm dev` from a clean checkout.
+2. Connect using the local `api.token`; verify it is held only in memory and disappears after disconnect/reload.
+3. Register a disposable fixture repository and inspect graph pagination, edge navigation, evidence metadata, integrity state and Change Passport history.
+4. Exercise every workbench with both populated and empty evidence; confirm missing data remains `NOT_MEASURED` rather than being presented as zero or PASS.
+5. Test keyboard-only navigation, screen-reader labels, reduced-motion behaviour and narrow/mobile viewports.
+6. Repeat against the owner's real local database. Do not include the private database or token in CI artifacts or issue comments.
+
+The disposable SQLite/browser CI scenario is useful integration evidence but does not replace step 6.
