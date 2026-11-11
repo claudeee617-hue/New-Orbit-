@@ -1,7 +1,8 @@
 import { timingSafeEqual } from 'node:crypto';
 import { realpath, stat } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
-import Fastify from 'fastify';
+import rateLimit from '@fastify/rate-limit';
+import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import {
   hashArtifact,
   nodeIdFor,
@@ -332,13 +333,21 @@ export function buildServer(options: BuildServerOptions) {
   server.setErrorHandler((error, _request, reply) => {
     const status = httpStatus(error);
     const code =
-      error instanceof OrbitError ? error.code : status < 500 ? 'INVALID_INPUT' : 'INTERNAL';
+      error instanceof OrbitError
+        ? error.code
+        : status === 429
+          ? 'RATE_LIMITED'
+          : status < 500
+            ? 'INVALID_INPUT'
+            : 'INTERNAL';
     const message =
       status >= 500
         ? 'The ORBIT API could not complete the request'
         : error instanceof Error
           ? error.message
-          : 'Invalid request';
+          : typeof (error as { message?: unknown }).message === 'string'
+            ? (error as { message: string }).message
+            : 'Invalid request';
     if (status >= 500) options.logger.error({ code }, 'API request failed');
     return reply.code(status).send({ error: code, message });
   });
@@ -360,6 +369,29 @@ export function buildServer(options: BuildServerOptions) {
 
   const store = createGraphStore(options.database);
   const dbPath = options.databasePath ?? options.database.path;
+
+  // Integrity verification walks the repository ledger. Bound repeated requests
+  // per client so an authenticated local session cannot monopolise the API.
+  // Used as a route preHandler so only authenticated requests consume the budget.
+  void server.register(rateLimit, { global: false });
+  type Limiter = (request: FastifyRequest, reply: FastifyReply) => Promise<unknown>;
+  let integrityLimiter: Limiter | undefined;
+  const integrityRateLimit = async (request: FastifyRequest, reply: FastifyReply) => {
+    // `server.rateLimit` is decorated once the plugin has loaded, which is
+    // always before the first request is served.
+    integrityLimiter ??= (
+      server as unknown as { rateLimit: (options: object) => Limiter }
+    ).rateLimit({
+      max: 60,
+      timeWindow: '1 minute',
+      errorResponseBuilder: (_request: FastifyRequest, context: { after: string }) => ({
+        statusCode: 429,
+        error: 'RATE_LIMITED',
+        message: `Integrity checks are limited to 60 requests per minute; retry after ${context.after}`,
+      }),
+    });
+    return integrityLimiter(request, reply);
+  };
 
   server.get('/api/v1/session', async () => ({
     authenticated: true,
@@ -410,11 +442,19 @@ export function buildServer(options: BuildServerOptions) {
 
   server.get<{
     Params: { key: string };
-    Querystring: { limit?: string; offset?: string; type?: string };
+    Querystring: {
+      limit?: string;
+      offset?: string;
+      nodeOffset?: string;
+      edgeOffset?: string;
+      type?: string;
+    };
   }>('/api/v1/repositories/:key/graph', async (request) => {
     const repository = repositoryByKey(store, request.params.key);
     const limit = boundedInteger(request.query.limit, 100, 1, MAX_GRAPH_LIMIT, 'limit');
     const offset = boundedInteger(request.query.offset, 0, 0, 1_000_000, 'offset');
+    const nodeOffset = boundedInteger(request.query.nodeOffset, offset, 0, 1_000_000, 'nodeOffset');
+    const edgeOffset = boundedInteger(request.query.edgeOffset, offset, 0, 1_000_000, 'edgeOffset');
     const type = optionalText(request.query.type, 'type', 64) as NodeType | undefined;
     const validTypes: readonly string[] = [
       'Repository',
@@ -443,8 +483,12 @@ export function buildServer(options: BuildServerOptions) {
     ];
     if (type && !validTypes.includes(type))
       throw new OrbitError('INVALID_INPUT', 'type is not a supported graph node type');
-    const nodes = store.nodes.find(repository.id, { ...(type ? { type } : {}), limit, offset });
-    const edges = store.edges.list(repository.id, { limit, offset });
+    const nodes = store.nodes.find(repository.id, {
+      ...(type ? { type } : {}),
+      limit,
+      offset: nodeOffset,
+    });
+    const edges = store.edges.list(repository.id, { limit, offset: edgeOffset });
     const ledgerHead = store.ledger.head(repository.id);
     return {
       repository,
@@ -453,6 +497,8 @@ export function buildServer(options: BuildServerOptions) {
       page: {
         limit,
         offset,
+        nodeOffset,
+        edgeOffset,
         hasMoreNodes: nodes.length === limit,
         hasMoreEdges: edges.length === limit,
       },
@@ -460,12 +506,27 @@ export function buildServer(options: BuildServerOptions) {
     };
   });
 
+  server.get<{ Params: { key: string } }>(
+    '/api/v1/repositories/:key/integrity',
+    { preHandler: integrityRateLimit },
+    async (request) => {
+      const repository = repositoryByKey(store, request.params.key);
+      return { repository, integrity: store.verifyIntegrity(repository.id) };
+    },
+  );
+
   server.get<{
     Params: { key: string };
-    Querystring: { limit?: string; commitSha?: string; sourceType?: string };
+    Querystring: {
+      limit?: string;
+      offset?: string;
+      commitSha?: string;
+      sourceType?: string;
+    };
   }>('/api/v1/repositories/:key/evidence', async (request) => {
     const repository = repositoryByKey(store, request.params.key);
     const limit = boundedInteger(request.query.limit, 100, 1, 1000, 'limit');
+    const offset = boundedInteger(request.query.offset, 0, 0, 1_000_000, 'offset');
     const commitSha = optionalText(request.query.commitSha, 'commitSha', 64);
     if (commitSha && !/^[0-9a-f]{7,64}$/i.test(commitSha))
       throw new OrbitError('INVALID_INPUT', 'commitSha is invalid');
@@ -486,12 +547,19 @@ export function buildServer(options: BuildServerOptions) {
       throw new OrbitError('INVALID_INPUT', 'sourceType is invalid');
     const evidence = store.evidence.list(repository.id, {
       limit,
+      offset,
       ...(commitSha ? { commitSha } : {}),
       ...(sourceType
         ? { sourceType: sourceType as 'ci' | 'test-report' | 'environment' | 'telemetry' }
         : {}),
     });
-    return { repository, evidence, returned: evidence.length, limit };
+    return {
+      repository,
+      evidence,
+      returned: evidence.length,
+      limit,
+      page: { limit, offset, hasMore: evidence.length === limit },
+    };
   });
 
   server.get<{ Params: { key: string }; Querystring: { limit?: string; offset?: string } }>(

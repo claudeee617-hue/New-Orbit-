@@ -36,4 +36,9 @@ export default tseslint.config(
     files: ['apps/web/src/**/*.{ts,tsx}'],
     languageOptions: { globals: { ...globals.browser } },
   },
+  {
+    // Playwright's CommonJS config/spec files use require() for the isolated test runner.
+    files: ['e2e/**/*.cjs'],
+    rules: { '@typescript-eslint/no-require-imports': 'off' },
+  },
 );

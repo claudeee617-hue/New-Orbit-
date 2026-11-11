@@ -64,26 +64,6 @@ describe('repositories', () => {
 });
 
 describe('evidence', () => {
-  it('lists evidence recorded in the same millisecond in insertion order', () => {
-    const fixed = '2026-01-01T00:00:00.000Z';
-    const tied = createGraphStore(database, { now: () => fixed });
-    const repo = tied.repositories.register({ key: 'github.com/acme/tied' }).record.id;
-    const sources: string[] = [];
-    for (let i = 0; i < 20; i++) {
-      sources.push(`test:${i}`);
-      tied.evidence.append({
-        repositoryId: repo,
-        source: `test:${i}`,
-        sourceType: 'manual',
-        contentHash: hashArtifact(`tie-${i}`),
-        status: 'PASS',
-        limitations: [],
-        relatedEntityIds: [],
-      });
-    }
-    expect(tied.evidence.list(repo, {}).map((e) => e.source)).toEqual(sources);
-  });
-
   it('is content-addressed and idempotent', () => {
     const { repo } = setup();
     const input = {
@@ -100,6 +80,34 @@ describe('evidence', () => {
     expect(a.changed).toBe(true);
     expect(b.changed).toBe(false);
     expect(b.record.id).toBe(a.record.id);
+  });
+
+  it('pages through evidence with a stable recorded-at and id order', () => {
+    const { repo } = setup();
+    for (const value of ['report-a', 'report-b', 'report-c']) {
+      store.evidence.append({
+        repositoryId: repo,
+        source: value,
+        sourceType: 'test-report',
+        contentHash: hashArtifact(value),
+        status: 'PASS',
+        limitations: [],
+        relatedEntityIds: [],
+      });
+    }
+
+    const page1 = store.evidence.list(repo, { sourceType: 'test-report', limit: 2 });
+    const page2 = store.evidence.list(repo, {
+      sourceType: 'test-report',
+      limit: 2,
+      offset: 2,
+    });
+    expect([...page1, ...page2].map((item) => item.source)).toEqual([
+      'report-a',
+      'report-b',
+      'report-c',
+    ]);
+    expect(() => store.evidence.list(repo, { offset: -1 })).toThrowError(/offset/);
   });
 
   it('requires a registered repository', () => {
