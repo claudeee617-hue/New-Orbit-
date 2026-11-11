@@ -128,6 +128,12 @@ export interface GraphStore {
 
 type RepoRow = typeof t.repositories.$inferSelect;
 type EvidenceRow = typeof t.evidence.$inferSelect;
+
+/**
+ * Evidence IDs are content hashes, so ordering ties on `recordedAt` (same millisecond) by ID would
+ * not reflect insertion order. The table is append-only, so SQLite's rowid is a stable tie-break.
+ */
+const EVIDENCE_INSERT_ORDER = sql`"evidence"."rowid"`;
 type NodeVersionRow = typeof t.nodeVersions.$inferSelect;
 type EdgeVersionRow = typeof t.edgeVersions.$inferSelect;
 type LedgerRow = typeof t.ledger.$inferSelect;
@@ -626,7 +632,7 @@ export function createGraphStore(
         .select()
         .from(t.evidence)
         .where(and(...conditions))
-        .orderBy(asc(t.evidence.recordedAt), asc(t.evidence.id))
+        .orderBy(asc(t.evidence.recordedAt), asc(EVIDENCE_INSERT_ORDER))
         .limit(clampLimit(query.limit))
         .all()
         .map(toEvidence);
@@ -639,7 +645,7 @@ export function createGraphStore(
         .where(
           and(eq(t.evidenceRefs.repositoryId, repositoryId), eq(t.evidenceRefs.entityId, entityId)),
         )
-        .orderBy(asc(t.evidence.recordedAt), asc(t.evidence.id))
+        .orderBy(asc(t.evidence.recordedAt), asc(EVIDENCE_INSERT_ORDER))
         .all()
         .map(({ row }) => toEvidence(row));
     },
