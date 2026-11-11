@@ -27,7 +27,8 @@
     "@orbit/core": "workspace:*",
     "@orbit/database": "workspace:*",
     "@orbit/shared": "workspace:*",
-    "commander": "15.1.0",
-    "@orbit/mcp": "workspace:*"
+    "@orbit/mcp": "workspace:*",
+    "@orbit/witness": "workspace:*",
+    "commander": "15.1.0"
   }
 }

@@ -46,6 +46,16 @@ export interface BuildServerOptions {
   env?: Record<string, string | undefined>;
 }
 
+/** Parsers run on caller-supplied content, so anything they throw is a client error. */
+function parseInput<T>(what: string, fn: () => T): T {
+  try {
+    return fn();
+  } catch (error) {
+    if (error instanceof OrbitError) throw error;
+    throw new OrbitError('INVALID_INPUT', `${what} could not be parsed`, { cause: error });
+  }
+}
+
 /** Strip the port from a Host header value, keeping IPv6 brackets. */
 function hostnameOf(hostHeader: string | undefined): string {
   if (!hostHeader) return '';
@@ -303,11 +313,16 @@ export function buildServer(options: BuildServerOptions) {
     if (!allowed.has(hostnameOf(request.headers.host).toLowerCase())) {
       return reply.code(403).send({ error: 'FORBIDDEN_HOST', message: 'Host header not allowed' });
     }
-    if (request.url.startsWith('/api/v1/')) {
+    // Decide on the route the router actually matched, not on the URL text: the router decodes
+    // %-escapes, so a prefix test on the raw URL can be bypassed (`/%61pi/v1/...`). Only the
+    // exact `/health` route is public; unmatched URLs reach the 404 handler, which returns no data.
+    const matched = request.routeOptions.url;
+    const isPublic = matched === undefined || matched === '/health' || matched === '*';
+    if (!isPublic) {
       if (!apiToken || !authenticate(request.headers.authorization, apiToken)) {
         return reply.code(401).send({
           error: 'UNAUTHENTICATED',
-          message: 'Provide the local ORBIT session token using Authorization: ***',
+          message: 'Provide the local ORBIT session token using Authorization: Bearer <token>',
         });
       }
     }
@@ -316,7 +331,8 @@ export function buildServer(options: BuildServerOptions) {
 
   server.setErrorHandler((error, _request, reply) => {
     const status = httpStatus(error);
-    const code = error instanceof OrbitError ? error.code : 'INTERNAL';
+    const code =
+      error instanceof OrbitError ? error.code : status < 500 ? 'INVALID_INPUT' : 'INTERNAL';
     const message =
       status >= 500
         ? 'The ORBIT API could not complete the request'
@@ -599,15 +615,21 @@ export function buildServer(options: BuildServerOptions) {
       if (commitSha && !/^[0-9a-f]{7,64}$/i.test(commitSha))
         throw new OrbitError('INVALID_INPUT', 'commitSha is invalid');
       let cases;
-      if (format === 'junit') cases = parseJunitXml(content);
-      else if (format === 'pytest-json') cases = parsePytestJsonReport(content);
-      else if (format === 'jest-json') cases = parseJestJsonReport(content);
-      else if (format === 'go-json') cases = parseGoTestJson(content);
+      if (format === 'junit') cases = parseInput('JUnit report', () => parseJunitXml(content));
+      else if (format === 'pytest-json')
+        cases = parseInput('pytest report', () => parsePytestJsonReport(content));
+      else if (format === 'jest-json')
+        cases = parseInput('Jest report', () => parseJestJsonReport(content));
+      else if (format === 'go-json')
+        cases = parseInput('Go test output', () => parseGoTestJson(content));
       else
         throw new OrbitError(
           'INVALID_INPUT',
           'format must be junit, pytest-json, jest-json or go-json',
         );
+      // A report with no test cases is not evidence that anything passed.
+      if (cases.length === 0)
+        throw new OrbitError('INVALID_INPUT', 'The test report contains no test cases');
       const summary = {
         format,
         total: cases.length,
@@ -686,10 +708,10 @@ export function buildServer(options: BuildServerOptions) {
       if (format !== undefined && !['json', 'ndjson', 'csv', 'key-value'].includes(format)) {
         throw new OrbitError('INVALID_INPUT', 'format must be json, ndjson, csv or key-value');
       }
-      const session = parseTelemetry(content, format);
-      const analysis = analyseTelemetry(session, {
-        units: (body.units ?? {}) as Record<string, string>,
-      });
+      const session = parseInput('Telemetry', () => parseTelemetry(content, format));
+      const analysis = parseInput('Telemetry analysis', () =>
+        analyseTelemetry(session, { units: safeStringMap(body.units ?? {}, 'units') }),
+      );
       const contentHash = hashArtifact(content);
       const key = `telemetry:${contentHash}`;
       const nodeId = nodeIdFor(repository.id, 'TelemetrySession', key);

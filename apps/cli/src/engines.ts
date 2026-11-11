@@ -23,7 +23,16 @@ import {
   type TelemetrySession,
 } from '@orbit/atlas';
 import { createGraphStore, openDatabase } from '@orbit/database';
+import { loadConfig } from '@orbit/shared';
 import type { CliIo } from './program.js';
+import {
+  collectValues,
+  failOnError,
+  parseFailOn,
+  parseFraction,
+  resolveGitFormat,
+  runVerify,
+} from './verify.js';
 
 const IGNORED_DIRS = new Set([
   '.git',
@@ -184,21 +193,109 @@ function parseJsonOption<T>(value: string | undefined, label: string, fallback: 
 
 export function attachEngineCommands(program: Command, io: CliIo): void {
   program
-    .command('verify <diff-file>')
-    .description('verify added diff lines against an LCOV or Cobertura coverage report')
-    .option('--lcov <file>', 'LCOV coverage report')
-    .option('--cobertura <file>', 'Cobertura XML report')
-    .option('--format <format>', 'json, markdown or sarif', 'json')
+    .command('verify [diff-file]')
+    .description(
+      'WITNESS: verify a change. Git mode (--base/--head) reads coverage, test and build evidence; diff-file mode checks added lines of a saved diff against one coverage report',
+    )
+    .option('--base <ref>', 'git mode: base ref (the target branch)')
+    .option('--head <ref>', 'git mode: head ref (the change under review)')
+    .option('--repo <path>', 'git mode: repository to verify', '.')
+    .option(
+      '--coverage <file>',
+      'git mode: LCOV or Cobertura XML for head (repeatable)',
+      collectValues,
+    )
+    .option('--base-coverage <file>', 'git mode: coverage for the merge base', collectValues)
+    .option('--test-report <file>', 'git mode: JUnit XML for head (repeatable)', collectValues)
+    .option('--base-test-report <file>', 'git mode: JUnit XML for the merge base', collectValues)
+    .option('--build-result <file>', 'git mode: JSON like {"status":"success","command":"…"}')
+    .option('--coverage-commit <sha>', 'git mode: commit the coverage was produced from')
+    .option(
+      '--min-coverage <ratio>',
+      'git mode: fail below this changed-line ratio (0..1)',
+      parseFraction,
+    )
+    .option('--force', 'git mode: allow --out to overwrite an existing file')
+    .option('--record', 'git mode: record evidence and findings in the workspace database')
+    .option('--key <key>', 'git mode: repository key used with --record')
+    .option('--db <path>', 'git mode: database path used with --record')
+    .option(
+      '--fail-on <status>',
+      'git mode: exit code 6 when the overall status is at least this bad (PARTIAL, INCOMPLETE, FAIL)',
+      parseFailOn,
+    )
+    .option('--lcov <file>', 'diff-file mode: LCOV coverage report')
+    .option('--cobertura <file>', 'diff-file mode: Cobertura XML report')
+    .option(
+      '--format <format>',
+      'json, markdown (md) or sarif (default: md in git mode, json otherwise)',
+    )
     .option('--out <file>', 'write report to a new file (refuses to overwrite)')
     .action(
       async (
-        diffFile: string,
-        options: { lcov?: string; cobertura?: string; format: string; out?: string },
+        diffFile: string | undefined,
+        options: {
+          base?: string;
+          head?: string;
+          repo: string;
+          coverage?: string[];
+          baseCoverage?: string[];
+          testReport?: string[];
+          baseTestReport?: string[];
+          buildResult?: string;
+          coverageCommit?: string;
+          minCoverage?: number;
+          force?: boolean;
+          record?: boolean;
+          key?: string;
+          db?: string;
+          failOn?: 'PARTIAL' | 'INCOMPLETE' | 'FAIL';
+          lcov?: string;
+          cobertura?: string;
+          format?: string;
+          out?: string;
+        },
       ) => {
+        const gitMode = options.base !== undefined || options.head !== undefined;
+        if (gitMode) {
+          if (diffFile !== undefined)
+            throw new Error('use either a diff file or --base/--head, not both');
+          if (options.base === undefined || options.head === undefined)
+            throw new Error('git mode needs both --base and --head');
+          if (options.lcov || options.cobertura)
+            throw new Error(
+              '--lcov/--cobertura belong to diff-file mode; use --coverage in git mode',
+            );
+          const config = loadConfig(io.env);
+          const { report, text } = await runVerify({
+            repo: options.repo,
+            base: options.base,
+            head: options.head,
+            format: resolveGitFormat(options.format),
+            db: options.db ?? config.dbPath,
+            ...(options.coverage && { coverage: options.coverage }),
+            ...(options.baseCoverage && { baseCoverage: options.baseCoverage }),
+            ...(options.testReport && { testReport: options.testReport }),
+            ...(options.baseTestReport && { baseTestReport: options.baseTestReport }),
+            ...(options.buildResult !== undefined && { buildResult: options.buildResult }),
+            ...(options.coverageCommit !== undefined && { coverageCommit: options.coverageCommit }),
+            ...(options.minCoverage !== undefined && { minCoverage: options.minCoverage }),
+            ...(options.out !== undefined && { out: options.out }),
+            ...(options.force !== undefined && { force: options.force }),
+            ...(options.record !== undefined && { record: options.record }),
+            ...(options.key !== undefined && { key: options.key }),
+          });
+          io.stdout(text);
+          failOnError(report, options.failOn);
+          return;
+        }
+        if (diffFile === undefined)
+          throw new Error('provide a diff file, or --base and --head for git mode');
         if (Boolean(options.lcov) === Boolean(options.cobertura)) {
           throw new Error('provide exactly one of --lcov or --cobertura');
         }
-        if (!['json', 'markdown', 'sarif'].includes(options.format))
+        const format = options.format ?? 'json';
+        if (!['json', 'markdown', 'sarif'].includes(format))
           throw new Error('--format must be json, markdown or sarif');
         const diff = await readText(diffFile);
         const coverageText = await readText(options.lcov ?? options.cobertura!);
@@ -206,14 +303,13 @@ export function attachEngineCommands(program: Command, io: CliIo): void {
         const report = verifyChangedLineCoverage(diff, coverage);
         const sensitivePathFindings = findSensitivePathFindings(diff);
         const output =
-          options.format === 'markdown'
+          format === 'markdown'
             ? markdownVerification(report)
-            : options.format === 'sarif'
+            : format === 'sarif'
               ? renderWitnessSarif(report, sensitivePathFindings)
               : `${JSON.stringify({ ...report, sensitivePathFindings }, null, 2)}\n`;
         await writeOutput(options.out, output);
-        if (options.out)
-          io.stdout(`Wrote ${options.format} verification report to ${options.out}\n`);
+        if (options.out) io.stdout(`Wrote ${format} verification report to ${options.out}\n`);
         else io.stdout(output);
       },
     );

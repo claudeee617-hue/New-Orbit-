@@ -280,6 +280,66 @@ describe('scanRepository on a multi-language repository', () => {
   });
 });
 
+describe('import bindings resolve calls', () => {
+  async function callTargets(root: string): Promise<string[]> {
+    const r = await scan(root);
+    const edges = store.edges.list(r.repositoryId, { types: ['CALLS'] });
+    return edges.map((e) => `${e.fromId}->${e.toId}`).length > 0
+      ? store.edges
+          .list(r.repositoryId, { types: ['CALLS'] })
+          .map((e) => {
+            const from = store.nodes.get(r.repositoryId, e.fromId)?.key;
+            const to = store.nodes.get(r.repositoryId, e.toId)?.key;
+            return `${from} -> ${to}`;
+          })
+          .sort()
+      : [];
+  }
+
+  it('resolves aliased named imports and namespace calls (JS)', async () => {
+    const root = tempDir('orbit-repo-');
+    write(root, {
+      'lib.ts': `export function helper() { return 1; }\nexport function other() { return 2; }\n`,
+      'use.ts': `import { helper as h } from './lib';\nimport * as lib from './lib';\nexport function go() { return h() + lib.other(); }\n`,
+    });
+    expect(await callTargets(root)).toEqual([
+      'use.ts#go -> lib.ts#helper',
+      'use.ts#go -> lib.ts#other',
+    ]);
+  });
+
+  it('resolves aliased python imports', async () => {
+    const root = tempDir('orbit-repo-');
+    write(root, {
+      'util.py': `def work():\n    return 1\n`,
+      'main.py': `from util import work as w\nimport util as u\n\ndef run():\n    return w() + u.work()\n`,
+    });
+    const targets = await callTargets(root);
+    expect(targets).toContain('main.py#run -> util.py#work');
+  });
+
+  it('resolves Java static calls through class imports', async () => {
+    const root = tempDir('orbit-repo-');
+    write(root, {
+      'src/com/acme/Util.java': `package com.acme;\npublic class Util {\n  public static int twice(int x) { return x * 2; }\n}\n`,
+      'src/com/acme/App.java': `package com.acme.app;\nimport com.acme.Util;\npublic class App {\n  public int run() { return Util.twice(2); }\n}\n`,
+    });
+    const targets = await callTargets(root);
+    expect(targets).toContain('src/com/acme/App.java#App.run -> src/com/acme/Util.java#Util.twice');
+  });
+
+  it('resolves destructured require', async () => {
+    const root = tempDir('orbit-repo-');
+    write(root, {
+      'lib.js': `exports.helper = function helper() {};\nfunction helper2() {}\nmodule.exports = { helper2 };\n`,
+      'use.js': `const { helper2: h } = require('./lib');\nfunction go() { return h(); }\n`,
+    });
+    const r = await scan(root);
+    const imp = store.edges.list(r.repositoryId, { types: ['IMPORTS'] });
+    expect(imp.length).toBeGreaterThan(0);
+  });
+});
+
 describe('type-only imports and unresolved imports', () => {
   it('separates cycles that exist only through `import type`', async () => {
     const root = tempDir('orbit-repo-');
@@ -304,6 +364,16 @@ describe('type-only imports and unresolved imports', () => {
     });
     const r = await scan(root);
     expect(r.stats.imports).toMatchObject({ assets: 2, unresolved: 0 });
+  });
+
+  it('separates the Python standard library from third-party packages', async () => {
+    const root = tempDir('orbit-repo-');
+    write(root, { 'a.py': 'import os\nimport json\nimport requests\n' });
+    const r = await scan(root);
+    const deps = store.nodes.find(r.repositoryId, { type: 'Dependency' }).map((n) => n.key);
+    expect(deps).toEqual(
+      expect.arrayContaining(['python-stdlib:os', 'python-stdlib:json', 'pypi:requests']),
+    );
   });
 
   it('lists unresolved imports with reasons', async () => {
@@ -560,6 +630,17 @@ describe('git history', () => {
       { cwd: root, stdio: 'ignore' },
     );
   }
+
+  it('keeps unicode file names intact in history', async () => {
+    const root = tempDir('orbit-repo-');
+    git(root, 'init', '-q');
+    write(root, { 'données.py': 'def a(): pass\n' });
+    git(root, 'add', '.');
+    commit(root, 'Asha', 'first');
+    await scan(root, { config: {} });
+    const file = store.nodes.find(repo, { type: 'File', keyPrefix: 'données.py' })[0];
+    expect(file?.attrs['churn']).toBe(1);
+  });
 
   it('indexes commits, churn, ownership and hotspots', async () => {
     const root = tempDir('orbit-repo-');

@@ -93,6 +93,33 @@ function symbolView(node: NodeRecord): Record<string, unknown> {
 }
 
 /** Create an MCP server whose registered tools are all read-only. */
+const MAX_LIST_ITEMS = 50;
+const MAX_MEMORY_CONTENT = 500;
+
+/** Slice long arrays inside an object so one hub module cannot blow the response cap. */
+function compact<T extends object>(value: T): T {
+  const out: Record<string, unknown> = {};
+  for (const [key, item] of Object.entries(value)) {
+    if (Array.isArray(item) && item.length > MAX_LIST_ITEMS) {
+      out[key] = item.slice(0, MAX_LIST_ITEMS);
+      out[`${key}Total`] = item.length;
+    } else out[key] = item;
+  }
+  return out as T;
+}
+
+function limited<T>(items: readonly T[], max = 20): { items: T[]; total: number } {
+  return { items: items.slice(0, max), total: items.length };
+}
+
+/** Integrity result with a bounded problem list, so corruption cannot hide the requested data. */
+function integrityView(store: GraphStore, repositoryId: string): unknown {
+  const report = store.verifyIntegrity(repositoryId);
+  const problems = (report as { problems?: unknown[] }).problems;
+  if (!Array.isArray(problems) || problems.length <= 20) return report;
+  return { ...report, problems: problems.slice(0, 20), problemsTotal: problems.length };
+}
+
 export function createOrbitMcpServer(options: OrbitMcpOptions): McpServer {
   const { store, repositoryId } = options;
   const repository = store.repositories.get(repositoryId);
@@ -115,8 +142,8 @@ export function createOrbitMcpServer(options: OrbitMcpOptions): McpServer {
       const map = buildArchitectureMap(store, repositoryId);
       return result({
         repository,
-        modules: map.modules.slice(0, boundedLimit(limit)),
-        cycles: map.cycles,
+        modules: map.modules.slice(0, boundedLimit(limit)).map(compact),
+        cycles: limited(map.cycles),
         totalModules: map.modules.length,
       });
     },
@@ -290,16 +317,22 @@ export function createOrbitMcpServer(options: OrbitMcpOptions): McpServer {
     },
     async ({ commitSha, limit }) => {
       const count = boundedLimit(limit);
-      const evidence = store.evidence.list(repositoryId, {
-        ...(commitSha ? { commitSha } : {}),
-        limit: count,
+      // Newest first: recent activity matters most, and old records stay reachable via `limit`.
+      const all = store.evidence.list(repositoryId, {
+        ...(commitSha ? { commitSha: commitSha.toLowerCase() } : {}),
+        limit: 10_000,
       });
-      const ledger = store.ledger.entries(repositoryId, { limit: count });
+      const head = store.ledger.head(repositoryId);
       return result({
-        evidence,
-        ledger,
-        integrity: store.verifyIntegrity(repositoryId),
-        limitation: 'History contains only facts ingested into this local ORBIT database.',
+        evidence: all.slice(-count).reverse(),
+        evidenceTotal: all.length,
+        ledger: store.ledger
+          .entries(repositoryId, { afterSeq: Math.max(0, (head?.seq ?? 0) - count) })
+          .reverse(),
+        order: 'newest first',
+        integrity: integrityView(store, repositoryId),
+        limitation:
+          'History contains only facts ingested into this local ORBIT database. The ledger is not scoped by commit.',
       });
     },
   );
@@ -332,8 +365,18 @@ export function createOrbitMcpServer(options: OrbitMcpOptions): McpServer {
           ...(tags ? { tags } : {}),
           ...(currentSources ? { currentSources } : {}),
           limit: boundedLimit(limit),
+        }).map((memory) => {
+          const content = (memory as { content?: unknown }).content;
+          return typeof content === 'string' && content.length > MAX_MEMORY_CONTENT
+            ? {
+                ...memory,
+                content: `${content.slice(0, MAX_MEMORY_CONTENT)}…`,
+                contentTruncated: true,
+                contentLength: content.length,
+              }
+            : memory;
         }),
-        conflicts: detectMemoryConflicts(store, repositoryId),
+        conflicts: limited(detectMemoryConflicts(store, repositoryId)),
         retrieval:
           'Deterministic lexical search; no embedding model or semantic inference is used.',
       }),
@@ -353,9 +396,9 @@ export function createOrbitMcpServer(options: OrbitMcpOptions): McpServer {
       const map = buildArchitectureMap(store, repositoryId);
       const modules = map.modules.filter((item) => !module || item.module === module);
       return result({
-        modules: modules.slice(0, boundedLimit(limit)),
+        modules: modules.slice(0, boundedLimit(limit)).map(compact),
         total: modules.length,
-        cycles: map.cycles,
+        cycles: limited(map.cycles),
       });
     },
   );
@@ -370,17 +413,26 @@ export function createOrbitMcpServer(options: OrbitMcpOptions): McpServer {
         limit: z.number().int().min(1).max(MAX_TOOL_LIMIT).optional(),
       },
     },
-    async ({ commitSha, limit }) => {
+    async ({ commitSha: requested, limit }) => {
       const count = boundedLimit(limit);
-      const commit = store.nodes
-        .find(repositoryId, { type: 'Commit', keyPrefix: commitSha, limit: 10 })
-        .find((node) => node.key === commitSha);
-      const evidence = store.evidence.list(repositoryId, { commitSha, limit: count });
+      const sha = requested.toLowerCase();
+      // Accept abbreviated SHAs when exactly one indexed commit matches.
+      const matches = store.nodes
+        .find(repositoryId, { type: 'Commit', keyPrefix: sha, limit: 10 })
+        .filter((node) => node.key.startsWith(sha));
+      const commit = matches.length === 1 ? matches[0] : undefined;
+      const evidence = store.evidence.list(repositoryId, {
+        commitSha: commit?.key ?? sha,
+        limit: count,
+      });
       return result({
         commit: commit ?? null,
+        ...(matches.length > 1 && {
+          ambiguous: `${matches.length} indexed commits start with ${sha}; use a longer SHA`,
+        }),
         evidence,
         repository,
-        integrity: store.verifyIntegrity(repositoryId),
+        integrity: integrityView(store, repositoryId),
         note: 'Only commit metadata and evidence already indexed in ORBIT are returned.',
       });
     },
@@ -406,7 +458,7 @@ export function createOrbitMcpServer(options: OrbitMcpOptions): McpServer {
       return result({
         found: evidenceId ? Boolean(record) : undefined,
         evidence: items,
-        integrity: store.verifyIntegrity(repositoryId),
+        integrity: integrityView(store, repositoryId),
       });
     },
   );
@@ -436,9 +488,14 @@ export async function startOrbitMcpServer(options: {
     }
     const server = createOrbitMcpServer({ store, repositoryId: repository.id });
     const transport = new StdioServerTransport();
+    server.server.onclose = () => {
+      if (database.isHealthy()) database.close();
+    };
     await server.connect(transport);
     const close = () => {
-      void server.close().finally(() => database.close());
+      void server.close().finally(() => {
+        if (database.isHealthy()) database.close();
+      });
     };
     process.once('SIGINT', close);
     process.once('SIGTERM', close);
