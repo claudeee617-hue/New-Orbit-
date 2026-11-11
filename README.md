@@ -13,7 +13,7 @@ Its central artifact is the **Change Passport**: a content-hashed record of a ch
 
 ## Current status
 
-ORBIT is pre-release (no package or Marketplace release has been published). The public `main` branch contains engineering roadmap Prompts 0–11 and the App Business Module sub-prompts 0–4, including the local API and CLI (PR #11), the git-based WITNESS package (PR #32), ATLAS 0.2.0, the read-only MCP server with production acceptance tests (PR #26), parser regression tests (PR #31) and a prototype GitHub Action (PR #25). CI runs the full format, lint, typecheck, test and build matrix on Ubuntu, macOS and Windows, plus CodeQL and a dependency audit. A local `pnpm run check` currently runs 488 tests across ten workspace suites. Command Center, AI features, ACCELQ and durable FLARE history are still open pull requests and are not part of `main`.
+ORBIT is pre-release (no package or Marketplace release has been published). The public `main` branch contains engineering roadmap Prompts 0–11 and the App Business Module sub-prompts 0–4, including the local API and CLI (PR #11), the git-based WITNESS package (PR #32), ATLAS 0.2.0, the read-only MCP server with production acceptance tests (PR #26), parser regression tests (PR #31) and a prototype GitHub Action (PR #25). CI runs the full format, lint, typecheck, test and build matrix on Ubuntu, macOS and Windows, plus CodeQL and a dependency audit. The Command Center (real API data, Chromium E2E in CI), durable FLARE history, an opt-in ORBIT AI preview (core works without a key) and an opt-in ACCELQ regression workflow are also on `main`. A local `pnpm run check` runs 546 tests across eleven workspace suites.
 
 | Capability | Current implementation |
 | --- | --- |
@@ -28,7 +28,8 @@ ORBIT is pre-release (no package or Marketplace release has been published). The
 | Change Passport graph correlation, versioned history, comparisons and non-executing reproduction plan | Implemented on `main` as backend/CLI prototype; visual Replay Room UI not implemented |
 | App Business Module | Implemented on `main` via PR #9: strategy, market references, local actual-vs-forecast calculator and pricing simulator; no live accounting/CRM/billing data |
 | GitHub Action for PR verification | Prototype on `main` (PR #25); see [docs/GITHUB_ACTION.md](docs/GITHUB_ACTION.md). Not published to the Marketplace |
-| Specialist AI agents and full Command Center dashboard | Not on `main`; in open pull requests |
+| Full Command Center, durable FLARE history | On `main` (PRs #23, #29, #38) |
+| ORBIT AI | Opt-in preview on `main` (PR #39); no live-provider results are claimed |
 
 See [ORBIT_BUILD_STATE.md](ORBIT_BUILD_STATE.md) for phase-by-phase implementation details, branch status, known limitations and verified test results.
 
