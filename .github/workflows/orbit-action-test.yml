@@ -1,0 +1,60 @@
+name: ORBIT Action integration
+
+on:
+  pull_request:
+    paths:
+      - '.github/actions/orbit/**'
+      - '.github/scripts/orbit-action.mjs'
+      - '.github/scripts/orbit-action.test.mjs'
+      - '.github/workflows/orbit-action-test.yml'
+      - '.github/scripts/orbit-action-security.mjs'
+      - '.github/fixtures/orbit-action-coverage.lcov'
+      - 'apps/cli/**'
+      - 'packages/atlas/**'
+
+permissions:
+  contents: read
+
+jobs:
+  action:
+    name: exercise composite action against PR diff
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out PR data
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify fork-safe Action permissions and trusted checkout
+        run: node --test .github/scripts/orbit-action-security.mjs
+
+      - name: Run ORBIT verification action with LCOV coverage
+        uses: ./.github/actions/orbit
+        with:
+          base-sha: ${{ github.event.pull_request.base.sha }}
+          head-sha: ${{ github.event.pull_request.head.sha }}
+          coverage-file: .github/fixtures/orbit-action-coverage.lcov
+          coverage-format: lcov
+          fail-on-uncovered: 'false'
+          comment: 'false'
+          upload-sarif: 'false'
+
+      - name: Verify SARIF was generated without uploading alerts
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s .orbit-action-report.sarif
+          node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            const sarif = JSON.parse(readFileSync(".orbit-action-report.sarif", "utf8"));
+            if (sarif.version !== "2.1.0" || !Array.isArray(sarif.runs)) {
+              throw new Error("ORBIT did not generate a valid SARIF 2.1.0 document.");
+            }
+          '
+
+      - name: Test Action script behaviour (missing report, bad paths, mentions, truncation)
+        shell: bash
+        env:
+          ORBIT_RUNTIME_DIR: ${{ github.workspace }}/.orbit-action-runtime
+        run: node --test .github/scripts/orbit-action.test.mjs
