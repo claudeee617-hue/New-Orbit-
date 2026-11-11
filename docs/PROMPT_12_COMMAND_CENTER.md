@@ -49,3 +49,7 @@ Keep `api.token` private. Do not commit it, paste it into an issue, or expose it
 - Verify the API/UI against a real local workspace and document any intentionally deferred capabilities.
 
 The browser E2E suite and cross-platform CI matrix passed in CI #325 on commit `58120793`; CodeQL #119 also passed on that commit. Those historical checks do not validate the current PR head. Fresh CI must pass after the PR #37 timeout fix; keyboard/screen-reader and responsive accessibility checks and the real local-workspace smoke test must also be completed and reviewed.
+## Cross-platform rebase verification
+
+- Rebased Prompt 12 onto the stabilized `main` commit `1157869e81507277282fbe3e4c7009a8a44f1dd2` after the test-timeout correction merged in PR #37.
+- A fresh CI and Security run is required for the rebased PR head; historical run numbers above are retained only as historical evidence and are not current-head acceptance.
