@@ -38,3 +38,26 @@ jobs:
       # format:check, lint, typecheck, test, build
       - name: Check
         run: pnpm run check
+
+  mcp-stdio:
+    name: MCP stdio SQLite read-only acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all workspaces
+        run: pnpm run build
+
+      - name: Run production MCP stdio acceptance test
+        run: pnpm --filter @orbit/mcp test:stdio
