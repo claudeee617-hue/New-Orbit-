@@ -662,10 +662,7 @@ export function runTestHistory(
     let pageSize = 0;
 
     while (reportRows.length < targetReports && scannedNodes < MAX_FLARE_HISTORY_RECORDS) {
-      pageSize = Math.min(
-        FLARE_HISTORY_PAGE_SIZE,
-        MAX_FLARE_HISTORY_RECORDS - scannedNodes,
-      );
+      pageSize = Math.min(FLARE_HISTORY_PAGE_SIZE, MAX_FLARE_HISTORY_RECORDS - scannedNodes);
       const rows = store.nodes.find(repository.id, {
         type: 'TestRun',
         limit: pageSize,
@@ -675,8 +672,7 @@ export function runTestHistory(
       if (rows.length === 0) break;
       for (const item of rows) {
         if (
-          (item.attrs['producer'] === 'orbit-cli' ||
-            item.attrs['producer'] === 'orbit-api') &&
+          (item.attrs['producer'] === 'orbit-cli' || item.attrs['producer'] === 'orbit-api') &&
           item.attrs['recordKind'] !== 'case'
         ) {
           reportRows.push(item);
