@@ -1,11 +1,11 @@
 # ORBIT — Build State
 
 Durable progress log. Update after every implementation phase.
-Last updated: 2026-11-10
+Last updated: 2026-11-11
 
 ## Current phase
 
-**Engineering roadmap Prompts 0–10 and App Business Module sub-prompts 0–4 are on `main` (PRs #5 and #9). Branch `integration/witness-and-atlas-0.2` adds the git-based WITNESS package (`packages/witness`) and ATLAS 0.2.0 improvements on top of that `main`; it is verified locally and awaiting review and CI. Prompt 11 API/CLI is in `feat/prompt-11-api-cli` (PR #11, not merged).**
+**Engineering roadmap Prompts 0–11 and App Business Module sub-prompts 0–4 are on `main` (PRs #5, #9, #11). `main` also contains the git-based WITNESS package (PR #32), ATLAS 0.2.0, MCP acceptance tests (PR #26), parser regression tests (PR #31) and the prototype GitHub Action (PR #25). Open and not merged: Command Center (PR #23), ORBIT AI (PR #24), ACCELQ (PR #27) and durable FLARE history (PRs #29, #30). ORBIT is pre-release.**
 
 ## Phase checklist
 
@@ -17,15 +17,15 @@ Last updated: 2026-11-10
 | 3      | ORBIT Core graph                               | Done on `main` (see results below)           |
 | 4      | ATLAS scanning                                 | Done (see results below)                       |
 | 5      | ATLAS memory and MCP                           | Implemented on `main` via PR #5; CI run #109 passed on Ubuntu, macOS and Windows |
-| 6      | WITNESS                                        | Prototype on `main` via PR #5; **full git-based verifier in `packages/witness` on the integration branch** (see Prompt 6 section) |
+| 6      | WITNESS                                        | Prototype on `main` via PR #5; full git-based verifier in `packages/witness` merged via PR #32 (see Prompt 6 section) |
 | 7      | FLARE                                          | Merged to `main` via PR #5: pytest/Jest/Go adapters and reliability analytics/CLI; durable history remains outstanding |
 | 8      | CAPSULE                                        | Merged to `main` via PR #5: polyglot manifest inspection and CLI; build replay remains out of scope |
 | 9      | FLIGHT RECORDER                                | Merged to `main` via PR #5: recorded-log analysis + hash-verified graph persistence; no physical serial connection |
 | 10     | Change Passport and Replay Room                | Merged to `main` via PR #5: commit-scoped evidence correlation, immutable history, comparison and non-executing reproduction plan; no visual Replay Room UI |
-| 11     | API and CLI (full)                             | Partial: local engine CLI commands on feature branch |
-| 12     | Command Center (full)                          | Not started (shell exists)                     |
-| 13     | GitHub Action                                  | Not started                                    |
-| 14     | ORBIT AI                                       | Not implemented; provider/privacy design in `docs/AI_PROVIDER_POLICY.md` |
+| 11     | API and CLI (full)                             | Done on `main` via PR #11: local API and engine CLI commands; full Ubuntu/macOS/Windows CI passed |
+| 12     | Command Center (full)                          | Not on `main` (shell exists); in open PR #23   |
+| 13     | GitHub Action                                  | Prototype on `main` via PR #25 (`docs/GITHUB_ACTION.md`); not published to the Marketplace |
+| 14     | ORBIT AI                                       | Not on `main`; provider/privacy design in `docs/AI_PROVIDER_POLICY.md`; implementation in open PR #24 |
 | 15     | Security review                                | Partial: SECURITY.md, privacy policy, CodeQL workflow and Dependabot config added; independent review and security tests pending |
 | 16     | Testing and validation                         | Partial: existing unit/API/CLI tests plus validation-gap checklist; browser E2E, fuzz, migration and action tests pending |
 | 17     | Release polish                                 | Partial: contributor docs, Apache-2.0 license, citation metadata, issue templates and release checklist added; clean-machine validation and release approval pending |
@@ -54,7 +54,7 @@ Known prototype limitations:
 
 ## Audit and fixes of `main` (2026-11-11, branch `integration/witness-and-atlas-0.2`)
 
-`main` (373 tests) was reviewed after other sessions added Prompts 5–10 and the API. Defects found by running adversarial inputs, then fixed with regression tests:
+`main` (373 tests at the time) was reviewed after other sessions added Prompts 5–10 and the API. Defects found by running adversarial inputs, then fixed with regression tests:
 
 | Area | Defect | Fix |
 | --- | --- | --- |
@@ -115,7 +115,7 @@ Prompts 0–4 were re-audited (links, dependency audit, fresh-clone install and 
 
 Fixed or added: import bindings (aliases, namespace/default imports, destructured `require`, Python `as`, Java class imports) so more calls resolve; Python standard-library recognition (list generated from Python 3.13); `core.quotepath=false` so non-ASCII paths survive git; a fuzz test for extractors; a seeded fuzz test comparing the graph store against an in-memory model; dashboard status made truthful; README rewritten to match reality; ADR-0011 updated.
 
-Still open from Prompt 4 (not tackled): tsconfig `paths` aliases, C/C++ include paths from build systems, git rename following and surviving-line ownership, scan-time optimisation above 3000 files, `CALLS` edges from module-level code (needs a core rule change), LICENSE file.
+Still open from Prompt 4 (not tackled): tsconfig `paths` aliases, C/C++ include paths from build systems, git rename following and surviving-line ownership, scan-time optimisation above 3000 files, `CALLS` edges from module-level code (needs a core rule change).
 
 ## Prompt 3 summary (ORBIT Core: Living Engineering Graph)
 
@@ -205,7 +205,7 @@ Manual end-to-end checks that passed: API `/health` returned `ok` with schema ve
 3. A fresh-clone install was tested locally only (see below).
 4. Competitor claims for CodeGraph, CodeCortex, Chisel and PatchProof remain unverified (`docs/COMPETITIVE_ANALYSIS.md`).
 5. Project name availability (GitHub, npm, domains, trademarks) not checked.
-6. No `LICENSE` file yet (Apache-2.0 targeted).
+6. (Resolved) The Apache-2.0 `LICENSE` file is now present.
 7. Repository moved/renamed: GitHub reports the canonical URL as `claudeee617-hue/New-Orbit-`; the session's remote uses the lowercase form, which redirects.
 8. MCP SDK 1.32.2 is installed and used by the Prompt 5 stdio server on main; only local stdio transport is implemented.
 
@@ -224,7 +224,7 @@ node apps/cli/dist/index.js verify --base main --head HEAD --coverage lcov.info 
 
 ## Next step
 
-Next engineering work: complete the remaining Prompt 11–17 roadmap gates, especially API/CLI depth, full Command Center UX, security review, broader validation and release polish. Physical serial capture remains a separately scoped future capability.
+Next engineering work: review and merge the open Command Center, AI, ACCELQ and FLARE-history pull requests, then close the remaining Prompt 15–17 gates: independent security review, browser E2E and fuzz validation, and release polish. Physical serial capture remains a separately scoped future capability.
 
 
 ## Prompt 6–8 extension work merged via PR #5 (CI passed)
@@ -296,13 +296,14 @@ This implementation was consolidated from the `feat/orbit-evidence-engines` base
 
 Verified by GitHub Actions run `42481493312` on Ubuntu, macOS and Windows; the engineering branch recorded 331 passing tests plus format, lint, typecheck and build. The changes were merged into `main` through PR #5.
 
-## Final Prompt 0–10 integrated state
+## Integrated state on `main`
 
-- Engineering Prompts 0–10 are merged into `main` through the engineering implementation and verification path.
+- Engineering Prompts 0–11 are merged into `main` (Prompts 5–10 via PR #5, Prompt 11 via PR #11), followed by WITNESS (PR #32), the GitHub Action prototype (PR #25), MCP acceptance tests (PR #26) and parser regression tests (PR #31).
+- Local verification on 2026-11-11 with the dependency overrides applied: `pnpm run check` exited 0 with 488 tests across ten workspace suites (shared 36, core 66, web 27, graph 14, mcp 16, api 39, witness 63, database 45, cli 41, atlas 168) and `pnpm audit` reported no known vulnerabilities.
 - The separate App Business Module Prompts 0–4 are also merged into `main` through PR #9.
 - Final main-head validation is performed by the latest `main` push-CI after the Business Module merge. All three OS jobs passed in run `42482443566`.
 - Business and engineering layers remain separated: business UI uses local planning state and does not add billing, hosted customer data, CRM, payment processing or live accounting.
-- The repository still has no `LICENSE` file, so the project should not be described as currently licensed open source until that file is added.
+- The Apache-2.0 `LICENSE` file is present. No package or Marketplace release has been published yet.
 
 ## App Business Module sub-prompts 0–4 (separate from engineering roadmap)
 
@@ -316,14 +317,14 @@ Verified by GitHub Actions run `42481493312` on Ubuntu, macOS and Windows; the e
 - No live accounting, billing, checkout, CRM, customer database, hosted sync or payment integration. Financial inputs remain in local React state and are discarded after refresh. No demo revenue/customer data is seeded.
 
 
-## Prompt 11 — Local API and CLI (in progress on feat/prompt-11-api-cli)
+## Prompt 11 — Local API and CLI (merged via PR #11)
 
 - Added persistent local API Bearer session-token support. The token is random, stored beside the workspace database in a private `api.token` file, and never returned in API responses or logs. `ORBIT_API_TOKEN` can override the file token.
 - Added authenticated repository, scan, graph, evidence, Change Passport, impact/ATLAS report and CI/test/environment/recorded-telemetry ingestion routes under `/api/v1`. Public `/health` and Host-header/DNS-rebinding protection remain.
 - API ingestion uses bounded inputs and allowlisted CI summary/environment metadata; it does not persist arbitrary credential fields or raw test/telemetry report bodies as graph attributes.
 - Added CLI `init`, `doctor`, `graph summary`, `graph nodes`, `ci ingest`, `tests ingest` and `tests history` commands.
 - Added API token lifecycle, API route/integration and CLI workspace/ingestion tests.
-- **Status:** Implementation pushed in PR #11; full format/lint/typecheck/test/build matrix passed on Ubuntu, macOS and Windows in GitHub Actions run #136. Ubuntu reported 373 passing tests across nine workspace suites; 15/15 typecheck tasks and 9/9 build tasks passed. PR #11 is ready for review and is not merged.
+- **Status:** Implementation pushed in PR #11; full format/lint/typecheck/test/build matrix passed on Ubuntu, macOS and Windows in GitHub Actions run #136. Ubuntu reported 373 passing tests across nine workspace suites; 15/15 typecheck tasks and 9/9 build tasks passed. PR #11 has since been merged to `main`.
 
 
 ## Prompts 14–17 documentation and security groundwork
