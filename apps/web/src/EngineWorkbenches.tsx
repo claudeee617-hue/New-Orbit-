@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import type { ApiFlareHistory } from './api.js';
 
 type DataRecord = Record<string, unknown>;
 type Workbench =
@@ -9,6 +10,7 @@ interface EngineWorkbenchesProps {
   edges: unknown[];
   evidence: unknown[];
   passports: unknown[];
+  flareHistory?: ApiFlareHistory['history'] | null;
   onLoadPassportHistory?: (passportId: string) => Promise<unknown>;
   onComparePassports?: (beforeId: string, afterId: string) => Promise<unknown>;
   onLoadImpact?: (filePath: string) => Promise<unknown>;
@@ -98,6 +100,7 @@ export function EngineWorkbenches({
   edges,
   evidence,
   passports,
+  flareHistory,
   onLoadPassportHistory,
   onComparePassports,
   onLoadImpact,
@@ -146,7 +149,19 @@ export function EngineWorkbenches({
     () => evidence.filter((item) => evidenceType(item) === 'telemetry'),
     [evidence],
   );
-  const flareNodes = useMemo(() => nodes.filter((item) => nodeType(item) === 'TestRun'), [nodes]);
+  const flareSummaries = useMemo(
+    () => (Array.isArray(flareHistory?.summaries) ? flareHistory.summaries.map(record) : []),
+    [flareHistory],
+  );
+  const suspectedFlakyTests = flareSummaries.filter(
+    (item) => item.classification === 'suspected-flaky',
+  );
+  const failureClusters = Array.isArray(flareHistory?.failureClusters)
+    ? flareHistory.failureClusters.map(record)
+    : [];
+  const flareLimitations = Array.isArray(flareHistory?.limitations)
+    ? flareHistory.limitations.filter((item): item is string => typeof item === 'string')
+    : [];
   const capsuleNodes = useMemo(
     () => nodes.filter((item) => nodeType(item) === 'Environment'),
     [nodes],
@@ -584,25 +599,149 @@ export function EngineWorkbenches({
             <DataCard
               title="Test report evidence"
               value={flareEvidence.length}
-              description="Supplied test-report records"
+              description="Supplied report artifacts"
             />
             <DataCard
-              title="Test run nodes"
-              value={flareNodes.length}
-              description="Indexed test-run summaries"
+              title="Per-test executions"
+              value={flareHistory?.testExecutions ?? 0}
+              description={`${flareHistory?.distinctRuns ?? 0} distinct ingested runs`}
             />
             <DataCard
-              title="Observed failures"
-              value={flareNodes.reduce<number>(
-                (sum, item) =>
-                  sum + Number((record(item).attrs && record(record(item).attrs).failed) || 0),
-                0,
-              )}
-              description="From supplied summaries only"
+              title="Suspected flaky tests"
+              value={suspectedFlakyTests.length}
+              description="Only when sample and flip thresholds are met"
             />
           </div>
+
+          {flareSummaries.length ? (
+            <section className="overflow-hidden rounded-lg border border-edge bg-void/40">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-edge p-3">
+                <div>
+                  <h4 className="font-mono text-xs uppercase tracking-wider text-mute">
+                    Per-test reliability
+                  </h4>
+                  <p className="mt-1 text-xs text-mute">
+                    {flareSummaries.length} tests analysed from {flareHistory?.distinctRuns ?? 0}{' '}
+                    distinct runs
+                  </p>
+                </div>
+                {flareHistory?.truncated ? <StatusPill value="TRUNCATED" /> : null}
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[680px] text-left text-xs">
+                  <thead className="bg-panel text-mute">
+                    <tr>
+                      <th scope="col" className="px-3 py-2 font-medium">
+                        Test
+                      </th>
+                      <th scope="col" className="px-3 py-2 font-medium">
+                        Samples
+                      </th>
+                      <th scope="col" className="px-3 py-2 font-medium">
+                        Pass / fail / skip
+                      </th>
+                      <th scope="col" className="px-3 py-2 font-medium">
+                        Failure rate
+                      </th>
+                      <th scope="col" className="px-3 py-2 font-medium">
+                        Flips
+                      </th>
+                      <th scope="col" className="px-3 py-2 font-medium">
+                        Classification
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {flareSummaries.slice(0, 100).map((item, index) => {
+                      const samples = Number(item.samples) || 0;
+                      const failureRate = Number(item.failureRate);
+                      const classification =
+                        typeof item.classification === 'string'
+                          ? item.classification.replaceAll('-', ' ').toUpperCase()
+                          : 'NOT MEASURED';
+                      return (
+                        <tr
+                          key={label(item.testId) === 'Not recorded' ? index : label(item.testId)}
+                          className="border-t border-edge/70"
+                        >
+                          <td className="max-w-[280px] px-3 py-2">
+                            <p className="font-medium text-ink">{label(item.name)}</p>
+                            <p className="mt-1 break-all font-mono text-[10px] text-mute">
+                              {label(item.suite)} · {label(item.testId)}
+                            </p>
+                          </td>
+                          <td className="px-3 py-2 tabular-nums text-ink">{samples}</td>
+                          <td className="px-3 py-2 tabular-nums text-ink">
+                            {Number(item.passed) || 0} / {Number(item.failed) || 0} /{' '}
+                            {Number(item.skipped) || 0}
+                          </td>
+                          <td className="px-3 py-2 tabular-nums text-ink">
+                            {Number.isFinite(failureRate)
+                              ? `${(failureRate * 100).toFixed(1)}%`
+                              : 'Not measured'}
+                          </td>
+                          <td className="px-3 py-2 tabular-nums text-ink">
+                            {Number(item.flipCount) || 0}
+                          </td>
+                          <td className="px-3 py-2">
+                            <StatusPill value={classification} />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <p className="border-t border-edge px-3 py-2 text-[11px] text-mute">
+                Showing at most 100 tests. Low-sample tests remain insufficient-data; this is a
+                reliability signal, not a correctness guarantee.
+              </p>
+            </section>
+          ) : (
+            <EmptyState
+              title="Per-test history not measured"
+              detail="FLARE has no persisted per-test outcomes for this repository yet. Aggregate report totals are not treated as individual executions or reliability evidence."
+            />
+          )}
+
+          {failureClusters.length ? (
+            <section className="rounded-lg border border-edge bg-void/40 p-3">
+              <h4 className="font-mono text-xs uppercase tracking-wider text-mute">
+                Failure clusters
+              </h4>
+              <div className="mt-3 space-y-2">
+                {failureClusters.slice(0, 20).map((item, index) => (
+                  <article
+                    key={label(item.id) === 'Not recorded' ? index : label(item.id)}
+                    className="rounded-md border border-edge bg-panel p-3"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="font-mono text-xs text-ink">{label(item.signature)}</p>
+                      <StatusPill value={`${Number(item.occurrences) || 0} OCCURRENCES`} />
+                    </div>
+                    <p className="mt-1 text-[10px] text-mute">
+                      {Array.isArray(item.affectedTests) ? item.affectedTests.length : 0} affected
+                      tests
+                    </p>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {flareLimitations.length ? (
+            <ul className="list-disc space-y-1 pl-5 text-[11px] text-mute">
+              {flareLimitations.slice(0, 8).map((item, index) => (
+                <li key={index}>{item}</li>
+              ))}
+            </ul>
+          ) : null}
+
           {flareEvidence.length ? (
             <div className="space-y-2">
+              <h4 className="font-mono text-xs uppercase tracking-wider text-mute">
+                Test report evidence
+              </h4>
               {flareEvidence.slice(0, 40).map((item, index) => {
                 const value = record(item);
                 return (
@@ -623,17 +762,8 @@ export function EngineWorkbenches({
                   </article>
                 );
               })}
-              <p className="text-xs text-mute">
-                A single test report cannot establish flakiness. Historical, repeated observations
-                and sample-size gates are required.
-              </p>
             </div>
-          ) : (
-            <EmptyState
-              title="No test history supplied"
-              detail="Ingest JUnit, pytest, Jest or Go test reports. FLARE will not label tests flaky from a single run."
-            />
-          )}
+          ) : null}
         </div>
       ) : null}
 

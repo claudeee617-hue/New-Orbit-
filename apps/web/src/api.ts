@@ -39,6 +39,21 @@ export interface ApiEvidencePage {
   page: { limit: number; offset: number; hasMore: boolean };
 }
 
+export interface ApiFlareHistory {
+  repository: ApiRepository;
+  history: {
+    testExecutions: number;
+    distinctRuns: number;
+    tests: number;
+    summaries: unknown[];
+    failureClusters: unknown[];
+    slowTests: unknown[];
+    limitations: string[];
+    truncated: boolean;
+    scannedTestRunNodes: number;
+  };
+}
+
 export class OrbitApiError extends Error {
   constructor(
     message: string,
@@ -158,6 +173,19 @@ export function createOrbitApiClient(options: ApiClientOptions) {
       const suffix = query.size ? `?${query.toString()}` : '';
       return request<ApiEvidencePage>(
         `/repositories/${encodeURIComponent(repositoryKey)}/evidence${suffix}`,
+        { signal: options.signal },
+      );
+    },
+    getFlareHistory(
+      repositoryKey: string,
+      options: { minSamples?: number; minFlips?: number; signal?: AbortSignal } = {},
+    ) {
+      const query = new URLSearchParams();
+      if (options.minSamples !== undefined) query.set('minSamples', String(options.minSamples));
+      if (options.minFlips !== undefined) query.set('minFlips', String(options.minFlips));
+      const suffix = query.size ? `?${query.toString()}` : '';
+      return request<ApiFlareHistory>(
+        `/repositories/${encodeURIComponent(repositoryKey)}/reports/flare/history${suffix}`,
         { signal: options.signal },
       );
     },

@@ -1,6 +1,6 @@
 # ORBIT Prompt 12 — Command Center
 
-**Status:** Implementation submitted in PR #23. The dashboard is a local-first, authenticated read surface. The cross-platform test-timeout hardening from PR #37 is now merged to `main`; Prompt 12 still requires fresh CI on the updated merge base, manual accessibility review and a real local-workspace acceptance run.
+**Status:** Stacked implementation across PR #23 (Command Center), PR #29 (persistent FLARE history) and PR #30 (FLARE history API/dashboard). PR #23 is the parent; PR #29 adds per-test CLI history; PR #30 consumes those persisted records. The stack is not ready to merge until current-head checks and owner acceptance pass.
 
 ## Implemented
 
@@ -15,7 +15,8 @@
 - Change Passport workbench can fetch the selected passport's version history and compare it with another stored passport through the existing authenticated local API endpoints.
 - Evidence timeline orders records newest-first using stored timestamps (falling back to recordedAt), displays valid timestamps, and preserves stable order for equal or missing dates. Workbench filters and bounded evidence views remain data-backed; missing evidence stays unmeasured and the UI does not infer coverage, flakiness, live hardware activity or correctness.
 - Graph nodes and edges use independent offsets, and Change Passports can be paged on demand.
-- API client tests for token validation, authentication failure handling, URL encoding and abort-signal forwarding.
+- API client tests for token validation, authentication failure handling, URL encoding, abort-signal forwarding and the FLARE history endpoint.
+- Read-only FLARE history API endpoint and Command Center workbench panel: bounded per-test execution history, distinct run count, sample/flip classifications, failure clusters and explicit limitations. Aggregate-only legacy TestRun records are excluded, and missing per-test history stays unmeasured. The resource-intensive history endpoint shares a 60-requests-per-minute per-client rate limit with ledger-integrity reads.
 - API integration coverage for authentication, independent graph pagination offsets, evidence ingestion, validation, Host-header protection and integrity verification.
 - Integrity endpoint rate limiting: 60 requests per client per minute, with a Retry-After header and a bounded in-memory client map.
 
@@ -43,12 +44,13 @@ Keep `api.token` private. Do not commit it, paste it into an issue, or expose it
 ## Remaining work before merge
 
 - Add a richer visual evidence history with event grouping and source-specific drill-down. Current timeline is a chronological view of stored evidence records only.
-- Playwright Chromium browser E2E covers connect/disconnect, Authorization-header-only token use, repository switching, graph/evidence/passport navigation, workbench navigation, API failure and empty-workspace states. CI #325 passed these browser tests and the Ubuntu/macOS/Windows check matrix on commit `58120793`. The runner retries CI failures twice, captures trace/video/screenshots on failure, and uses semantic locator fallbacks before failing. CI installs Playwright transiently and uploads diagnostics on failure; it does not add Playwright to the production dependency graph.
+- Playwright Chromium browser E2E covers connect/disconnect, Authorization-header-only token use, repository switching, graph/evidence/passport navigation, workbench navigation including the honest empty FLARE history state, API failure and empty-workspace states. CI #325 passed these browser tests and the Ubuntu/macOS/Windows check matrix on commit `58120793`. The runner retries CI failures twice, captures trace/video/screenshots on failure, and uses semantic locator fallbacks before failing. CI installs Playwright transiently and uploads diagnostics on failure; it does not add Playwright to the production dependency graph.
 - Run keyboard/screen-reader accessibility checks and responsive viewport validation. Accessible labels have been added to ATLAS inspection controls, but this is not a substitute for a full accessibility audit.
 - Pass fresh Ubuntu/macOS/Windows CI, including format, lint, typecheck, unit/integration tests and build, plus the new Chromium browser E2E job.
 - Verify the API/UI against a real local workspace and document any intentionally deferred capabilities.
 
-The browser E2E suite and cross-platform CI matrix passed in CI #325 on commit `58120793`; CodeQL #119 also passed on that commit. Those historical checks do not validate the current PR head. Fresh CI must pass after the PR #37 timeout fix; keyboard/screen-reader and responsive accessibility checks and the real local-workspace smoke test must also be completed and reviewed.
+The browser E2E suite and cross-platform matrix passed historically in CI #325 on commit `58120793`; CodeQL #119 also passed on that commit. Those runs do not validate the current stacked PR head. The FLARE workbench addition is proposed in the Prompt 12 child branch `feat/flare-command-center-history`, based on PR #23 and dependent on persistent per-test ingestion in PR #29. It is not on main until the parent and child work are reviewed and merged in dependency order. Prompt 12 remains in draft until keyboard/screen-reader and responsive accessibility checks and the real local-workspace smoke test are completed and reviewed.
+
 ## Cross-platform rebase verification
 
 - Rebased Prompt 12 onto the stabilized `main` commit `1157869e81507277282fbe3e4c7009a8a44f1dd2` after the test-timeout correction merged in PR #37.
