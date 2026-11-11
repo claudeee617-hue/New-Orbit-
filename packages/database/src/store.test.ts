@@ -64,6 +64,26 @@ describe('repositories', () => {
 });
 
 describe('evidence', () => {
+  it('lists evidence recorded in the same millisecond in insertion order', () => {
+    const fixed = '2026-01-01T00:00:00.000Z';
+    const tied = createGraphStore(database, { now: () => fixed });
+    const repo = tied.repositories.register({ key: 'github.com/acme/tied' }).record.id;
+    const sources: string[] = [];
+    for (let i = 0; i < 20; i++) {
+      sources.push(`test:${i}`);
+      tied.evidence.append({
+        repositoryId: repo,
+        source: `test:${i}`,
+        sourceType: 'manual',
+        contentHash: hashArtifact(`tie-${i}`),
+        status: 'PASS',
+        limitations: [],
+        relatedEntityIds: [],
+      });
+    }
+    expect(tied.evidence.list(repo, {}).map((e) => e.source)).toEqual(sources);
+  });
+
   it('is content-addressed and idempotent', () => {
     const { repo } = setup();
     const input = {

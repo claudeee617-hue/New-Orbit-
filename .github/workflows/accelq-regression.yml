@@ -1,0 +1,86 @@
+name: ACCELQ Enterprise Regression
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: accelq-regression-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate-runner:
+    name: Validate ACCELQ API runner
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Unit-test ACCELQ response handling
+        run: node --test scripts/accelq-ci.test.mjs
+
+  accelq-regression:
+    name: ACCELQ enterprise regression
+    needs: validate-runner
+    # Never expose subscription credentials to fork-originated PR workflows.
+    if: ${{ vars.ACCELQ_ENABLED == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate required ACCELQ configuration
+        shell: bash
+        env:
+          ACCELQ_APP_URL: ${{ secrets.ACCELQ_APP_URL }}
+          ACCELQ_USER_ID: ${{ secrets.ACCELQ_USER_ID }}
+          ACCELQ_API_KEY: ${{ secrets.ACCELQ_API_KEY }}
+          ACCELQ_TENANT_CODE: ${{ secrets.ACCELQ_TENANT_CODE }}
+          ACCELQ_JOB_ID: ${{ secrets.ACCELQ_JOB_ID }}
+        run: |
+          set -euo pipefail
+          missing=()
+          for name in ACCELQ_APP_URL ACCELQ_USER_ID ACCELQ_API_KEY ACCELQ_TENANT_CODE ACCELQ_JOB_ID; do
+            if [[ -z "${!name:-}" ]]; then
+              missing+=("$name")
+            fi
+          done
+          if (( ${#missing[@]} > 0 )); then
+            printf 'ACCELQ is enabled but required secrets are missing: %s\n' "${missing[*]}" >&2
+            exit 1
+          fi
+          node --input-type=module -e '
+            const u = new URL(process.env.ACCELQ_APP_URL);
+            if (u.protocol !== "https:" || u.username || u.password || u.search || u.hash || !["", "/"].includes(u.pathname)) {
+              throw new Error("ACCELQ_APP_URL must be the HTTPS ACCELQ server root URL.");
+            }
+            if (!/^\d+$/.test(process.env.ACCELQ_JOB_ID) || Number(process.env.ACCELQ_JOB_ID) <= 0) {
+              throw new Error("ACCELQ_JOB_ID must be a positive integer.");
+            }
+          '
+
+      - name: Trigger ACCELQ CI job and poll until completion
+        env:
+          ACCELQ_APP_URL: ${{ secrets.ACCELQ_APP_URL }}
+          ACCELQ_USER_ID: ${{ secrets.ACCELQ_USER_ID }}
+          ACCELQ_API_KEY: ${{ secrets.ACCELQ_API_KEY }}
+          ACCELQ_TENANT_CODE: ${{ secrets.ACCELQ_TENANT_CODE }}
+          ACCELQ_JOB_ID: ${{ secrets.ACCELQ_JOB_ID }}
+          ACCELQ_RUN_PROPERTIES_JSON: ${{ vars.ACCELQ_RUN_PROPERTIES_JSON }}
+          ACCELQ_AGENT_PICKUP_TIMEOUT_MINUTES: '20'
+          ACCELQ_MAX_RUN_MINUTES: '90'
+          ACCELQ_POLL_INTERVAL_SECONDS: '30'
+        run: node scripts/accelq-ci.mjs
