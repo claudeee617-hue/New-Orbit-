@@ -2,6 +2,7 @@ import { connect } from 'node:net';
 import { Writable } from 'node:stream';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createGraphStore, IN_MEMORY, openDatabase, type OrbitDatabase } from '@orbit/database';
+import { hashArtifact } from '@orbit/core';
 import { ORBIT_VERSION, createLogger, type HealthResponse } from '@orbit/shared';
 import { buildServer } from './server.js';
 
@@ -88,6 +89,90 @@ describe('authenticated local API', () => {
     expect(missing.statusCode).toBe(401);
     expect(incorrect.statusCode).toBe(401);
     expect(missing.json()).toMatchObject({ error: 'UNAUTHENTICATED' });
+  });
+
+  it('paginates evidence and returns page metadata', async () => {
+    const { server, database, repositoryId } = setup();
+    const store = createGraphStore(database);
+    for (const source of ['report-a', 'report-b', 'report-c']) {
+      store.evidence.append({
+        repositoryId,
+        source,
+        sourceType: 'test-report',
+        contentHash: hashArtifact(source),
+        status: 'PASS',
+        limitations: [],
+        relatedEntityIds: [],
+      });
+    }
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/api/v1/repositories/example/evidence?limit=2&offset=1&sourceType=test-report',
+      headers: { host: 'localhost', ...auth },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      returned: 2,
+      limit: 2,
+      page: { limit: 2, offset: 1, hasMore: true },
+    });
+  });
+
+  it('paginates graph nodes and edges with independent offsets', async () => {
+    const { server } = setup();
+    const response = await server.inject({
+      method: 'GET',
+      url: '/api/v1/repositories/example/graph?limit=10&nodeOffset=3&edgeOffset=7',
+      headers: { host: 'localhost', ...auth },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      page: {
+        limit: 10,
+        offset: 0,
+        nodeOffset: 3,
+        edgeOffset: 7,
+        hasMoreNodes: false,
+        hasMoreEdges: false,
+      },
+    });
+  });
+
+  it('returns a read-only hash-chain integrity report for a repository', async () => {
+    const { server } = setup();
+    const response = await server.inject({
+      method: 'GET',
+      url: '/api/v1/repositories/example/integrity',
+      headers: { host: 'localhost', ...auth },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      repository: { key: 'example' },
+      integrity: { ok: true, problems: [] },
+    });
+  });
+
+  it('rate-limits repeated authenticated integrity checks and provides Retry-After', async () => {
+    const { server } = setup();
+    const request = () =>
+      server.inject({
+        method: 'GET',
+        url: '/api/v1/repositories/example/integrity',
+        headers: { host: 'localhost', ...auth },
+      });
+
+    for (let index = 0; index < 60; index += 1) {
+      const response = await request();
+      expect(response.statusCode).toBe(200);
+    }
+
+    const limited = await request();
+    expect(limited.statusCode).toBe(429);
+    expect(Number(limited.headers['retry-after'])).toBeGreaterThan(0);
+    expect(limited.json()).toMatchObject({ error: 'RATE_LIMITED' });
   });
 
   it('lists registered repositories and never returns the token value', async () => {
