@@ -58,6 +58,24 @@ function apiPayload(pathname, options = {}) {
   if (pathname.endsWith('/integrity')) {
     return { repository, integrity: { ok: true, ledgerEntriesChecked: 0, problems: [] } };
   }
+  if (pathname.endsWith('/reports/flare/history')) {
+    return {
+      repository,
+      history: {
+        testExecutions: 0,
+        distinctRuns: 0,
+        tests: 0,
+        summaries: [],
+        failureClusters: [],
+        slowTests: [],
+        limitations: [
+          'No per-test history records were found. Ingest JUnit, pytest, Jest or Go reports with the updated ORBIT CLI.',
+        ],
+        truncated: false,
+        scannedTestRunNodes: 0,
+      },
+    };
+  }
   return { repository };
 }
 
@@ -158,6 +176,14 @@ test('switches repositories and navigates dashboard and engine workbench views',
     'aria-pressed',
     'true',
   );
+
+  await workbenches.getByRole('button', { name: /FLARE/ }).click();
+  await expect(workbenches.getByRole('button', { name: /FLARE/ })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(page.getByText('Per-test history not measured')).toBeVisible();
+  await expect(page.getByText(/No per-test history records were found/)).toBeVisible();
 });
 
 test('shows a useful API failure and an honest empty-workspace state', async ({ page }) => {

@@ -1,7 +1,6 @@
 import { timingSafeEqual } from 'node:crypto';
 import { realpath, stat } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
-import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import {
   hashArtifact,
@@ -13,6 +12,7 @@ import {
 } from '@orbit/core';
 import {
   analyseTelemetry,
+  analyseTestHistory,
   compareChangePassports,
   exportAtlas,
   getPassportHistory,
@@ -25,6 +25,8 @@ import {
   scanRepository,
   parseTelemetry,
   type PassportRecordInput,
+  type TestCaseResult,
+  type TestReliabilityReport,
 } from '@orbit/atlas';
 import { createGraphStore, type GraphStore, type OrbitDatabase } from '@orbit/database';
 import { ORBIT_VERSION, OrbitError, type HealthResponse, type Logger } from '@orbit/shared';
@@ -33,6 +35,144 @@ import { getOrCreateApiToken } from './session-token.js';
 export const DEFAULT_ALLOWED_HOSTS: readonly string[] = ['127.0.0.1', 'localhost', '[::1]'];
 const MAX_INGEST_BYTES = 2 * 1024 * 1024;
 const MAX_GRAPH_LIMIT = 1000;
+const MAX_FLARE_HISTORY_NODES = 100_000;
+const FLARE_HISTORY_PAGE_SIZE = 10_000;
+
+function readFlareHistory(
+  store: GraphStore,
+  repositoryId: string,
+  options: { minSamples: number; minFlips: number },
+): {
+  testExecutions: number;
+  distinctRuns: number;
+  tests: number;
+  summaries: TestReliabilityReport['summaries'];
+  failureClusters: TestReliabilityReport['failureClusters'];
+  slowTests: TestReliabilityReport['slowTests'];
+  limitations: string[];
+  truncated: boolean;
+  scannedTestRunNodes: number;
+} {
+  const rows: Array<{
+    runId: string;
+    ordinal: number;
+    recordedAt: string;
+    result: TestCaseResult;
+  }> = [];
+  let offset = 0;
+  let scannedTestRunNodes = 0;
+  let lastPageSize = 0;
+
+  while (scannedTestRunNodes < MAX_FLARE_HISTORY_NODES) {
+    const page = store.nodes.find(repositoryId, {
+      type: 'TestRun',
+      limit: FLARE_HISTORY_PAGE_SIZE,
+      offset,
+    });
+    lastPageSize = page.length;
+    if (page.length === 0) break;
+    scannedTestRunNodes += page.length;
+
+    for (const node of page) {
+      const attrs = node.attrs;
+      const runId = attrs['runId'];
+      const id = attrs['testId'];
+      const name = attrs['name'];
+      const suite = attrs['suite'];
+      const outcome = attrs['outcome'];
+      const duration = attrs['durationSeconds'];
+      if (
+        attrs['producer'] !== 'orbit-cli' ||
+        attrs['recordKind'] !== 'case' ||
+        typeof runId !== 'string' ||
+        runId.length === 0 ||
+        runId.length > 128 ||
+        typeof id !== 'string' ||
+        id.length === 0 ||
+        id.length > 1000 ||
+        typeof name !== 'string' ||
+        name.length > 500 ||
+        typeof suite !== 'string' ||
+        suite.length > 500 ||
+        !['passed', 'failed', 'skipped'].includes(String(outcome)) ||
+        (duration !== null &&
+          (typeof duration !== 'number' ||
+            !Number.isFinite(duration) ||
+            duration < 0 ||
+            duration > 1_000_000_000))
+      ) {
+        continue;
+      }
+      const ordinal = attrs['ordinal'];
+      rows.push({
+        runId,
+        ordinal: typeof ordinal === 'number' && Number.isInteger(ordinal) ? ordinal : 0,
+        recordedAt: node.recordedAt,
+        result: {
+          id,
+          name,
+          suite,
+          outcome: outcome as TestCaseResult['outcome'],
+          durationSeconds: duration as number | null,
+          ...(typeof attrs['message'] === 'string'
+            ? { message: attrs['message'].slice(0, 2_000) }
+            : {}),
+        },
+      });
+      if (rows.length > MAX_FLARE_HISTORY_NODES) break;
+    }
+
+    offset += page.length;
+    if (page.length < FLARE_HISTORY_PAGE_SIZE) break;
+  }
+
+  const moreNodes =
+    scannedTestRunNodes >= MAX_FLARE_HISTORY_NODES &&
+    lastPageSize === FLARE_HISTORY_PAGE_SIZE &&
+    store.nodes.find(repositoryId, {
+      type: 'TestRun',
+      limit: 1,
+      offset: scannedTestRunNodes,
+    }).length > 0;
+  const truncated = moreNodes || rows.length > MAX_FLARE_HISTORY_NODES;
+  rows.sort(
+    (a, b) =>
+      a.recordedAt.localeCompare(b.recordedAt) ||
+      a.runId.localeCompare(b.runId) ||
+      a.ordinal - b.ordinal,
+  );
+  const history = rows.slice(0, MAX_FLARE_HISTORY_NODES);
+  const analysis = analyseTestHistory(
+    history.map((item) => item.result),
+    options,
+  );
+  const limitations = [...analysis.limitations];
+  if (history.length === 0) {
+    limitations.push(
+      'No per-test history records were found. Ingest JUnit, pytest, Jest or Go reports with the updated ORBIT CLI.',
+    );
+  }
+  limitations.push(
+    'The endpoint analyses per-test records written by the ORBIT CLI; legacy aggregate-only TestRun records do not count as executions.',
+    'Failure signatures are normalized for grouping; they are not raw failure messages or a complete security scan.',
+  );
+  if (truncated) {
+    limitations.push(
+      `The API history scan reached the ${MAX_FLARE_HISTORY_NODES} TestRun-node bound; additional records were not analysed.`,
+    );
+  }
+  return {
+    testExecutions: history.length,
+    distinctRuns: new Set(history.map((item) => item.runId)).size,
+    tests: analysis.summaries.length,
+    summaries: analysis.summaries,
+    failureClusters: analysis.failureClusters,
+    slowTests: analysis.slowTests,
+    limitations,
+    truncated,
+    scannedTestRunNodes,
+  };
+}
 
 export interface BuildServerOptions {
   database: OrbitDatabase;
@@ -45,16 +185,6 @@ export interface BuildServerOptions {
   databasePath?: string;
   /** Optional test override. Production uses the generated or configured local API token. */
   env?: Record<string, string | undefined>;
-}
-
-/** Parsers run on caller-supplied content, so anything they throw is a client error. */
-function parseInput<T>(what: string, fn: () => T): T {
-  try {
-    return fn();
-  } catch (error) {
-    if (error instanceof OrbitError) throw error;
-    throw new OrbitError('INVALID_INPUT', `${what} could not be parsed`, { cause: error });
-  }
 }
 
 /** Strip the port from a Host header value, keeping IPv6 brackets. */
@@ -314,16 +444,11 @@ export function buildServer(options: BuildServerOptions) {
     if (!allowed.has(hostnameOf(request.headers.host).toLowerCase())) {
       return reply.code(403).send({ error: 'FORBIDDEN_HOST', message: 'Host header not allowed' });
     }
-    // Decide on the route the router actually matched, not on the URL text: the router decodes
-    // %-escapes, so a prefix test on the raw URL can be bypassed (`/%61pi/v1/...`). Only the
-    // exact `/health` route is public; unmatched URLs reach the 404 handler, which returns no data.
-    const matched = request.routeOptions.url;
-    const isPublic = matched === undefined || matched === '/health' || matched === '*';
-    if (!isPublic) {
+    if (request.url.startsWith('/api/v1/')) {
       if (!apiToken || !authenticate(request.headers.authorization, apiToken)) {
         return reply.code(401).send({
           error: 'UNAUTHENTICATED',
-          message: 'Provide the local ORBIT session token using Authorization: Bearer <token>',
+          message: 'Provide the local ORBIT session token using Authorization: ***',
         });
       }
     }
@@ -332,22 +457,13 @@ export function buildServer(options: BuildServerOptions) {
 
   server.setErrorHandler((error, _request, reply) => {
     const status = httpStatus(error);
-    const code =
-      error instanceof OrbitError
-        ? error.code
-        : status === 429
-          ? 'RATE_LIMITED'
-          : status < 500
-            ? 'INVALID_INPUT'
-            : 'INTERNAL';
+    const code = error instanceof OrbitError ? error.code : 'INTERNAL';
     const message =
       status >= 500
         ? 'The ORBIT API could not complete the request'
         : error instanceof Error
           ? error.message
-          : typeof (error as { message?: unknown }).message === 'string'
-            ? (error as { message: string }).message
-            : 'Invalid request';
+          : 'Invalid request';
     if (status >= 500) options.logger.error({ code }, 'API request failed');
     return reply.code(status).send({ error: code, message });
   });
@@ -370,27 +486,40 @@ export function buildServer(options: BuildServerOptions) {
   const store = createGraphStore(options.database);
   const dbPath = options.databasePath ?? options.database.path;
 
-  // Integrity verification walks the repository ledger. Bound repeated requests
-  // per client so an authenticated local session cannot monopolise the API.
-  // Used as a route preHandler so only authenticated requests consume the budget.
-  void server.register(rateLimit, { global: false });
-  type Limiter = (request: FastifyRequest, reply: FastifyReply) => Promise<unknown>;
-  let integrityLimiter: Limiter | undefined;
-  const integrityRateLimit = async (request: FastifyRequest, reply: FastifyReply) => {
-    // `server.rateLimit` is decorated once the plugin has loaded, which is
-    // always before the first request is served.
-    integrityLimiter ??= (
-      server as unknown as { rateLimit: (options: object) => Limiter }
-    ).rateLimit({
-      max: 60,
-      timeWindow: '1 minute',
-      errorResponseBuilder: (_request: FastifyRequest, context: { after: string }) => ({
-        statusCode: 429,
+  // Ledger integrity and historical analysis can scan many persisted records.
+  // Share a bounded per-client read budget across these expensive endpoints.
+  const expensiveReadRateWindows = new Map<string, { startedAt: number; count: number }>();
+  const expensiveReadRateLimit = async (request: FastifyRequest, reply: FastifyReply) => {
+    const now = Date.now();
+    const windowMs = 60_000;
+    const maxRequests = 60;
+    const key = request.ip;
+    let window = expensiveReadRateWindows.get(key);
+
+    if (!window || now - window.startedAt >= windowMs) {
+      // Expire stale entries and keep the map bounded even if the API is
+      // deliberately exposed to many distinct local network clients.
+      for (const [client, entry] of expensiveReadRateWindows) {
+        if (now - entry.startedAt >= windowMs) expensiveReadRateWindows.delete(client);
+      }
+      if (!expensiveReadRateWindows.has(key) && expensiveReadRateWindows.size >= 1024) {
+        const oldest = expensiveReadRateWindows.keys().next().value;
+        if (oldest !== undefined) expensiveReadRateWindows.delete(oldest);
+      }
+      window = { startedAt: now, count: 0 };
+      expensiveReadRateWindows.set(key, window);
+    }
+
+    if (window.count >= maxRequests) {
+      const retryAfter = Math.max(1, Math.ceil((window.startedAt + windowMs - now) / 1000));
+      return reply.header('Retry-After', String(retryAfter)).code(429).send({
         error: 'RATE_LIMITED',
-        message: `Integrity checks are limited to 60 requests per minute; retry after ${context.after}`,
-      }),
-    });
-    return integrityLimiter(request, reply);
+        message: 'Resource-intensive read requests are limited to 60 per minute',
+      });
+    }
+
+    window.count += 1;
+    return undefined;
   };
 
   server.get('/api/v1/session', async () => ({
@@ -508,7 +637,7 @@ export function buildServer(options: BuildServerOptions) {
 
   server.get<{ Params: { key: string } }>(
     '/api/v1/repositories/:key/integrity',
-    { preHandler: integrityRateLimit },
+    { preHandler: expensiveReadRateLimit },
     async (request) => {
       const repository = repositoryByKey(store, request.params.key);
       return { repository, integrity: store.verifyIntegrity(repository.id) };
@@ -620,6 +749,23 @@ export function buildServer(options: BuildServerOptions) {
     },
   );
 
+  server.get<{
+    Params: { key: string };
+    Querystring: { minSamples?: string; minFlips?: string };
+  }>(
+    '/api/v1/repositories/:key/reports/flare/history',
+    { preHandler: expensiveReadRateLimit },
+    async (request) => {
+      const repository = repositoryByKey(store, request.params.key);
+      const minSamples = boundedInteger(request.query.minSamples, 8, 2, 100_000, 'minSamples');
+      const minFlips = boundedInteger(request.query.minFlips, 3, 1, 100_000, 'minFlips');
+      return {
+        repository,
+        history: readFlareHistory(store, repository.id, { minSamples, minFlips }),
+      };
+    },
+  );
+
   server.post<{ Params: { key: string } }>(
     '/api/v1/repositories/:key/ingest/ci',
     async (request) => {
@@ -683,21 +829,15 @@ export function buildServer(options: BuildServerOptions) {
       if (commitSha && !/^[0-9a-f]{7,64}$/i.test(commitSha))
         throw new OrbitError('INVALID_INPUT', 'commitSha is invalid');
       let cases;
-      if (format === 'junit') cases = parseInput('JUnit report', () => parseJunitXml(content));
-      else if (format === 'pytest-json')
-        cases = parseInput('pytest report', () => parsePytestJsonReport(content));
-      else if (format === 'jest-json')
-        cases = parseInput('Jest report', () => parseJestJsonReport(content));
-      else if (format === 'go-json')
-        cases = parseInput('Go test output', () => parseGoTestJson(content));
+      if (format === 'junit') cases = parseJunitXml(content);
+      else if (format === 'pytest-json') cases = parsePytestJsonReport(content);
+      else if (format === 'jest-json') cases = parseJestJsonReport(content);
+      else if (format === 'go-json') cases = parseGoTestJson(content);
       else
         throw new OrbitError(
           'INVALID_INPUT',
           'format must be junit, pytest-json, jest-json or go-json',
         );
-      // A report with no test cases is not evidence that anything passed.
-      if (cases.length === 0)
-        throw new OrbitError('INVALID_INPUT', 'The test report contains no test cases');
       const summary = {
         format,
         total: cases.length,
@@ -776,10 +916,10 @@ export function buildServer(options: BuildServerOptions) {
       if (format !== undefined && !['json', 'ndjson', 'csv', 'key-value'].includes(format)) {
         throw new OrbitError('INVALID_INPUT', 'format must be json, ndjson, csv or key-value');
       }
-      const session = parseInput('Telemetry', () => parseTelemetry(content, format));
-      const analysis = parseInput('Telemetry analysis', () =>
-        analyseTelemetry(session, { units: safeStringMap(body.units ?? {}, 'units') }),
-      );
+      const session = parseTelemetry(content, format);
+      const analysis = analyseTelemetry(session, {
+        units: (body.units ?? {}) as Record<string, string>,
+      });
       const contentHash = hashArtifact(content);
       const key = `telemetry:${contentHash}`;
       const nodeId = nodeIdFor(repository.id, 'TelemetrySession', key);

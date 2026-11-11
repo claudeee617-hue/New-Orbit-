@@ -4,6 +4,7 @@ import {
   createOrbitApiClient,
   OrbitApiError,
   type ApiEvidencePage,
+  type ApiFlareHistory,
   type ApiGraphPage,
   type ApiRepository,
 } from './api.js';
@@ -88,6 +89,7 @@ export function CommandCenter() {
   const [repositoryKey, setRepositoryKey] = useState('');
   const [graph, setGraph] = useState<ApiGraphPage | null>(null);
   const [evidence, setEvidence] = useState<ApiEvidencePage | null>(null);
+  const [flareHistory, setFlareHistory] = useState<ApiFlareHistory['history'] | null>(null);
   const [evidenceHasMore, setEvidenceHasMore] = useState(false);
   const [loadingMoreEvidence, setLoadingMoreEvidence] = useState(false);
   const [passports, setPassports] = useState<unknown[]>([]);
@@ -132,6 +134,7 @@ export function CommandCenter() {
           setGraph(null);
           setEvidence(null);
           setEvidenceHasMore(false);
+          setFlareHistory(null);
           setPassports([]);
           setPassportsHaveMore(false);
           setIntegrity(null);
@@ -141,18 +144,21 @@ export function CommandCenter() {
           return;
         }
         setRepositoryKey(selected.key);
-        const [graphResult, evidenceResult, passportResult, integrityResult] = await Promise.all([
-          client.getGraph(selected.key, { limit: 100, ...(signal ? { signal } : {}) }),
-          client.getEvidence(selected.key, { limit: 100, ...(signal ? { signal } : {}) }),
-          client.getPassports(selected.key, { limit: 100, ...(signal ? { signal } : {}) }),
-          client.getIntegrity(selected.key, signal),
-        ]);
+        const [graphResult, evidenceResult, passportResult, integrityResult, flareResult] =
+          await Promise.all([
+            client.getGraph(selected.key, { limit: 100, ...(signal ? { signal } : {}) }),
+            client.getEvidence(selected.key, { limit: 100, ...(signal ? { signal } : {}) }),
+            client.getPassports(selected.key, { limit: 100, ...(signal ? { signal } : {}) }),
+            client.getIntegrity(selected.key, signal),
+            client.getFlareHistory(selected.key, signal ? { signal } : {}),
+          ]);
         setGraph(graphResult);
         setEvidence(evidenceResult);
         setEvidenceHasMore(evidenceResult.page.hasMore);
         setPassports(passportResult.passports);
         setPassportsHaveMore(passportResult.page.hasMore);
         setIntegrity(integrityResult.integrity);
+        setFlareHistory(flareResult.history);
         setNotice('');
       } catch (cause) {
         if (!signal?.aborted) setError(messageOf(cause));
@@ -302,6 +308,7 @@ export function CommandCenter() {
     setGraph(null);
     setEvidence(null);
     setEvidenceHasMore(false);
+    setFlareHistory(null);
     setSelectedEvidenceId('');
     setSelectedGraphNodeId('');
     setEvidenceVerification(null);
@@ -318,6 +325,7 @@ export function CommandCenter() {
     setGraph(null);
     setEvidence(null);
     setEvidenceHasMore(false);
+    setFlareHistory(null);
     setSelectedEvidenceId('');
     setEvidenceVerification(null);
     setEvidenceVerificationError('');
@@ -1088,6 +1096,7 @@ export function CommandCenter() {
         edges={edges}
         evidence={evidenceItems}
         passports={passports}
+        flareHistory={flareHistory}
         onLoadPassportHistory={(passportId) =>
           client.getPassportHistory(repositoryKey, passportId).then((result) => result.history)
         }
