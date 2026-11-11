@@ -54,6 +54,37 @@ export interface ApiFlareHistory {
   };
 }
 
+export type ApiAIProvider = 'openai' | 'anthropic' | 'ollama';
+
+export interface ApiAIPreview {
+  provider: ApiAIProvider;
+  model: string;
+  destination: string;
+  text: string;
+  sha256: string;
+  bytes: number;
+  evidenceIds: string[];
+  redactions: number;
+  limitations: string[];
+}
+
+export interface ApiAIRequest {
+  provider: ApiAIProvider;
+  model: string;
+  prompt: string;
+  evidenceIds: string[];
+}
+
+export interface ApiAIAnalysis {
+  provider: ApiAIProvider;
+  model: string;
+  text: string;
+  contextSha256: string;
+  evidenceIds: string[];
+  citationStatus: 'CITED' | 'MISSING_CITATIONS';
+  limitations: string[];
+}
+
 export class OrbitApiError extends Error {
   constructor(
     message: string,
@@ -194,6 +225,22 @@ export function createOrbitApiClient(options: ApiClientOptions) {
       return request<{ repository: ApiRepository; impact: unknown }>(
         `/repositories/${encodeURIComponent(repositoryKey)}/reports/impact?${query.toString()}`,
         { signal },
+      );
+    },
+    previewAI(repositoryKey: string, input: ApiAIRequest, signal?: AbortSignal) {
+      return request<{ preview: ApiAIPreview; notice: string }>(
+        `/repositories/${encodeURIComponent(repositoryKey)}/ai/preview`,
+        { method: 'POST', body: input, signal },
+      );
+    },
+    analyseAI(
+      repositoryKey: string,
+      input: ApiAIRequest & { approvedContextSha256: string; confirmed: true },
+      signal?: AbortSignal,
+    ) {
+      return request<{ analysis: ApiAIAnalysis }>(
+        `/repositories/${encodeURIComponent(repositoryKey)}/ai/analyse`,
+        { method: 'POST', body: input, signal },
       );
     },
     getIntegrity(repositoryKey: string, signal?: AbortSignal) {

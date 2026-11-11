@@ -1,56 +1,75 @@
 # ORBIT AI — Provider and Privacy Policy
 
-**Implementation status:** Design policy only. No provider integration is currently shipped. The presence of this document must not be represented as an AI feature.
+**Implementation status:** `@orbit/ai` adapters, local API preview/approval endpoints and a Command Center preview/approval panel are implemented on a draft feature branch. The integration is not yet merged or released; E2E and provider smoke tests remain pending.
 
 ## Product boundary
 
-ORBIT Core, ATLAS, WITNESS, FLARE, CAPSULE, FLIGHT RECORDER, Change Passport, CLI, local API and MCP must remain useful without an AI key or network access. ORBIT AI is an optional analysis layer; it is not the source of truth for repository facts, test outcomes, evidence status or security decisions.
+ORBIT Core, ATLAS, WITNESS, FLARE, CAPSULE, FLIGHT RECORDER, Change Passport, CLI, local API and MCP remain useful without an AI key or network access. ORBIT AI is an optional analysis layer; it is not the source of truth for repository facts, test outcomes, evidence status or security decisions.
+
+## Implemented provider adapters
+
+- **OpenAI Responses API:** `POST https://api.openai.com/v1/responses`, bearer API key, `store: false`, no tools enabled.
+- **Anthropic Messages API:** `POST https://api.anthropic.com/v1/messages`, `x-api-key` and version header.
+- **Ollama:** `POST /api/chat`, defaults to `http://127.0.0.1:11434`; remote Ollama requires explicit opt-in and HTTPS.
+
+Official API references:
+- OpenAI: https://developers.openai.com/api/reference/overview and https://developers.openai.com/api/docs/guides/migrate-to-responses
+- Anthropic: https://platform.claude.com/docs/en/api/overview
+- Ollama: https://docs.ollama.com/api/introduction
+
+Provider model names and API versions change. Re-verify them against official documentation before release.
 
 ## Required user flow
 
 1. AI is disabled by default.
 2. The user explicitly selects a provider, model and task.
-3. ORBIT prepares a bounded context bundle from already indexed or explicitly selected evidence.
-4. The UI shows the exact content, file paths, evidence IDs, hashes, destination provider and estimated token/byte size.
-5. Secret scanning/redaction runs before the request. The user can inspect and edit the final bundle.
-6. The user explicitly approves transmission.
-7. The provider returns advisory text. The result is stored as an AI note with model/provider, timestamp, context evidence IDs and limitations—not as test or correctness evidence.
+3. ORBIT prepares a bounded context bundle from selected evidence items.
+4. The application shows the exact context text, evidence IDs, hashes, destination, byte size and redaction count.
+5. Best-effort secret scanning/redaction runs before the request. The current Command Center displays the prepared bundle for inspection but does not provide an editor for changing its contents.
+6. The user explicitly approves transmission. The adapter requires the SHA-256 of the exact approved preview; changing the context, provider, model or destination invalidates approval.
+7. The provider returns advisory text. The result is not test or correctness evidence.
 8. No AI result may mutate graph facts, create PASS states, run shell commands, connect to hardware, write files or apply patches automatically.
 
-## Provider adapters
+## Current package safeguards
 
-Potential providers for a future implementation:
-- Anthropic Messages API.
-- OpenAI API or an explicitly configured OpenAI-compatible endpoint.
-- Ollama on a user-controlled local endpoint.
+- No provider SDK dependency; requests use injected/global fetch.
+- Disabled AI and missing approval are rejected before network access.
+- Context is capped at 48 KiB; evidence count, prompt size, response bytes (stream-bounded), output characters and timeout are bounded.
+- Best-effort redaction for common API keys, GitHub tokens, AWS access-key IDs, bearer tokens, private-key blocks and credential assignments.
+- The exact preview is SHA-256 bound to the approval.
+- Ollama defaults to loopback; remote destinations require a separate explicit flag and HTTPS.
+- OpenAI storage is disabled and no tools are sent.
+- Provider error messages do not echo response bodies or credentials.
+- Responses are marked CITED only when a selected evidence ID appears in the text; otherwise citations are marked missing.
+- The adapter never writes to ORBIT's graph or invokes local tools.
 
-Provider-specific authentication, API versions, model identifiers, rate limits and data retention must be re-verified against current official provider documentation at implementation time. Never hard-code a model as permanently available.
+## Remaining work before user-facing release
 
-## Security requirements
-
-- API keys are supplied at runtime and never stored in SQLite, graph attributes, evidence, logs, telemetry, screenshots or generated reports.
-- Remote providers require an explicit per-provider opt-in and a per-request send approval.
-- Ollama defaults to loopback. A remote Ollama host requires a separate explicit warning/approval.
-- Requests use bounded timeouts, retries only for safe transient failures, and strict request/response byte limits.
-- Context is selected by allowlisted evidence IDs and source ranges, not by arbitrary recursive filesystem reads.
-- Secret redaction must cover common tokens, private keys, credentials and environment values; redaction is best-effort and must be disclosed as such.
-- Repository text is untrusted data and may contain prompt injection. It must never be treated as instructions for the assistant or provider.
-- Provider output is untrusted. Validate evidence IDs and citations; mark unsupported claims as unverified.
-- Do not expose tool execution, shell, file write, network fetch, graph mutation or hardware control to the AI agent in v1.
-
-## Evaluation and acceptance
-
-Before shipping:
-- Provider contract tests with mocked HTTP.
-- No-network test proving disabled AI makes zero requests.
-- Tests proving secrets never appear in outbound payloads or logs.
-- Context preview exactly matches outbound payload.
-- Evidence citation validation and unsupported-claim warnings.
-- Timeout, rate-limit, malformed JSON and oversized response tests.
-- Prompt-injection fixture tests.
-- Documentation of provider-side retention and data processing.
-- Explicit UI approval for every remote transmission.
+- Add browser E2E tests proving no provider network call occurs before the user approves the exact preview.
+- Add a safe, explicit way to edit selected excerpts before approval, while keeping evidence provenance and hashes clear.
+- Keep provider keys server-side and never expose them to browser JavaScript.
+- Add cancellation support, token/cost estimates and model capability selection.
+- Add tests for timeout, oversized response, malformed JSON, 401/429/5xx, remote destination approval, changed destination, redaction edge cases and prompt injection.
+- Verify exact official provider schemas and version headers during release validation.
+- Document provider-side retention, regional processing and account-level data settings.
+- Add user-visible disclosure and a way to inspect/clear AI notes.
 
 ## Non-goals
 
-No autonomous coding agent, automatic patch application, automatic PR approval, security certification, or hidden background AI calls.
+No autonomous coding agent, automatic patch application, automatic PR approval, hidden background AI calls, tool use, shell execution or hardware control.
+
+
+## Current local API integration
+
+The local API exposes:
+- `POST /api/v1/repositories/:key/ai/preview`: builds the exact provider-bound context from selected evidence metadata and optional user-supplied excerpts. This endpoint does not call the provider.
+- `POST /api/v1/repositories/:key/ai/analyse`: requires `confirmed: true` and the preview SHA-256, reconstructs the context and sends it only when `ORBIT_AI_ENABLED=true`.
+
+Environment configuration is process-local:
+- `ORBIT_AI_ENABLED=false` by default; set to `true` only after choosing an explicit provider.
+- `ORBIT_OPENAI_API_KEY` for OpenAI.
+- `ANTHROPIC_API_KEY` for Anthropic.
+- `ORBIT_OLLAMA_URL` defaults to loopback Ollama.
+- `ORBIT_ALLOW_REMOTE_OLLAMA=true` is required for remote Ollama and remote endpoints must use HTTPS.
+
+The current Command Center sends selected evidence metadata only. It does not read repository source files. API excerpts are supported for future use but not exposed as a browser file-reading feature.
