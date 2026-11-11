@@ -1,3 +1,5 @@
+import { XmlError, parseXml, type XmlElement } from './xml.js';
+import { OrbitError } from '@orbit/shared';
 export interface TestCaseResult {
   id: string;
   name: string;
@@ -23,20 +25,6 @@ export interface TestHistorySummary {
 
 const MAX_XML_BYTES = 10 * 1024 * 1024;
 const MAX_TEST_CASES = 100_000;
-
-function attributes(source: string): Record<string, string> {
-  const result: Record<string, string> = {};
-  const pattern = /([A-Za-z_:][\w:.-]*)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
-  for (const match of source.matchAll(pattern)) {
-    result[match[1]!] = (match[2] ?? match[3] ?? '')
-      .replace(/&quot;/g, '"')
-      .replace(/&apos;/g, "'")
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&amp;/g, '&');
-  }
-  return result;
-}
 
 function wilson(successes: number, samples: number): { lower: number; upper: number } {
   if (samples === 0) return { lower: 0, upper: 1 };
@@ -135,37 +123,50 @@ export function summarizeTestHistory(
 
 /** Safe subset parser for JUnit XML. DTD and entity declarations are rejected. */
 export function parseJunitXml(xml: string): TestCaseResult[] {
-  if (typeof xml !== 'string') throw new Error('JUnit input must be text');
+  if (typeof xml !== 'string') throw new OrbitError('INVALID_INPUT', 'JUnit input must be text');
   if (Buffer.byteLength(xml, 'utf8') > MAX_XML_BYTES)
-    throw new Error('JUnit XML exceeds the 10 MiB parser limit');
+    throw new OrbitError('INVALID_INPUT', 'JUnit XML exceeds the 10 MiB parser limit');
   if (/<!DOCTYPE|<!ENTITY/i.test(xml))
-    throw new Error('JUnit XML DTD/entity declarations are not supported');
+    throw new OrbitError('INVALID_INPUT', 'JUnit XML DTD/entity declarations are not supported');
   const results: TestCaseResult[] = [];
-  const suites = [...xml.matchAll(/<testsuite\b([^>]*)>([\s\S]*?)<\/testsuite>/gi)];
-  const regions = suites.length
-    ? suites.map((match) => ({ attrs: attributes(match[1] ?? ''), body: match[2] ?? '' }))
-    : [{ attrs: {}, body: xml }];
-  for (const region of regions) {
-    const suite = region.attrs.name ?? 'default';
-    const cases = region.body.matchAll(/<testcase\b([^>]*?)(?:\/>|>([\s\S]*?)<\/testcase>)/gi);
-    for (const match of cases) {
-      const attrs = attributes(match[1] ?? '');
-      const body = match[2] ?? '';
-      const name = attrs.name ?? 'unnamed';
-      const className = attrs.classname ?? suite;
-      const failure = /<(failure|error)\b([^>]*?)(?:\/>|>([\s\S]*?)<\/\1>)/i.exec(body);
-      const skipped = /<skipped\b/i.test(body);
+  let root: XmlElement;
+  try {
+    root = parseXml(xml);
+  } catch (error) {
+    if (error instanceof XmlError)
+      throw new OrbitError('INVALID_INPUT', `JUnit XML is not well-formed: ${error.message}`);
+    throw error;
+  }
+  if (root.name !== 'testsuites' && root.name !== 'testsuite')
+    throw new OrbitError(
+      'INVALID_INPUT',
+      `JUnit XML root must be <testsuites> or <testsuite>, found <${root.name}>`,
+    );
+  const visit = (element: XmlElement, suiteName: string): void => {
+    for (const child of element.children) {
+      if (child.name === 'testsuite') {
+        visit(child, child.attrs['name'] ?? suiteName);
+        continue;
+      }
+      if (child.name !== 'testcase') {
+        visit(child, suiteName);
+        continue;
+      }
+      const attrs = child.attrs;
+      const name = attrs['name'] ?? 'unnamed';
+      const className = attrs['classname'] ?? suiteName;
+      const failure = child.children.find((c) => c.name === 'failure' || c.name === 'error');
+      const skipped = child.children.some((c) => c.name === 'skipped');
       const outcome: TestCaseResult['outcome'] = skipped
         ? 'skipped'
         : failure
           ? 'failed'
           : 'passed';
-      const messageAttrs = failure ? attributes(failure[2] ?? '') : {};
       const message = failure
-        ? (messageAttrs.message ?? failure[3] ?? '').replace(/<[^>]*>/g, '').slice(0, 2000)
+        ? (failure.attrs['message'] ?? failure.text).trim().slice(0, 2000)
         : undefined;
       if (results.length >= MAX_TEST_CASES) {
-        throw new Error('JUnit XML exceeds the 100000 test-case limit');
+        throw new OrbitError('INVALID_INPUT', 'JUnit XML exceeds the 100000 test-case limit');
       }
       results.push({
         id: `${className}::${name}`,
@@ -173,12 +174,13 @@ export function parseJunitXml(xml: string): TestCaseResult[] {
         suite: className,
         outcome,
         durationSeconds:
-          attrs.time !== undefined && Number.isFinite(Number(attrs.time))
-            ? Number(attrs.time)
+          attrs['time'] !== undefined && Number.isFinite(Number(attrs['time']))
+            ? Number(attrs['time'])
             : null,
         ...(message && { message }),
       });
     }
-  }
+  };
+  visit(root, root.attrs['name'] ?? 'default');
   return results;
 }

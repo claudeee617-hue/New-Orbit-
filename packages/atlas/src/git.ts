@@ -39,6 +39,8 @@ const SAFE_ARGS = [
   'diff.external=',
   '-c',
   'core.hooksPath=/dev/null',
+  '-c',
+  'core.quotepath=false',
   '--no-pager',
 ];
 const SAFE_ENV = {

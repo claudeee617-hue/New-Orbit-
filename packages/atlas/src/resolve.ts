@@ -1,3 +1,4 @@
+import { PYTHON_STDLIB } from './pystdlib.js';
 import { builtinModules } from 'node:module';
 import { posix } from 'node:path';
 import type { ExtractedImport, Language } from './types.js';
@@ -169,14 +170,23 @@ function resolvePython(ctx: ResolveContext, from: string, imp: ExtractedImport):
       ];
   }
   const top = segments[0] ?? imp.specifier;
-  // Without an interpreter's stdlib list we cannot tell third-party from standard library.
+  if (PYTHON_STDLIB.has(top))
+    return [
+      {
+        kind: 'external',
+        ecosystem: 'python-stdlib',
+        name: top,
+        confidence: 0.95,
+        how: 'Python standard library (3.13 module list)',
+      },
+    ];
   return [
     {
       kind: 'external',
       ecosystem: 'pypi',
       name: top,
       confidence: 0.6,
-      how: 'not in repository: third-party or standard library',
+      how: 'not in repository: assumed third-party',
     },
   ];
 }

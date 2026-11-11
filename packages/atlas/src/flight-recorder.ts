@@ -43,6 +43,36 @@ function normaliseEvent(value: string): string {
   return 'other';
 }
 
+const ISO_LIKE =
+  /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,9})?)?)?\s*(Z|[+-]\d{2}(?::?\d{2})?)?$/i;
+
+/**
+ * Wall-clock timestamps only. ISO-8601-style strings (zone-less values are read as UTC so results
+ * do not depend on the machine's time zone) and epoch seconds/milliseconds of a plausible year
+ * (2001–5138). Small numbers such as uptime ticks or sequence numbers are not dates and are
+ * ignored rather than turned into 1970 or machine-local times.
+ */
+export function parseTelemetryTimestamp(item: unknown): string | null {
+  let ms: number | undefined;
+  if (typeof item === 'number' || (typeof item === 'string' && /^\d+(\.\d+)?$/.test(item.trim()))) {
+    const n = Number(item);
+    if (n >= 1e9 && n < 1e11) ms = n * 1000;
+    else if (n >= 1e11 && n < 1e14) ms = n;
+  } else if (typeof item === 'string') {
+    const text = item.trim();
+    const match = ISO_LIKE.exec(text);
+    if (match) {
+      const zone = match[7];
+      const normalized = zone || !match[4] ? text : `${text.replace(' ', 'T')}Z`;
+      ms = new Date(normalized.replace(' ', 'T').replace(/\s+(?=Z|[+-])/i, '')).getTime();
+      if (!zone && !match[4]) ms = new Date(`${text}T00:00:00Z`).getTime();
+    }
+  }
+  if (ms === undefined || !Number.isFinite(ms)) return null;
+  const date = new Date(ms);
+  return Number.isFinite(date.getTime()) ? date.toISOString() : null;
+}
+
 function normaliseRecord(value: Record<string, unknown>): TelemetryPoint {
   const metrics: Record<string, number> = {};
   let timestamp: string | null = null;
@@ -50,8 +80,7 @@ function normaliseRecord(value: Record<string, unknown>): TelemetryPoint {
   for (const [key, item] of Object.entries(value)) {
     const lower = key.toLowerCase();
     if (['timestamp', 'time', 'ts', 'datetime'].includes(lower)) {
-      const parsed = typeof item === 'number' ? new Date(item) : new Date(String(item));
-      if (Number.isFinite(parsed.getTime())) timestamp = parsed.toISOString();
+      timestamp = parseTelemetryTimestamp(item) ?? timestamp;
     } else if (['event', 'type', 'message', 'status'].includes(lower)) {
       if (typeof item === 'string' && item.trim()) event = normaliseEvent(item);
     } else if (typeof item === 'number' && Number.isFinite(item) && METRIC_NAME.test(key)) {

@@ -138,3 +138,6 @@ export type {
   ReproductionStep,
   ReproductionPlan,
 } from './passport-engine.js';
+
+export { XmlError, childrenNamed, parseXml, type XmlElement } from './xml.js';
+export { parseTelemetryTimestamp } from './flight-recorder.js';

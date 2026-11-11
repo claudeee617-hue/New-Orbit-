@@ -98,3 +98,113 @@ describe('ORBIT read-only MCP surface', () => {
     await client.close();
   });
 });
+
+async function connect(store: ReturnType<typeof createGraphStore>, repositoryId: string) {
+  const server = createOrbitMcpServer({ store, repositoryId });
+  servers.push(server);
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  await server.connect(serverTransport);
+  const client = new Client({ name: 'orbit-test-client', version: '1.0.0' });
+  await client.connect(clientTransport);
+  return client;
+}
+
+async function call(client: Client, name: string, args: Record<string, unknown>) {
+  const response = await client.callTool({ name, arguments: args });
+  const first = (response.content as { type: string; text: string }[])[0];
+  return { isError: response.isError === true, body: JSON.parse(first?.text ?? 'null') as never };
+}
+
+describe('MCP responses stay usable on larger data', () => {
+  it('returns newest history first and exposes totals', async () => {
+    const { store, repository } = setup();
+    for (let i = 0; i < 8; i++)
+      store.evidence.append({
+        repositoryId: repository.id,
+        source: `test:${i}`,
+        sourceType: 'manual',
+        contentHash: String(i).repeat(64).slice(0, 64),
+        status: 'NOT_MEASURED',
+        limitations: ['fixture'],
+        relatedEntityIds: [],
+      });
+    const client = await connect(store, repository.id);
+    const { body } = await call(client, 'orbit_search_history', { limit: 3 });
+    const view = body as {
+      evidence: { source: string }[];
+      evidenceTotal: number;
+      ledger: { seq: number }[];
+    };
+    expect(view.evidence.map((e) => e.source)).toEqual(['test:7', 'test:6', 'test:5']);
+    expect(view.evidenceTotal).toBe(8);
+    expect(view.ledger.map((l) => l.seq)).toEqual(
+      [...view.ledger.map((l) => l.seq)].sort((a, b) => b - a),
+    );
+    expect(view.ledger).toHaveLength(3);
+  });
+
+  it('resolves abbreviated and upper-case commit SHAs', async () => {
+    const { store, repository } = setup();
+    const sha = 'abcdef0123456789abcdef0123456789abcdef01';
+    store.nodes.upsert({
+      repositoryId: repository.id,
+      type: 'Commit',
+      key: sha,
+      attrs: { producer: 'atlas', subject: 'fixture' },
+      sourceEvidenceId: store.evidence.append({
+        repositoryId: repository.id,
+        source: 'test:git',
+        commitSha: sha,
+        sourceType: 'git',
+        contentHash: 'b'.repeat(64),
+        status: 'PASS',
+        limitations: [],
+        relatedEntityIds: [],
+      }).record.id,
+    });
+    const client = await connect(store, repository.id);
+    for (const input of [sha, sha.slice(0, 7), sha.toUpperCase(), sha.slice(0, 10).toUpperCase()]) {
+      const { body } = await call(client, 'orbit_get_change_context', { commitSha: input });
+      const view = body as { commit: { key: string } | null; evidence: unknown[] };
+      expect(view.commit?.key, input).toBe(sha);
+      expect(view.evidence, input).toHaveLength(1);
+    }
+  });
+
+  it('truncates long memory content instead of failing with the output limit', async () => {
+    const { store, repository } = setup();
+    const evidence = store.evidence.append({
+      repositoryId: repository.id,
+      source: 'test:memory',
+      sourceType: 'manual',
+      contentHash: 'c'.repeat(64),
+      status: 'NOT_MEASURED',
+      limitations: ['fixture'],
+      relatedEntityIds: [],
+    });
+    for (let i = 0; i < 4; i++)
+      store.nodes.upsert({
+        repositoryId: repository.id,
+        type: 'Documentation',
+        key: `architecture:big-${i}`,
+        attrs: {
+          producer: 'atlas-memory',
+          memoryKind: 'architecture',
+          title: `Big ${i}`,
+          summary: 'big',
+          content: 'x'.repeat(19_000),
+          tags: [],
+          sourceRefs: [],
+          supersedes: [],
+          conflictsWith: [],
+        },
+        sourceEvidenceId: evidence.record.id,
+      });
+    const client = await connect(store, repository.id);
+    const { isError, body } = await call(client, 'orbit_search_memory', {});
+    expect(isError).toBe(false);
+    const view = body as { memories: { content?: string; contentTruncated?: boolean }[] };
+    expect(view.memories.length).toBeGreaterThan(0);
+    for (const m of view.memories) if (m.content) expect(m.content.length).toBeLessThanOrEqual(501);
+  });
+});

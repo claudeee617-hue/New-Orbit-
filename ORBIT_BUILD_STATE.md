@@ -1,11 +1,11 @@
 # ORBIT — Build State
 
 Durable progress log. Update after every implementation phase.
-Last updated: 2026-11-08
+Last updated: 2026-11-10
 
 ## Current phase
 
-**Engineering roadmap Prompts 0–10 and App Business Module sub-prompts 0–4 are merged into `main` (PRs #5 and #9). Prompt 11 API/CLI implementation is in `feat/prompt-11-api-cli`; full CI run #136 passed on Ubuntu, macOS and Windows (373 Ubuntu tests), and PR #11 is ready for review but not merged.**
+**Engineering roadmap Prompts 0–10 and App Business Module sub-prompts 0–4 are on `main` (PRs #5 and #9). Branch `integration/witness-and-atlas-0.2` adds the git-based WITNESS package (`packages/witness`) and ATLAS 0.2.0 improvements on top of that `main`; it is verified locally and awaiting review and CI. Prompt 11 API/CLI is in `feat/prompt-11-api-cli` (PR #11, not merged).**
 
 ## Phase checklist
 
@@ -17,7 +17,7 @@ Last updated: 2026-11-08
 | 3      | ORBIT Core graph                               | Done on `main` (see results below)           |
 | 4      | ATLAS scanning                                 | Done (see results below)                       |
 | 5      | ATLAS memory and MCP                           | Implemented on `main` via PR #5; CI run #109 passed on Ubuntu, macOS and Windows |
-| 6      | WITNESS                                        | Base prototype plus extended verification helpers and CLI on `main` via PR #5; CI run #109 passed on three OSs |
+| 6      | WITNESS                                        | Prototype on `main` via PR #5; **full git-based verifier in `packages/witness` on the integration branch** (see Prompt 6 section) |
 | 7      | FLARE                                          | Merged to `main` via PR #5: pytest/Jest/Go adapters and reliability analytics/CLI; durable history remains outstanding |
 | 8      | CAPSULE                                        | Merged to `main` via PR #5: polyglot manifest inspection and CLI; build replay remains out of scope |
 | 9      | FLIGHT RECORDER                                | Merged to `main` via PR #5: recorded-log analysis + hash-verified graph persistence; no physical serial connection |
@@ -52,6 +52,21 @@ Known prototype limitations:
 - Telemetry analysis works on recorded files only; physical ESP32/STM32 serial capture is unimplemented.
 - Change Passport requires a user-supplied evidence JSON bundle; graph correlation and replay UI remain future work.
 
+## Audit and fixes of `main` (2026-11-11, branch `integration/witness-and-atlas-0.2`)
+
+`main` (373 tests) was reviewed after other sessions added Prompts 5–10 and the API. Defects found by running adversarial inputs, then fixed with regression tests:
+
+| Area | Defect | Fix |
+| --- | --- | --- |
+| API auth | **Authentication bypass**: the check was `url.startsWith('/api/v1/')`, but the router decodes `%`-escapes, so `GET /%61pi/v1/repositories` returned data with no token | Auth now keys on the route the router matched; only `/health` and unmatched (404) requests skip it |
+| API errors | Bad JSON, bad test report, bad telemetry, bad passport body returned 500 or `INTERNAL`; empty JUnit report was stored as **PASS** | Parse failures are 400 `INVALID_INPUT`; a report with zero test cases is rejected; `units` validated; engine validation errors are `OrbitError('INVALID_INPUT')` |
+| Diff parser | Added line `+++x` was dropped and shifted every later line number; removed lines starting `--` looked like headers | Hunk bodies are consumed using the `@@` line counts |
+| Cobertura / JUnit parsers | Regex parsing: self-closing `<class/>` swallowed the next class; `>` in attributes, XML comments and CDATA produced ghost or missing test cases (a commented-out failing test was reported as failed) | Both parsers now use a strict XML reader (no DTD/entities, depth and size limits); malformed XML is an error instead of an empty result |
+| Telemetry | Numbers/strings like `1` became 1970 or machine-time-zone dates | Only ISO-8601 strings and plausible epoch seconds/ms are timestamps; others stay `null` |
+| MCP | `orbit_search_memory` failed with the 48 KiB cap on ordinary data; history returned only the oldest records; abbreviated/upper-case SHAs found nothing; unbounded cycle and module lists; unbounded integrity problem list; DB not closed when the transport closed | Content truncated at 500 chars with a flag; newest-first history with totals; SHA prefix and case handling; lists capped with totals; integrity problems capped; DB closed on transport close |
+
+Not changed (reported only): read-only open of a WAL database creates `-wal`/`-shm` files (SQLite behaviour); a malformed JSON line on MCP stdin gets no `-32700` reply (SDK behaviour); `orbit_analyze_impact` output is still bounded only by the response cap; the FLARE/CAPSULE/telemetry-persistence modules were only spot-checked (a full audit pass was interrupted by a usage limit and is still open).
+
 ## Prompt 5 summary (ATLAS persistent memory + read-only MCP)
 
 - `packages/atlas/src/memory.ts`: validated memory records stored as versioned `Decision` / `Documentation` graph nodes with deterministic SHA-256 evidence; lexical search; append-only updates; tombstone invalidation; Markdown/ADR import; explicit `Supersedes` edges and declared-conflict notices; source freshness only when callers provide current hashes.
@@ -68,6 +83,39 @@ Known Prompt 5 limitations:
 - Conflict detection is limited to explicit document metadata. Semantic contradictions and unreferenced decisions require human review.
 - MCP reads only data already present in the local ORBIT database. The server does not index the repository or create/migrate a database when launched.
 - MCP transport currently supports stdio only; remote HTTP transport, authentication and hosted multi-tenant operation are not included.
+
+## Prompt 6 summary (WITNESS: git-based PR verification, `packages/witness`)
+
+- `packages/witness`: Git diff (merge base to head, `--unified=0`) to exact changed head lines (added / modified / deletion-only, renames, binary); changed-file classification (ATLAS classifier); changed-symbol mapping from ATLAS extraction of the file *at head*; LCOV and Cobertura XML parsers; JUnit XML parser; changed-line coverage (covered / uncovered / non-executable) that never infers from file coverage; per-symbol coverage; regression comparison (base vs head coverage per file, base vs head test results); test linkage via ATLAS static facts (direct vs indirect); sensitive-file rules; relevant ADRs by textual mention; findings with stable IDs (`WIT-<RULE>-<hash>`), severity, explanation, location, evidence and suggested action; Markdown, JSON and SARIF 2.1.0 renderers; opt-in graph recording (`--record`: evidence per input + `Finding` nodes + `AFFECTS` edges).
+- CLI (git mode of `orbit verify`): `--base --head [--repo --coverage --base-coverage --test-report --base-test-report --build-result --coverage-commit --min-coverage --format md|json|sarif --out --force --record --key --db --fail-on PARTIAL|INCOMPLETE|FAIL]`. New exit code 6 (`VERIFICATION_FAILED`). `--out` refuses to overwrite without `--force`.
+- Status rules and design: ADR-0016. The earlier coverage-only prototype in `@orbit/atlas` (`verifyChangedLineCoverage`, diff-file mode of `orbit verify`) is kept for compatibility; `orbit verify` now has two modes (diff-file, or `--base/--head` git mode).
+- Deterministic sample PR report (Markdown/JSON/SARIF) in `packages/witness/samples/`, produced by a fixed-date fixture repo; its LCOV/JUnit inputs are **hand-written parser fixtures, not output of a real run** (stated in the samples README).
+
+Test results (`pnpm run check`, Node 22.23.4, Linux): shared 36, core 66, database 43, graph 14, atlas 96, witness 62, api 12, cli 21, web 6 = **356 passing**; format, lint, typecheck and build clean.
+
+Parser tests cover: empty/garbage/binary input, truncated files, malformed records, CRLF, duplicate records, wrong root elements, DOCTYPE and entity handling, runaway nesting, nameless test cases, ambiguous and suffix path matches, hostile refs, missing inputs.
+
+Real-world check run here (not a unit test): after committing, `orbit verify --base HEAD~1 --head HEAD` on this repository with a real LCOV and JUnit report from `vitest --coverage` of the witness package and a real `pnpm run build` result gave overall PARTIAL: 440 of 463 executable changed lines covered (95.0%), tests PASS (62/62), build PASS, and every changed file outside `packages/witness` reported NOT_MEASURED for coverage because no coverage for those packages was supplied. That is the intended behaviour.
+
+Limitations specific to Prompt 6:
+- WITNESS reads evidence files; it does not run tests or builds. Coverage staleness cannot be detected from the report itself (it states the assumption; `--coverage-commit` enables a check).
+- SARIF output was validated structurally by tests only; the official SARIF JSON schema could not be fetched offline, so schema validation was not run.
+- Test linkage is static (imports and naming); dynamic dispatch and reflection are invisible. Link is not coverage.
+- Line coverage only: no branch coverage, no per-test coverage contexts.
+- Relevant ADRs are matched by textual mention of changed paths (heuristic).
+- Symbol ranges depend on ATLAS parsing; files with syntax errors give imprecise ranges (reported as limitations).
+- A coverage entry matched only by path suffix is labelled; ambiguous matches become NOT_MEASURED.
+- Test linkage needs a clean working tree at head (or an existing ATLAS scan of head in the database); otherwise it is NOT_MEASURED.
+- Golden sample SHAs depend on Git producing identical commits across platforms; CI on Windows/macOS had not run these tests when this was written.
+- The dashboard does not display verification results yet.
+
+## ATLAS 0.2.0 upgrades and debugging pass (between Prompt 4 and 6)
+
+Prompts 0–4 were re-audited (links, dependency audit, fresh-clone install and check, real-browser look at the dashboard, CI on three operating systems, a store fuzz test).
+
+Fixed or added: import bindings (aliases, namespace/default imports, destructured `require`, Python `as`, Java class imports) so more calls resolve; Python standard-library recognition (list generated from Python 3.13); `core.quotepath=false` so non-ASCII paths survive git; a fuzz test for extractors; a seeded fuzz test comparing the graph store against an in-memory model; dashboard status made truthful; README rewritten to match reality; ADR-0011 updated.
+
+Still open from Prompt 4 (not tackled): tsconfig `paths` aliases, C/C++ include paths from build systems, git rename following and surviving-line ownership, scan-time optimisation above 3000 files, `CALLS` edges from module-level code (needs a core rule change), LICENSE file.
 
 ## Prompt 3 summary (ORBIT Core: Living Engineering Graph)
 
@@ -137,7 +185,7 @@ Created: root config (pnpm workspace, Turborepo, strict tsconfig, ESLint 10 flat
 | -------------------- | ---------------------------------------- |
 | `pnpm run build`     | 8/8 tasks pass                           |
 | `pnpm run typecheck` | 13/13 tasks pass                         |
-| `pnpm run test`      | 276 tests pass (shared 36, core 66, database 39, graph 14, atlas 89, api 12, cli 14, web 6) |
+| `pnpm run test`      | 499 tests pass (shared 36, core 66, database 45, graph 14, atlas 164, mcp 5, witness 62, api 39, cli 41, web 27) |
 | `pnpm run lint`      | clean                                    |
 | `pnpm run format:check` | clean (Markdown excluded)             |
 
@@ -171,6 +219,7 @@ node apps/cli/dist/index.js status --json
 node apps/cli/dist/index.js scan . --db .orbit/orbit.db   # ATLAS scan of this repo
 node apps/cli/dist/index.js atlas export --db .orbit/orbit.db --out atlas.json
 node apps/cli/dist/index.js atlas impact packages/core/src/index.ts --db .orbit/orbit.db
+node apps/cli/dist/index.js verify --base main --head HEAD --coverage lcov.info --test-report junit.xml --format md
 ```
 
 ## Next step

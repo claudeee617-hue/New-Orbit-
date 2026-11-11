@@ -411,6 +411,8 @@ export async function scanRepository(options: ScanOptions): Promise<ScanResult> 
   };
   const unresolvedImports: { path: string; specifier: string; reason: string }[] = [];
   const importedNames = new Map<string, Map<string, string>>(); // file → name → target file
+  // file → local name → { target file, imported name } (aliases, namespaces, default imports)
+  const bindingTargets = new Map<string, Map<string, { file: string; imported: string }>>();
 
   for (const path of parsedPaths) {
     const { extraction } = parsed.get(path) as ParsedFile;
@@ -438,6 +440,11 @@ export async function scanRepository(options: ScanOptions): Promise<ScanResult> 
           const names = importedNames.get(path) ?? new Map<string, string>();
           for (const n of imp.names) if (n !== '*') names.set(n, res.path);
           importedNames.set(path, names);
+          const bound =
+            bindingTargets.get(path) ?? new Map<string, { file: string; imported: string }>();
+          for (const b of imp.bindings)
+            bound.set(b.local, { file: res.path, imported: b.imported });
+          bindingTargets.set(path, bound);
         } else if (res.kind === 'module') {
           importStats.toModules += 1;
           addEdge(moduleImportEdges, path, res.dir, {
@@ -454,7 +461,7 @@ export async function scanRepository(options: ScanOptions): Promise<ScanResult> 
           externalNodes.set(dependencyKey, {
             ecosystem: res.ecosystem,
             name: res.name,
-            maybeStdlib: res.ecosystem === 'pypi' || res.ecosystem === 'java',
+            maybeStdlib: res.ecosystem === 'java',
           });
           addEdge(externalEdges, path, dependencyKey, {
             kind: imp.kind,
@@ -562,6 +569,38 @@ export async function scanRepository(options: ScanOptions): Promise<ScanResult> 
           if (hits.length === 1) {
             target = hits[0];
             how = 'imported name';
+            confidence = 0.8;
+          }
+        }
+      }
+      if (!target && call.receiver !== undefined) {
+        // `ns.fn()` where `ns` is a namespace/module binding, or `Cls.method()` for a class binding.
+        const bound = bindingTargets.get(path)?.get(call.receiver);
+        if (bound && bound.imported === '*') {
+          const inFile = (symbolsByFile.get(bound.file) ?? []).filter((r) => callable(r));
+          // Namespace import: exported function. Class import (Java): `Receiver.callee` method.
+          const direct = inFile.filter((r) => r.symbol.name === call.callee && r.symbol.exported);
+          const viaClass = inFile.filter(
+            (r) => r.symbol.qualifiedName === `${call.receiver}.${call.callee}`,
+          );
+          const pick = direct.length > 0 ? direct : viaClass;
+          if (pick.length === 1) {
+            target = pick[0];
+            how = 'namespace or class binding';
+            confidence = 0.8;
+          }
+        }
+      }
+      if (!target && call.receiver === undefined) {
+        // `import { a as b }` then `b()`: resolve through the imported name.
+        const bound = bindingTargets.get(path)?.get(call.callee);
+        if (bound && bound.imported !== '*' && bound.imported !== 'default') {
+          const hits = (symbolsByFile.get(bound.file) ?? []).filter(
+            (r) => callable(r) && r.symbol.name === bound.imported && r.symbol.exported,
+          );
+          if (hits.length === 1) {
+            target = hits[0];
+            how = 'aliased import';
             confidence = 0.8;
           }
         }

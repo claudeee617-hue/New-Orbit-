@@ -1,5 +1,5 @@
 /** Version of the extraction logic. Bump when extractors change so cached results are discarded. */
-export const ATLAS_VERSION = '0.1.0';
+export const ATLAS_VERSION = '0.2.0';
 
 export const LANGUAGES = ['typescript', 'javascript', 'python', 'java', 'c', 'cpp'] as const;
 export type Language = (typeof LANGUAGES)[number];
@@ -42,12 +42,20 @@ export interface ExtractedSymbol {
 export type ImportKind =
   'static' | 'type' | 'reexport' | 'dynamic' | 'require' | 'include-local' | 'include-system';
 
+/** A local name introduced by an import. `imported` is `*` for a whole module/class, `default` for a default export. */
+export interface ImportBinding {
+  local: string;
+  imported: string;
+}
+
 export interface ExtractedImport {
   /** Module specifier exactly as written (`./a`, `os.path`, `a.b.C`, `"x.h"`). */
   specifier: string;
   kind: ImportKind;
   /** Imported names, when the syntax lists them. `*` for wildcard imports. */
   names: string[];
+  /** Local names this import creates (aliases, namespaces), used to resolve calls. */
+  bindings: ImportBinding[];
   /** Number of leading dots for Python relative imports. */
   relativeLevel: number;
   location: SourceLocation;

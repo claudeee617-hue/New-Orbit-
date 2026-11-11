@@ -1,3 +1,4 @@
+import { OrbitError } from '@orbit/shared';
 import { createHash } from 'node:crypto';
 import type { TelemetrySession } from './flight-recorder.js';
 
@@ -86,27 +87,30 @@ export function analyseTelemetry(
   options: TelemetryAnalysisOptions = {},
 ): TelemetryAnalysis {
   if (!session || typeof session !== 'object' || Array.isArray(session)) {
-    throw new Error('telemetry session must be an object');
+    throw new OrbitError('INVALID_INPUT', 'telemetry session must be an object');
   }
   if (!/^[0-9a-f]{64}$/i.test(session.rawSha256)) {
-    throw new Error('telemetry session SHA-256 is invalid');
+    throw new OrbitError('INVALID_INPUT', 'telemetry session SHA-256 is invalid');
   }
   if (!['json', 'ndjson', 'csv', 'key-value'].includes(session.format)) {
-    throw new Error('telemetry session format is invalid');
+    throw new OrbitError('INVALID_INPUT', 'telemetry session format is invalid');
   }
   if (
     !Array.isArray(session.points) ||
     session.points.length === 0 ||
     session.points.length > 100_000
   ) {
-    throw new Error('telemetry session must contain between 1 and 100000 points');
+    throw new OrbitError(
+      'INVALID_INPUT',
+      'telemetry session must contain between 1 and 100000 points',
+    );
   }
   if (!options || typeof options !== 'object' || Array.isArray(options)) {
-    throw new Error('telemetry analysis options must be an object');
+    throw new OrbitError('INVALID_INPUT', 'telemetry analysis options must be an object');
   }
   const units = options.units ?? {};
   if (!units || typeof units !== 'object' || Array.isArray(units)) {
-    throw new Error('telemetry units must be an object');
+    throw new OrbitError('INVALID_INPUT', 'telemetry units must be an object');
   }
   const unitEntries = Object.entries(units);
   if (
@@ -118,20 +122,25 @@ export function analyseTelemetry(
         value.length > 32,
     )
   ) {
-    throw new Error(
+    throw new OrbitError(
+      'INVALID_INPUT',
       'telemetry units must contain at most 100 valid metric names and short unit strings',
     );
   }
   const thresholds = options.thresholds ?? [];
-  if (!Array.isArray(thresholds)) throw new Error('telemetry thresholds must be an array');
+  if (!Array.isArray(thresholds))
+    throw new OrbitError('INVALID_INPUT', 'telemetry thresholds must be an array');
   const rules = [...thresholds];
   if (rules.length > MAX_THRESHOLD_RULES) {
-    throw new Error('at most ' + MAX_THRESHOLD_RULES + ' telemetry threshold rules are allowed');
+    throw new OrbitError(
+      'INVALID_INPUT',
+      'at most ' + MAX_THRESHOLD_RULES + ' telemetry threshold rules are allowed',
+    );
   }
   const ruleIds = new Set<string>();
   for (const rule of rules) {
     if (!rule || typeof rule !== 'object' || Array.isArray(rule)) {
-      throw new Error('each telemetry threshold rule must be an object');
+      throw new OrbitError('INVALID_INPUT', 'each telemetry threshold rule must be an object');
     }
     if (
       typeof rule.id !== 'string' ||
@@ -139,34 +148,44 @@ export function analyseTelemetry(
       rule.id.length > 128 ||
       ruleIds.has(rule.id)
     ) {
-      throw new Error(
+      throw new OrbitError(
+        'INVALID_INPUT',
         'telemetry threshold rule IDs must be non-empty, unique strings up to 128 characters',
       );
     }
     ruleIds.add(rule.id);
     if (typeof rule.metric !== 'string' || !/^[A-Za-z][A-Za-z0-9_.-]{0,63}$/.test(rule.metric)) {
-      throw new Error('threshold ' + rule.id + ' requires a valid metric name');
+      throw new OrbitError(
+        'INVALID_INPUT',
+        'threshold ' + rule.id + ' requires a valid metric name',
+      );
     }
     if (rule.unit !== undefined && (typeof rule.unit !== 'string' || rule.unit.length > 32)) {
-      throw new Error('threshold ' + rule.id + ' unit must be a short string');
+      throw new OrbitError(
+        'INVALID_INPUT',
+        'threshold ' + rule.id + ' unit must be a short string',
+      );
     }
     if (rule.label !== undefined && (typeof rule.label !== 'string' || rule.label.length > 200)) {
-      throw new Error('threshold ' + rule.id + ' label must be a string up to 200 characters');
+      throw new OrbitError(
+        'INVALID_INPUT',
+        'threshold ' + rule.id + ' label must be a string up to 200 characters',
+      );
     }
     if (rule.min === undefined && rule.max === undefined) {
-      throw new Error('threshold ' + rule.id + ' must define min or max');
+      throw new OrbitError('INVALID_INPUT', 'threshold ' + rule.id + ' must define min or max');
     }
     if (rule.severity !== undefined && !['info', 'warning', 'error'].includes(rule.severity)) {
-      throw new Error('threshold ' + rule.id + ' severity is invalid');
+      throw new OrbitError('INVALID_INPUT', 'threshold ' + rule.id + ' severity is invalid');
     }
     if (rule.min !== undefined && !Number.isFinite(rule.min)) {
-      throw new Error('threshold ' + rule.id + ' min must be finite');
+      throw new OrbitError('INVALID_INPUT', 'threshold ' + rule.id + ' min must be finite');
     }
     if (rule.max !== undefined && !Number.isFinite(rule.max)) {
-      throw new Error('threshold ' + rule.id + ' max must be finite');
+      throw new OrbitError('INVALID_INPUT', 'threshold ' + rule.id + ' max must be finite');
     }
     if (rule.min !== undefined && rule.max !== undefined && rule.min > rule.max) {
-      throw new Error('threshold ' + rule.id + ' min must not exceed max');
+      throw new OrbitError('INVALID_INPUT', 'threshold ' + rule.id + ' min must not exceed max');
     }
   }
 
@@ -176,7 +195,8 @@ export function analyseTelemetry(
   let metricSampleCount = 0;
   const addAnomaly = (anomaly: TelemetryAnomaly): void => {
     if (anomalies.length >= MAX_ANALYSIS_ANOMALIES) {
-      throw new Error(
+      throw new OrbitError(
+        'INVALID_INPUT',
         'telemetry analysis exceeds the ' + MAX_ANALYSIS_ANOMALIES + ' anomaly limit',
       );
     }
@@ -186,7 +206,7 @@ export function analyseTelemetry(
 
   session.points.forEach((point, pointIndex) => {
     if (!point || typeof point !== 'object' || Array.isArray(point)) {
-      throw new Error('telemetry session contains an invalid point');
+      throw new OrbitError('INVALID_INPUT', 'telemetry session contains an invalid point');
     }
     if (
       (point.timestamp !== null && typeof point.timestamp !== 'string') ||
@@ -195,12 +215,12 @@ export function analyseTelemetry(
       Array.isArray(point.metrics) ||
       (point.event !== null && typeof point.event !== 'string')
     ) {
-      throw new Error('telemetry session contains an invalid point shape');
+      throw new OrbitError('INVALID_INPUT', 'telemetry session contains an invalid point shape');
     }
     const event = normalizeEventForAnalysis(point.event);
     const timestamp = point.timestamp === null ? null : new Date(point.timestamp);
     if (timestamp && !Number.isFinite(timestamp.getTime())) {
-      throw new Error('telemetry session contains an invalid timestamp');
+      throw new OrbitError('INVALID_INPUT', 'telemetry session contains an invalid timestamp');
     }
     const canonicalTimestamp = timestamp?.toISOString() ?? null;
     if (event) eventCounts[event] = (eventCounts[event] ?? 0) + 1;
@@ -235,11 +255,12 @@ export function analyseTelemetry(
         typeof value !== 'number' ||
         !Number.isFinite(value)
       ) {
-        throw new Error('telemetry session contains an invalid metric value');
+        throw new OrbitError('INVALID_INPUT', 'telemetry session contains an invalid metric value');
       }
       metricSampleCount += 1;
       if (metricSampleCount > MAX_METRIC_SAMPLES) {
-        throw new Error(
+        throw new OrbitError(
+          'INVALID_INPUT',
           'telemetry analysis exceeds the ' + MAX_METRIC_SAMPLES + ' metric sample limit',
         );
       }

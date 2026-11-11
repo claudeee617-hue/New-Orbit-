@@ -1,3 +1,4 @@
+import { OrbitError } from '@orbit/shared';
 import { createHash } from 'node:crypto';
 import { lstat, readFile, realpath } from 'node:fs/promises';
 import { relative, resolve, sep } from 'node:path';
@@ -48,45 +49,54 @@ export async function storeTelemetrySession(
   input: StoreTelemetrySessionInput,
 ): Promise<StoredTelemetrySession> {
   if (!input || typeof input !== 'object' || Array.isArray(input)) {
-    throw new Error('telemetry persistence input must be an object');
+    throw new OrbitError('INVALID_INPUT', 'telemetry persistence input must be an object');
   }
   const { session } = input;
   if (!session || typeof session !== 'object' || Array.isArray(session)) {
-    throw new Error('telemetry session is required');
+    throw new OrbitError('INVALID_INPUT', 'telemetry session is required');
   }
-  if (!/^[0-9a-f]{64}$/i.test(session.rawSha256)) throw new Error('session raw SHA-256 is invalid');
+  if (!/^[0-9a-f]{64}$/i.test(session.rawSha256))
+    throw new OrbitError('INVALID_INPUT', 'session raw SHA-256 is invalid');
   if (typeof input.repositoryId !== 'string' || !input.repositoryId.trim()) {
-    throw new Error('repositoryId is required');
+    throw new OrbitError('INVALID_INPUT', 'repositoryId is required');
   }
   if (typeof input.repositoryRoot !== 'string' || !input.repositoryRoot.trim()) {
-    throw new Error('repository root is required');
+    throw new OrbitError('INVALID_INPUT', 'repository root is required');
   }
   if (typeof input.source !== 'string' || !input.source.trim() || input.source.length > 2048) {
-    throw new Error('telemetry source must be a non-empty string up to 2048 characters');
+    throw new OrbitError(
+      'INVALID_INPUT',
+      'telemetry source must be a non-empty string up to 2048 characters',
+    );
   }
   if (typeof input.artifactRelativePath !== 'string') {
-    throw new Error('telemetry artifact path must be a string');
+    throw new OrbitError('INVALID_INPUT', 'telemetry artifact path must be a string');
   }
-  if (typeof input.isDemo !== 'boolean') throw new Error('isDemo must be boolean');
+  if (typeof input.isDemo !== 'boolean')
+    throw new OrbitError('INVALID_INPUT', 'isDemo must be boolean');
   if (
     input.deviceLabel !== undefined &&
     (typeof input.deviceLabel !== 'string' || input.deviceLabel.length > 512)
   ) {
-    throw new Error('device label must be a string up to 512 characters');
+    throw new OrbitError('INVALID_INPUT', 'device label must be a string up to 512 characters');
   }
   if (
     input.firmwareBuildId !== undefined &&
     (typeof input.firmwareBuildId !== 'string' || input.firmwareBuildId.length > 512)
   ) {
-    throw new Error('firmware build ID must be a string up to 512 characters');
+    throw new OrbitError(
+      'INVALID_INPUT',
+      'firmware build ID must be a string up to 512 characters',
+    );
   }
   if (input.commitSha !== undefined && typeof input.commitSha !== 'string') {
-    throw new Error('commit SHA must be a string');
+    throw new OrbitError('INVALID_INPUT', 'commit SHA must be a string');
   }
   if (input.startedAt !== undefined && typeof input.startedAt !== 'string') {
-    throw new Error('startedAt must be a string');
+    throw new OrbitError('INVALID_INPUT', 'startedAt must be a string');
   }
-  if (!store.repositories.get(input.repositoryId)) throw new Error('repository is not registered');
+  if (!store.repositories.get(input.repositoryId))
+    throw new OrbitError('INVALID_INPUT', 'repository is not registered');
   const relativeArtifact = normalizeRepoPath(input.artifactRelativePath);
   const root = await realpath(resolve(input.repositoryRoot));
   const filePath = await realpath(resolve(root, relativeArtifact));
@@ -97,31 +107,40 @@ export async function storeTelemetrySession(
     relativeActual.startsWith(`..${sep}`) ||
     relativeActual.startsWith(sep)
   ) {
-    throw new Error('telemetry artifact resolves outside the selected repository');
+    throw new OrbitError(
+      'INVALID_INPUT',
+      'telemetry artifact resolves outside the selected repository',
+    );
   }
   if (!(await lstat(filePath)).isFile())
-    throw new Error('telemetry artifact must be a regular file');
+    throw new OrbitError('INVALID_INPUT', 'telemetry artifact must be a regular file');
   const raw = await readFile(filePath);
   if (raw.byteLength > MAX_ARTIFACT_BYTES)
-    throw new Error('telemetry artifact exceeds the 10 MiB limit');
+    throw new OrbitError('INVALID_INPUT', 'telemetry artifact exceeds the 10 MiB limit');
   const actualHash = createHash('sha256').update(raw).digest('hex');
   if (actualHash !== session.rawSha256.toLowerCase()) {
-    throw new Error('telemetry artifact SHA-256 does not match the parsed session');
+    throw new OrbitError(
+      'INVALID_INPUT',
+      'telemetry artifact SHA-256 does not match the parsed session',
+    );
   }
   const verifiedSession = parseTelemetry(raw.toString('utf8'), session.format);
   if (verifiedSession.rawSha256 !== actualHash) {
-    throw new Error('telemetry artifact could not be reproduced by the recorded-file parser');
+    throw new OrbitError(
+      'INVALID_INPUT',
+      'telemetry artifact could not be reproduced by the recorded-file parser',
+    );
   }
   const analysis = analyseTelemetry(verifiedSession, input.analysisOptions);
   if (input.commitSha && !/^[0-9a-f]{7,64}$/i.test(input.commitSha))
-    throw new Error('commit SHA is invalid');
+    throw new OrbitError('INVALID_INPUT', 'commit SHA is invalid');
   const timestamp =
     input.startedAt ??
     verifiedSession.points.find((point) => point.timestamp)?.timestamp ??
     new Date().toISOString();
   const timestampDate = new Date(timestamp);
   if (!Number.isFinite(timestampDate.getTime()))
-    throw new Error('telemetry session timestamp is invalid');
+    throw new OrbitError('INVALID_INPUT', 'telemetry session timestamp is invalid');
   const canonicalTimestamp = timestampDate.toISOString();
 
   const sessionKey = `telemetry:${verifiedSession.rawSha256}`;

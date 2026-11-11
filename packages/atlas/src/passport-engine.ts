@@ -1,3 +1,4 @@
+import { OrbitError } from '@orbit/shared';
 import { nodeIdFor, type JsonValue } from '@orbit/core';
 import type { GraphStore } from '@orbit/database';
 import { traverse } from '@orbit/graph';
@@ -78,9 +79,16 @@ function collectEvidence(
   }
   for (const id of input.evidenceIds ?? []) {
     const item = store.evidence.get(repositoryId, id);
-    if (!item) throw new Error(`Evidence ${id} does not exist in the selected repository`);
+    if (!item)
+      throw new OrbitError(
+        'INVALID_INPUT',
+        `Evidence ${id} does not exist in the selected repository`,
+      );
     if (item.commitSha !== input.commitSha.toLowerCase()) {
-      throw new Error(`Evidence ${id} is not scoped to commit ${input.commitSha}`);
+      throw new OrbitError(
+        'INVALID_INPUT',
+        `Evidence ${id} is not scoped to commit ${input.commitSha}`,
+      );
     }
     records.set(item.id, item);
   }
@@ -93,7 +101,8 @@ function collectEvidence(
       item.source !== supplied.source ||
       item.status !== supplied.status
     ) {
-      throw new Error(
+      throw new OrbitError(
+        'INVALID_INPUT',
         `Supplied evidence ${supplied.id} does not match an immutable stored evidence record for this commit`,
       );
     }
@@ -269,30 +278,32 @@ export function recordChangePassport(
   options: { now?: () => string } = {},
 ): PersistedPassport {
   if (!input || typeof input !== 'object' || Array.isArray(input))
-    throw new Error('Passport record input must be an object');
+    throw new OrbitError('INVALID_INPUT', 'Passport record input must be an object');
   if (typeof input.repositoryId !== 'string' || !input.repositoryId.trim())
-    throw new Error('repositoryId is required');
+    throw new OrbitError('INVALID_INPUT', 'repositoryId is required');
   if (typeof input.repository !== 'string' || !input.repository.trim())
-    throw new Error('repository is required');
+    throw new OrbitError('INVALID_INPUT', 'repository is required');
   if (typeof input.commitSha !== 'string' || !/^[0-9a-f]{7,64}$/i.test(input.commitSha))
-    throw new Error('commit SHA is invalid');
+    throw new OrbitError('INVALID_INPUT', 'commit SHA is invalid');
   if (typeof input.diffSha256 !== 'string' || !/^[0-9a-f]{64}$/i.test(input.diffSha256))
-    throw new Error('diff SHA-256 is invalid');
+    throw new OrbitError('INVALID_INPUT', 'diff SHA-256 is invalid');
   if (
     !Array.isArray(input.changedFiles) ||
     input.changedFiles.length > 1000 ||
     input.changedFiles.some((path) => typeof path !== 'string')
   )
-    throw new Error('changedFiles must be an array of at most 1000 paths');
-  if (!Array.isArray(input.evidence)) throw new Error('evidence must be an array');
-  if (input.evidence.length > 500) throw new Error('at most 500 evidence records can be supplied');
+    throw new OrbitError('INVALID_INPUT', 'changedFiles must be an array of at most 1000 paths');
+  if (!Array.isArray(input.evidence))
+    throw new OrbitError('INVALID_INPUT', 'evidence must be an array');
+  if (input.evidence.length > 500)
+    throw new OrbitError('INVALID_INPUT', 'at most 500 evidence records can be supplied');
   if (
     input.evidenceIds !== undefined &&
     (!Array.isArray(input.evidenceIds) ||
       input.evidenceIds.length > 500 ||
       input.evidenceIds.some((id) => typeof id !== 'string' || !id.trim()))
   )
-    throw new Error('evidenceIds must contain at most 500 non-empty strings');
+    throw new OrbitError('INVALID_INPUT', 'evidenceIds must contain at most 500 non-empty strings');
   if (
     input.evidence.some(
       (item) =>
@@ -304,13 +315,20 @@ export function recordChangePassport(
         typeof item.status !== 'string',
     )
   )
-    throw new Error('supplied evidence references must include ID, SHA-256, source and status');
+    throw new OrbitError(
+      'INVALID_INPUT',
+      'supplied evidence references must include ID, SHA-256, source and status',
+    );
   const repository = store.repositories.get(input.repositoryId);
-  if (!repository) throw new Error('repository is not registered');
+  if (!repository) throw new OrbitError('INVALID_INPUT', 'repository is not registered');
   if (input.repository !== repository.key && input.repository !== repository.id) {
-    throw new Error('passport repository must match the selected graph repository key or ID');
+    throw new OrbitError(
+      'INVALID_INPUT',
+      'passport repository must match the selected graph repository key or ID',
+    );
   }
-  if (!/^[0-9a-f]{7,64}$/i.test(input.commitSha)) throw new Error('commit SHA is invalid');
+  if (!/^[0-9a-f]{7,64}$/i.test(input.commitSha))
+    throw new OrbitError('INVALID_INPUT', 'commit SHA is invalid');
   const canonicalInput = { ...input, commitSha: input.commitSha.toLowerCase() };
   const changedFiles = [...new Set(input.changedFiles.map(normalizeRepoPath))].sort();
   const impact = computeImpact(store, input.repositoryId, changedFiles);
@@ -498,7 +516,8 @@ export function getPassportHistory(
   passportNodeId: string,
 ): PassportVersionSummary[] {
   const current = store.nodes.get(repositoryId, passportNodeId);
-  if (!current || !isPassportNode(current)) throw new Error('Change Passport does not exist');
+  if (!current || !isPassportNode(current))
+    throw new OrbitError('INVALID_INPUT', 'Change Passport does not exist');
   return store.nodes.history(repositoryId, passportNodeId).map((item) => ({
     version: item.version,
     recordedAt: item.recordedAt,
@@ -532,7 +551,10 @@ export function compareChangePassports(
   const before = store.nodes.get(repositoryId, beforeNodeId);
   const after = store.nodes.get(repositoryId, afterNodeId);
   if (!before || !isPassportNode(before) || !after || !isPassportNode(after)) {
-    throw new Error('both passport IDs must identify current Change Passports in this repository');
+    throw new OrbitError(
+      'INVALID_INPUT',
+      'both passport IDs must identify current Change Passports in this repository',
+    );
   }
   const beforeAttrs = before.attrs;
   const afterAttrs = after.attrs;
@@ -633,7 +655,8 @@ export function createReproductionPlan(
   passportNodeId: string,
 ): ReproductionPlan {
   const node = store.nodes.get(repositoryId, passportNodeId);
-  if (!node || !isPassportNode(node)) throw new Error('Change Passport does not exist');
+  if (!node || !isPassportNode(node))
+    throw new OrbitError('INVALID_INPUT', 'Change Passport does not exist');
   const attrs = node.attrs;
   const evidence = Array.isArray(attrs['evidence'])
     ? (attrs['evidence'] as unknown as PassportEvidence[])

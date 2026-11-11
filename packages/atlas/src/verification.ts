@@ -1,3 +1,5 @@
+import { XmlError, parseXml, type XmlElement } from './xml.js';
+import { OrbitError } from '@orbit/shared';
 import { createHash } from 'node:crypto';
 
 export type VerificationStatus = 'PASS' | 'FAIL' | 'PARTIAL' | 'NOT_MEASURED' | 'INCOMPLETE';
@@ -68,13 +70,18 @@ function parseDiffPath(line: string): string | undefined {
   return match?.[1] && match[1] !== '/dev/null' ? normalizeRepoPath(match[1]) : undefined;
 }
 
-/** Parse added line numbers from a unified diff. Deleted lines do not enter the denominator. */
+/**
+ * Parse added line numbers from a unified diff. Deleted lines do not enter the denominator.
+ * Hunk bodies are consumed using the line counts from the `@@` header, so a body line such as
+ * `+++counter;` (an added line) or `--- a/x` (a removed line) is never mistaken for a file header.
+ */
 export function parseUnifiedDiff(diff: string): DiffFile[] {
   assertSize(diff, 'Unified diff');
   const files: DiffFile[] = [];
   let current: DiffFile | undefined;
   let newLine = 0;
-  let inHunk = false;
+  let remainingOld = 0;
+  let remainingNew = 0;
 
   const finish = () => {
     if (current) {
@@ -84,6 +91,29 @@ export function parseUnifiedDiff(diff: string): DiffFile[] {
   };
 
   for (const line of diff.split(/\r?\n/)) {
+    if (remainingOld > 0 || remainingNew > 0) {
+      const marker = line[0];
+      if (marker === '\\') continue; // "\ No newline at end of file"
+      if (marker === '+') {
+        current?.addedLines.push(newLine);
+        newLine += 1;
+        remainingNew -= 1;
+        continue;
+      }
+      if (marker === '-') {
+        remainingOld -= 1;
+        continue;
+      }
+      if (marker === ' ' || line === '') {
+        newLine += 1;
+        remainingOld -= 1;
+        remainingNew -= 1;
+        continue;
+      }
+      // Anything else means the hunk header lied or the diff is truncated: leave the hunk.
+      remainingOld = 0;
+      remainingNew = 0;
+    }
     if (line.startsWith('diff --git ')) {
       finish();
       const match = /^diff --git a\/(.+) b\/(.+)$/.exec(line);
@@ -94,7 +124,6 @@ export function parseUnifiedDiff(diff: string): DiffFile[] {
         addedLines: [],
         binary: false,
       };
-      inHunk = false;
       continue;
     }
     if (!current) continue;
@@ -103,7 +132,6 @@ export function parseUnifiedDiff(diff: string): DiffFile[] {
     else if (line.startsWith('rename from ')) current.status = 'renamed';
     else if (line.startsWith('Binary files ') || line.startsWith('GIT binary patch')) {
       current.binary = true;
-      inHunk = false;
     } else if (line.startsWith('--- a/')) {
       if (current.status === 'unknown') current.status = 'modified';
     } else if (line.startsWith('+++ b/')) {
@@ -112,22 +140,12 @@ export function parseUnifiedDiff(diff: string): DiffFile[] {
     } else if (line.startsWith('+++ /dev/null')) {
       current.status = 'deleted';
     } else if (line.startsWith('@@')) {
-      const hunk = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(line);
+      const hunk = /^@@ -\d+(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/.exec(line);
       if (hunk) {
-        newLine = Number(hunk[1]);
-        inHunk = true;
+        remainingOld = hunk[1] === undefined ? 1 : Number(hunk[1]);
+        newLine = Number(hunk[2]);
+        remainingNew = hunk[3] === undefined ? 1 : Number(hunk[3]);
       }
-    } else if (inHunk && line.startsWith('+') && !line.startsWith('+++')) {
-      current.addedLines.push(newLine);
-      newLine += 1;
-    } else if (inHunk && line.startsWith(' ')) {
-      newLine += 1;
-    } else if (inHunk && line.startsWith('\\')) {
-      // " No newline at end of file" does not change hunk positions.
-    } else if (inHunk && line.startsWith('-')) {
-      // Removed lines do not advance the new-file line number.
-    } else if (line.startsWith('diff --git ')) {
-      inHunk = false;
     }
   }
   finish();
@@ -141,21 +159,6 @@ function safeXml(content: string, label: string): void {
       `${label} contains a DTD or entity declaration; external entities are not supported`,
     );
   }
-}
-
-function xmlAttributes(source: string): Record<string, string> {
-  const attributes: Record<string, string> = {};
-  const pattern = /([A-Za-z_:][\w:.-]*)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
-  for (const match of source.matchAll(pattern)) {
-    const raw = match[2] ?? match[3] ?? '';
-    attributes[match[1]!] = raw
-      .replace(/&quot;/g, '"')
-      .replace(/&apos;/g, "'")
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&amp;/g, '&');
-  }
-  return attributes;
 }
 
 function addCoverage(
@@ -198,24 +201,45 @@ export function parseLcov(content: string): CoverageFile[] {
 /** Parse the line-level subset of Cobertura XML without enabling DTDs or external entities. */
 export function parseCobertura(content: string): CoverageFile[] {
   safeXml(content, 'Cobertura report');
-  const result = new Map<string, Map<number, number>>();
-  const classPattern = /<class\b([^>]*)>([\s\S]*?)<\/class>/gi;
-  for (const classMatch of content.matchAll(classPattern)) {
-    const attributes = xmlAttributes(classMatch[1] ?? '');
-    const filename = attributes.filename;
-    if (!filename) continue;
-    const path = filename
-      .split(String.fromCharCode(92))
-      .join('/')
-      .replace(/^\.\//, '')
-      .replace(/^\//, '');
-    if (!path || path.split('/').includes('..')) continue;
-    const linePattern = /<line\b([^>]*?)\/?\s*>/gi;
-    for (const lineMatch of (classMatch[2] ?? '').matchAll(linePattern)) {
-      const lineAttributes = xmlAttributes(lineMatch[1] ?? '');
-      addCoverage(result, path, Number(lineAttributes.number), Number(lineAttributes.hits));
-    }
+  let root: XmlElement;
+  try {
+    root = parseXml(content);
+  } catch (error) {
+    if (error instanceof XmlError)
+      throw new OrbitError(
+        'INVALID_INPUT',
+        `Cobertura report is not well-formed: ${error.message}`,
+      );
+    throw error;
   }
+  if (root.name !== 'coverage')
+    throw new OrbitError(
+      'INVALID_INPUT',
+      `Cobertura root must be <coverage>, found <${root.name}>`,
+    );
+  const result = new Map<string, Map<number, number>>();
+  const visit = (element: XmlElement): void => {
+    for (const child of element.children) {
+      if (child.name !== 'class') {
+        visit(child);
+        continue;
+      }
+      const filename = child.attrs['filename'];
+      if (!filename) continue;
+      const path = filename
+        .split(String.fromCharCode(92))
+        .join('/')
+        .replace(/^\.\//, '')
+        .replace(/^\//, '');
+      if (!path || path.split('/').includes('..')) continue;
+      for (const container of child.children)
+        if (container.name === 'lines')
+          for (const line of container.children)
+            if (line.name === 'line')
+              addCoverage(result, path, Number(line.attrs['number']), Number(line.attrs['hits']));
+    }
+  };
+  visit(root);
   return [...result].map(([path, lines]) => ({ path, lines }));
 }
 

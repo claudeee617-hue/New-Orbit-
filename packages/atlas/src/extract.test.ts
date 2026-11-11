@@ -357,3 +357,43 @@ describe('syntax errors', () => {
     expect(r.symbols).toEqual([]);
   });
 });
+
+describe('robustness', () => {
+  const samples: [Parameters<typeof extractFile>[0], string, string][] = [
+    [
+      'typescript',
+      'a.ts',
+      "import { a as b } from './x';\nexport class A { m() { return b(); } }\nfunction f(){ if (1) { for(;;){} } }\n",
+    ],
+    ['python', 'a.py', 'from x import a as b\nclass A:\n    def m(self):\n        return b()\n'],
+    ['java', 'A.java', 'package p;\nimport q.R;\npublic class A { int m() { return R.x(); } }\n'],
+    ['c', 'a.c', '#include "a.h"\nint main(void) { return f(); }\n'],
+  ];
+  function mulberry(seed: number): () => number {
+    let a = seed;
+    return () => {
+      a = (a + 0x6d2b79f5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  it('never throws on truncated or mutated sources', async () => {
+    const rand = mulberry(2026);
+    for (const [language, path, code] of samples) {
+      for (let i = 0; i < 40; i++) {
+        let mutated = code.slice(0, Math.floor(rand() * code.length));
+        if (i % 2 === 0 && mutated.length > 2) {
+          const at = Math.floor(rand() * mutated.length);
+          mutated =
+            mutated.slice(0, at) +
+            String.fromCharCode(33 + Math.floor(rand() * 90)) +
+            mutated.slice(at + 1);
+        }
+        const result = await extractFile(language, path, mutated);
+        expect(result === undefined || Array.isArray(result.symbols)).toBe(true);
+      }
+    }
+  });
+});

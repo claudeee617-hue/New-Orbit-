@@ -16,7 +16,7 @@ The public `main` branch contains engineering roadmap Prompts 0–10 and the sep
 | ORBIT Core graph, versioned records and hash-chained ledger | Implemented on `main` |
 | ATLAS repository scanner and architecture reports | Implemented on `main` |
 | ATLAS persistent decision memory and read-only stdio MCP | Implemented on `main` (PR #5 merged; full Ubuntu/macOS/Windows CI passed) |
-| WITNESS changed-line coverage, baseline comparison, filename findings, Markdown/SARIF | Extended prototype on `main` (PR #5 merged; full cross-platform CI passed) |
+| WITNESS: git-based PR verification (`orbit verify --base --head`: exact changed lines, symbols, LCOV/Cobertura, JUnit, build result, regressions, findings, Markdown/JSON/SARIF) plus the diff-file coverage prototype | Implemented in `packages/witness`; CLI only |
 | FLARE JUnit, pytest, Jest and Go JSON reports; failure clusters and duration summaries | Extended prototype on `main`; durable history across independent invocations remains outstanding |
 | CAPSULE polyglot toolchain, dependency, container and workspace manifest inspection | Extended prototype on `main`; build replay is not implemented |
 | FLIGHT RECORDER recorded telemetry parser, caller-defined analysis and hash-verified graph persistence | Implemented on `main` as recorded-file prototype; physical serial/USB capture unavailable |
@@ -77,6 +77,15 @@ node apps/cli/dist/index.js atlas impact packages/core/src/index.ts --db .orbit/
 ```
 
 ### Evidence-engine prototype commands
+```bash
+# WITNESS, git mode: reads evidence files you supply; never runs your tests or build
+node apps/cli/dist/index.js verify --base main --head HEAD \
+  --coverage lcov.info --test-report junit.xml --build-result build.json \
+  --format md --fail-on PARTIAL
+```
+
+Anything not supplied is reported `NOT_MEASURED`, never passed. `--fail-on` exits with code `6` when the overall status is at least that bad. See [ADR-0016](docs/DECISIONS/0016-witness-git-verification-model.md).
+
 
 These commands are available after the feature branch is checked out and built:
 
@@ -109,7 +118,7 @@ node apps/cli/dist/index.js passport plan <passport-node-id> --db .orbit/orbit.d
 node apps/cli/dist/index.js passport create passport-input.json
 ```
 
-All `--out` paths are created without overwriting an existing file.
+All `--out` paths are created without overwriting an existing file (git-mode `orbit verify` accepts `--force`).
 
 Extended commands on `main`:
 
