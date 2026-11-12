@@ -75,6 +75,14 @@ The example assumes a trusted ORBIT release has been merged to `main`. For a Cob
 - Coverage and diff files are untrusted input and are bounded by ORBIT's parser limits.
 - A passing changed-line coverage result is not proof of correctness, security, or approval to merge.
 
+## Maintainer dependency pinning
+
+All third-party actions in repository-maintained GitHub workflows must use immutable full commit SHAs, with the upstream release tag retained as an inline comment for readability. Do not replace a SHA with a mutable version tag. Dependabot is configured to propose GitHub Actions dependency updates; review the upstream release and resulting diff before accepting an update.
+
+The Action integration's security-policy test scans every YAML workflow and fails when an external `uses:` reference is not pinned to a 40-character commit SHA. Local composite actions (for example, `./.github/actions/orbit`) are exempt because their source is reviewed in this repository.
+
+For downstream consumers, the `ORBIT_RELEASE_SHA` placeholder in the example is intentional: replace it with the full immutable commit SHA of the reviewed release, never with a branch name or mutable tag.
+
 ## Current limitations
 
 - The Action currently supports changed-line coverage from LCOV/Cobertura and filename-only sensitive-path checks.
