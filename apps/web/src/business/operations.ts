@@ -163,7 +163,7 @@ export function normaliseBusinessWorkspace(value: unknown): BusinessWorkspace {
 }
 
 export function parseBusinessWorkspace(serialized: string): BusinessWorkspace {
-  if (serialized.length > MAX_BUSINESS_WORKSPACE_BYTES) {
+  if (new TextEncoder().encode(serialized).byteLength > MAX_BUSINESS_WORKSPACE_BYTES) {
     throw new Error('Business workspace backup is larger than 2 MB.');
   }
   let parsed: unknown;
