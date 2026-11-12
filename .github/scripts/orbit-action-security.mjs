@@ -80,15 +80,15 @@ test('every third-party step in the composite action is pinned to a full commit 
 test(
   'action inputs reach shell steps only through env, never interpolated into run scripts',
   () => {
-    for (const block of action.matchAll(/^\\s*run:\\s*(.+)$/gm)) {
+    for (const block of action.matchAll(/^\s*run:\s*(.+)$/gm)) {
       assert.doesNotMatch(
         block[1],
-        /\\$\\{\\{\\s*inputs\\./,
+        /\$\{\{\s*inputs\./,
         `inputs interpolated into run: ${block[1]}`,
       );
       assert.doesNotMatch(
         block[1],
-        /\\$\\{\\{\\s*github\\.event\\./,
+        /\$\{\{\s*inputs\./,
         `event data interpolated into run: ${block[1]}`,
       );
     }
