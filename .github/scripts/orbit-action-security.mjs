@@ -77,23 +77,16 @@ test('every third-party step in the composite action is pinned to a full commit 
   }
 });
 
-test(
-  'action inputs reach shell steps only through env, never interpolated into run scripts',
-  () => {
-    for (const block of action.matchAll(/^\s*run:\s*(.+)$/gm)) {
-      assert.doesNotMatch(
-        block[1],
-        /\$\{\{\s*inputs\./,
-        `inputs interpolated into run: ${block[1]}`,
-      );
-      assert.doesNotMatch(
-        block[1],
-        /\$\{\{\s*github\.event\./,
-        `event data interpolated into run: ${block[1]}`,
-      );
-    }
-  },
-);
+test('action inputs reach shell steps only through env, never interpolated into run scripts', () => {
+  for (const block of action.matchAll(/^\s*run:\s*(.+)$/gm)) {
+    assert.doesNotMatch(block[1], /\$\{\{\s*inputs\./, `inputs interpolated into run: ${block[1]}`);
+    assert.doesNotMatch(
+      block[1],
+      /\$\{\{\s*github\.event\./,
+      `event data interpolated into run: ${block[1]}`,
+    );
+  }
+});
 
 test('flow-style and quoted action references are parsed before pin validation', () => {
   const sha = 'a'.repeat(40);
@@ -142,15 +135,12 @@ test('Docker action references require immutable sha256 digests', () => {
   assert.doesNotThrow(() => assertPinnedWorkflowUses('docker-pinned.yml', pinned));
 });
 
-test(
-  'all third-party actions in repository workflows are pinned to immutable references',
-  () => {
-    const workflowDir = '.github/workflows';
-    const workflowFiles = readdirSync(workflowDir).filter((item) => /\.ya?ml$/i.test(item));
+test('all third-party actions in repository workflows are pinned to immutable references', () => {
+  const workflowDir = '.github/workflows';
+  const workflowFiles = readdirSync(workflowDir).filter((item) => /\.ya?ml$/i.test(item));
 
-    for (const name of workflowFiles) {
-      const source = readFileSync(join(workflowDir, name), 'utf8');
-      assertPinnedWorkflowUses(name, source);
-    }
-  },
-);
+  for (const name of workflowFiles) {
+    const source = readFileSync(join(workflowDir, name), 'utf8');
+    assertPinnedWorkflowUses(name, source);
+  }
+});
