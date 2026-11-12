@@ -40,6 +40,12 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: pnpm audit --audit-level=moderate
 
+      - name: DEBUG format business files for validation
+        shell: bash
+        run: |
+          pnpm exec prettier --write apps/web/src/business/operations.ts apps/web/src/BusinessOperations.test.tsx apps/web/src/BusinessOperations.tsx
+          git diff -- apps/web/src/business/operations.ts apps/web/src/BusinessOperations.test.tsx apps/web/src/BusinessOperations.tsx
+
       # format:check, lint, typecheck, test, build
       - name: Check
         run: pnpm run check
