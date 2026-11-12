@@ -3,7 +3,7 @@
 
 language: en-US
 
-tone_instructions: "Be concise, technical, and evidence-led. Prioritize correctness, security, data integrity, test reliability, and reproducibility. Report only actionable findings with concrete impact and fix guidance."
+tone_instructions: 'Be concise, technical, and evidence-led. Prioritize correctness, security, data integrity, test reliability, and reproducibility. Report only actionable findings with concrete impact and fix guidance.'
 
 reviews:
   profile: assertive
@@ -34,30 +34,30 @@ reviews:
     auto_incremental_review: true
     auto_pause_after_reviewed_commits: 0
     ignore_title_keywords:
-      - "WIP"
-      - "DO NOT MERGE"
-      - "NO REVIEW"
+      - 'WIP'
+      - 'DO NOT MERGE'
+      - 'NO REVIEW'
 
   path_instructions:
-    - path: ".github/workflows/**"
+    - path: '.github/workflows/**'
       instructions: |
         Treat workflow edits as security-sensitive. Check least-privilege permissions, action pinning, pull_request_target misuse, untrusted context interpolation, secrets exposure, cache poisoning, artifact trust and fork-PR behavior.
-    - path: "**/*.{ts,tsx,js,mjs,cjs}"
+    - path: '**/*.{ts,tsx,js,mjs,cjs}'
       instructions: |
         Review TypeScript/JavaScript for unsafe input handling, async races, unhandled rejections, resource leaks, unsafe casts, weak runtime validation and test gaps. Check Node.js 22+ compatibility and ESM behavior.
-    - path: "**/*test*/**"
+    - path: '**/*test*/**'
       instructions: |
         Review tests for meaningful behavior assertions, edge cases, deterministic execution, isolation, cleanup and regression coverage. Flag tests that can pass without exercising the intended behavior.
-    - path: "**/*.{json,yaml,yml,toml}"
+    - path: '**/*.{json,yaml,yml,toml}'
       instructions: |
         Check configuration correctness, unsafe defaults, secret exposure, schema compatibility and accidental environment-specific assumptions. For GitHub Actions YAML, apply the workflow security instructions too.
-    - path: "packages/witness/**"
+    - path: 'packages/witness/**'
       instructions: |
         Treat verification and evidence provenance as critical. Check exact changed-line attribution, coverage/report parsing, JUnit/Cobertura/LCOV handling, SARIF correctness, hash integrity and the distinction between missing evidence and passing evidence.
-    - path: "**/*mcp*/**"
+    - path: '**/*mcp*/**'
       instructions: |
         Treat MCP tools and server boundaries as security-sensitive. Check read-only guarantees, tool input validation, path restrictions, prompt-injection boundaries, least privilege, output trust and accidental side effects.
-    - path: "**/*accelq*/**"
+    - path: '**/*accelq*/**'
       instructions: |
         Check that external test execution is opt-in, credentials are never logged or committed, failures/timeouts are reported honestly, and no external run is marked successful without verifiable provider evidence.
 
