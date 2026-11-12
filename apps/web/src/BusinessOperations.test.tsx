@@ -10,12 +10,12 @@ describe('BusinessOperations', () => {
     expect(html).toContain('Export JSON');
     expect(html).toContain('Import JSON');
     expect(html).toContain('No sample customers are preloaded.');
-    expect(html).not.toContain('Acme Engineering');
+    expect(html).toContain('0 locally recorded opportunities');
   });
 
   it('explains the local storage and planning-only boundary', () => {
     const html = renderToStaticMarkup(<BusinessOperations />);
-    expect(html).toContain("Records stay in this browser&#x27;s local storage");
+    expect(html).toContain('Records stay in this browser&#x27;s local storage');
     expect(html).toContain('not booked revenue or verified customer records');
     expect(html).toContain('not encrypted by the app');
   });
