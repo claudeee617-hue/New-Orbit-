@@ -90,6 +90,19 @@ Known Prompt 5 limitations:
 - SARIF output is validated against the vendored OASIS SARIF 2.1.0 (errata 01) JSON schema (`packages/witness/test-schemas`), with a negative control proving the validator rejects malformed logs.
 - Migration tests build older schemas from truncated copies of the real migration journal (versions 0–3), write real graph data with the real store, upgrade with current code, and check data, hash-chained ledger integrity, append-only triggers, idempotency and read-only refusal. Version 0–2 schemas predate the graph views and are tested as empty upgrades only.
 
+## Clean-machine verification (2026-11-12, commit c528c90)
+
+A fresh `git clone` of `main` into an empty directory, `pnpm install --frozen-lockfile` and `pnpm run check` completed with 19/19 tasks successful (573 tests). The built CLI then scanned the repository itself (`orbit scan .`) and ran `orbit verify --base HEAD~1 --head HEAD`, which honestly reported PARTIAL with tests and build NOT_MEASURED because no reports were supplied.
+
+### Still open (not claimed complete)
+
+- Independent human security review (API Host/Origin/CSRF/DNS-rebinding, token-file permissions and Windows ACLs, fork threat model for the Action). Only automated tests, CodeQL and the dependency audit exist.
+- Live AI provider contracts are unverified; only a fake provider is tested.
+- Real-hardware/serial device behaviour is untested; only recorded telemetry parsing is covered.
+- Coverage-guided/property-based fuzzing, scenarios S1–S10 end to end, and performance measurement on a documented fixture repository.
+- ATLAS limits: tsconfig `paths`, C/C++ include paths, rename following, very large repositories, CALLS from module-level code.
+- No package, Marketplace or GitHub Action release has been published. macOS runner capacity occasionally cancels jobs; re-run them.
+
 ## Merge note (2026-11-11)
 
 While merging #23 the squash silently reverted the evidence tie-break fix from #36 (same-millisecond evidence listed by hash instead of insertion order, which made MCP "newest history first" flaky on macOS). It was caught by CI on #40 and restored with its regression test. Playwright's `--with-deps` apt step failed once on a hosted runner (mirror error); the step now retries three times. macOS runner capacity also caused two cancelled jobs on #41 that were unrelated to the code.
