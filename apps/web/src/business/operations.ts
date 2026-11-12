@@ -155,7 +155,9 @@ export function normaliseBusinessWorkspace(value: unknown): BusinessWorkspace {
     throw new Error('Business workspace opportunities must be an array.');
   }
   if (value.opportunities.length > MAX_BUSINESS_OPPORTUNITIES) {
-    throw new Error(`A workspace can contain at most ${MAX_BUSINESS_OPPORTUNITIES} opportunities.`);
+    throw new Error(
+      `A workspace can contain at most ${MAX_BUSINESS_OPPORTUNITIES} opportunities.`,
+    );
   }
 
   const opportunities = value.opportunities.map(parseOpportunity);
