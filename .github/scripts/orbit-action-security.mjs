@@ -48,23 +48,28 @@ test('action inputs reach shell steps only through env, never interpolated into 
   }
 });
 
-test('all third-party actions in repository workflows are pinned to immutable commit SHAs', () => {
-  const workflowDir = '.github/workflows';
-  const workflowFiles = readdirSync(workflowDir).filter((item) => /\.ya?ml$/i.test(item));
+test(
+  'all third-party actions in repository workflows are pinned to immutable commit SHAs',
+  () => {
+    const workflowDir = '.github/workflows';
+    const workflowFiles = readdirSync(workflowDir).filter((item) =>
+      /\\.ya?ml$/i.test(item),
+      /\.ya?ml$/i.test(item),
 
-  for (const name of workflowFiles) {
-    const source = readFileSync(join(workflowDir, name), 'utf8');
-    const refs = [...source.matchAll(/^\s*(?:-\s*)?uses:\s*([^\s#]+)/gm)].map(
-      (match) => match[1],
-    );
-
-    for (const ref of refs) {
-      if (ref.startsWith('./') || ref.startsWith('docker://')) continue;
-      assert.match(
-        ref,
-        /^[^@]+@[0-9a-f]{40}$/,
-        `${name}: ${ref} must be pinned to a full commit SHA`,
-      );
+    for (const name of workflowFiles) {
+      const source = readFileSync(join(workflowDir, name), 'utf8');
+      const refs = [
+        ...source.matchAll(/^\\s*(?:-\\s*)?uses:\\s*([^\\s#]+)/gm),
+      ].map((match) => match[1]);
+        ...source.matchAll(/^\s*(?:-\s*)?uses:\s*([^\s#]+)/gm),
+      for (const ref of refs) {
+        if (ref.startsWith('./') || ref.startsWith('docker://')) continue;
+        assert.match(
+          ref,
+          /^[^@]+@[0-9a-f]{40}$/ ,
+          `${name}: ${ref} must be pinned to a full commit SHA`,
+          /^[^@]+@[0-9a-f]{40}$/,
+      }
     }
-  }
-});
+  },
+);
