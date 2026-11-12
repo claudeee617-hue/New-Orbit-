@@ -3,7 +3,10 @@
 
 language: en-US
 
-tone_instructions: "Be concise, technical, and evidence-led. Prioritize correctness, security, data integrity, test reliability, and reproducibility. Report only actionable findings with concrete impact and fix guidance."
+tone_instructions: >-
+  Be concise, technical, and evidence-led. Prioritize correctness, security, data
+  integrity, test reliability, and reproducibility. Report only actionable
+  findings with concrete impact and fix guidance.
 
 reviews:
   profile: assertive
