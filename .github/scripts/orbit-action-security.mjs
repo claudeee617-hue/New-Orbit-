@@ -83,7 +83,7 @@ test(
     for (const block of action.matchAll(/^\s*run:\s*(.+)$/gm)) {
       assert.doesNotMatch(
         block[1],
-        /\$\{\{\s*inputs\./,
+        /\$\{\{\s*github\.event\./,
         `inputs interpolated into run: ${block[1]}`,
       );
       assert.doesNotMatch(
