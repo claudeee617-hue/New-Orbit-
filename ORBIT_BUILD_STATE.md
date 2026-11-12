@@ -103,6 +103,11 @@ A fresh `git clone` of `main` into an empty directory, `pnpm install --frozen-lo
 - ATLAS limits: tsconfig `paths`, C/C++ include paths, rename following, very large repositories, CALLS from module-level code.
 - No package, Marketplace or GitHub Action release has been published. macOS runner capacity occasionally cancels jobs; re-run them.
 
+## Security and parser audits (2026-11-12)
+
+- SEC-01 (merged, #45): restored reverted API hardening, Origin allow-list, 62 API abuse-case tests, Action symlink refusal and SHA pins. See `docs/SECURITY_REVIEW.md`.
+- AUD-01/02/03: code review of FLARE, CAPSULE and the flight recorder with 15 findings fixed and 39 regression tests (`flare-audit`, `capsule-audit`, `flight-recorder-audit`). Reports: `docs/audits/FLARE.md`, `CAPSULE.md`, `FLIGHT_RECORDER.md`. The reviewer was the AI author, so these are **not independent reviews** and the independent-review item below stays open. Full check: 19/19 tasks, 674 tests (atlas 218, api 98).
+
 ## Merge note (2026-11-11)
 
 While merging #23 the squash silently reverted the evidence tie-break fix from #36 (same-millisecond evidence listed by hash instead of insertion order, which made MCP "newest history first" flaky on macOS). It was caught by CI on #40 and restored with its regression test. Playwright's `--with-deps` apt step failed once on a hosted runner (mirror error); the step now retries three times. macOS runner capacity also caused two cancelled jobs on #41 that were unrelated to the code.

@@ -24,6 +24,13 @@ export interface TestHistorySummary {
 }
 
 const MAX_XML_BYTES = 10 * 1024 * 1024;
+/** Largest duration the history validators accept; larger values are treated as not measured. */
+export const MAX_DURATION_SECONDS = 1_000_000_000;
+
+/** Convert a reported duration to seconds, or null when it is absent, negative, non-finite or absurd. */
+export function sanitizeDuration(value: number): number | null {
+  return Number.isFinite(value) && value >= 0 && value <= MAX_DURATION_SECONDS ? value : null;
+}
 const MAX_TEST_CASES = 100_000;
 
 function wilson(successes: number, samples: number): { lower: number; upper: number } {
@@ -174,8 +181,8 @@ export function parseJunitXml(xml: string): TestCaseResult[] {
         suite: className,
         outcome,
         durationSeconds:
-          attrs['time'] !== undefined && Number.isFinite(Number(attrs['time']))
-            ? Number(attrs['time'])
+          attrs['time'] !== undefined && attrs['time'].trim() !== ''
+            ? sanitizeDuration(Number(attrs['time']))
             : null,
         ...(message && { message }),
       });

@@ -1,6 +1,6 @@
 import { OrbitError } from '@orbit/shared';
 import { createHash } from 'node:crypto';
-import type { TelemetrySession } from './flight-recorder.js';
+import { canonicalEvent, type TelemetrySession } from './flight-recorder.js';
 
 const MAX_THRESHOLD_RULES = 200;
 const MAX_METRIC_SAMPLES = 250_000;
@@ -54,28 +54,13 @@ export interface TelemetryAnalysis {
     { count: number; min: number; max: number; mean: number; unit: string | null }
   >;
   eventCounts: Record<string, number>;
+  /** Threshold rule IDs whose metric never appears in the recording: they were not evaluated, which is not a pass. */
+  unmatchedRuleIds: string[];
   limitations: string[];
 }
 
 function normalizeEventForAnalysis(value: string | null): string | null {
-  if (!value) return null;
-  const event = value.toLowerCase();
-  const hasWatchdog = event.includes('watchdog') || event.includes('wdt');
-  const hasReset = event.includes('reset') || event.includes('reboot');
-  if (hasWatchdog && hasReset) return 'watchdog_reset';
-  if (hasWatchdog) return 'watchdog';
-  if (hasReset) return 'reset';
-  if (event.includes('boot')) return 'boot';
-  if (event.includes('panic')) return 'panic';
-  if (event.includes('brownout')) return 'brownout';
-  if (event.includes('fault') || event.includes('exception') || event.includes('assert'))
-    return 'fault';
-  if (event.includes('crash')) return 'crash';
-  if (event.includes('disconnect')) return 'disconnected';
-  if (event.includes('connect')) return 'connected';
-  if (event.includes('start')) return 'start';
-  if (event.includes('stop')) return 'stop';
-  return 'other';
+  return value ? canonicalEvent(value) : null;
 }
 function stableId(value: unknown): string {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex').slice(0, 24);
@@ -189,6 +174,11 @@ export function analyseTelemetry(
     }
   }
 
+  // Own-property lookup: a metric named `constructor` or `toString` must not pick up inherited members.
+  const unitFor = (metric: string): string | null =>
+    (Object.hasOwn(units, metric) ? units[metric] : undefined) ??
+    rules.find((rule) => rule.metric === metric && rule.unit)?.unit ??
+    null;
   const metrics: TypedTelemetryMetric[] = [];
   const anomalies: TelemetryAnomaly[] = [];
   const values = new Map<string, number[]>();
@@ -269,7 +259,7 @@ export function analyseTelemetry(
         timestamp: canonicalTimestamp,
         name,
         value,
-        unit: units[name] ?? rules.find((rule) => rule.metric === name && rule.unit)?.unit ?? null,
+        unit: unitFor(name),
       });
       const series = values.get(name) ?? [];
       series.push(value);
@@ -295,7 +285,7 @@ export function analyseTelemetry(
           ...(limit !== undefined ? { limit } : {}),
           message:
             rule.label?.slice(0, 200) ??
-            `${name}=${value}${units[name] ? ` ${units[name]}` : ''} is ${comparator} configured limit ${limit}`,
+            `${name}=${value}${unitFor(name) ? ` ${unitFor(name)}` : ''} is ${comparator} configured limit ${limit}`,
         });
       }
     }
@@ -309,16 +299,18 @@ export function analyseTelemetry(
       min: series.reduce((minimum, value) => Math.min(minimum, value), Number.POSITIVE_INFINITY),
       max: series.reduce((maximum, value) => Math.max(maximum, value), Number.NEGATIVE_INFINITY),
       mean: sum / series.length,
-      unit:
-        options.units?.[name] ??
-        rules.find((rule) => rule.metric === name && rule.unit)?.unit ??
-        null,
+      unit: unitFor(name),
     };
   }
 
+  const unmatchedRuleIds = rules
+    .filter((rule) => !values.has(rule.metric))
+    .map((rule) => rule.id)
+    .sort();
   return {
     schemaVersion: 1,
     metrics,
+    unmatchedRuleIds,
     anomalies: anomalies.sort(
       (a, b) => a.pointIndex - b.pointIndex || a.ruleId.localeCompare(b.ruleId),
     ),
@@ -327,6 +319,11 @@ export function analyseTelemetry(
       Object.entries(eventCounts).sort(([a], [b]) => a.localeCompare(b)),
     ),
     limitations: [
+      ...(unmatchedRuleIds.length > 0
+        ? [
+            `Threshold rule(s) ${unmatchedRuleIds.join(', ')} were NOT evaluated because their metric never appears in the recording; absence of anomalies for them is not evidence of compliance.`,
+          ]
+        : []),
       'Watchdog and reset detection is keyword-based; confirm event meanings against the firmware log specification.',
       'Threshold findings are produced only from caller-supplied rules and units; no universal device limits are inferred.',
       'Recorded telemetry is observational evidence and does not prove firmware correctness or causation.',
