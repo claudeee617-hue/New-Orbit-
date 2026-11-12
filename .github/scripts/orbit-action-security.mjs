@@ -66,8 +66,8 @@ test(
         if (ref.startsWith('./') || ref.startsWith('docker://')) continue;
         assert.match(
           ref,
-          /^[^@]+@[0-9a-f]{40}$/ ,
           /^[^@]+@[0-9a-f]{40}$/,
+          `${name}: ${ref} must be pinned to a full commit SHA`,
         );
       }
     }
