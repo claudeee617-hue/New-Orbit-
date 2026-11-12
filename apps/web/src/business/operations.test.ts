@@ -105,5 +105,6 @@ describe('Business operations workspace', () => {
     ).toThrow('estimated monthly value');
     expect(() => parseBusinessWorkspace('{invalid')).toThrow('valid JSON');
     expect(() => parseBusinessWorkspace(' '.repeat(2_000_001))).toThrow('larger than 2 MB');
+    expect(() => parseBusinessWorkspace('é'.repeat(1_000_001))).toThrow('larger than 2 MB');
   });
 });
