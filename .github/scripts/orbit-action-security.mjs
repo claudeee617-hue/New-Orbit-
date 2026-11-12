@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 import test from 'node:test';
 
 const workflow = readFileSync('.github/workflows/orbit-action-test.yml', 'utf8');
@@ -44,5 +45,17 @@ test('action inputs reach shell steps only through env, never interpolated into 
       /\$\{\{\s*github\.event\./,
       `event data interpolated into run: ${block[1]}`,
     );
+  }
+});
+
+test('all third-party actions in repository workflows are pinned to immutable commit SHAs', () => {
+  const workflowDir = '.github/workflows';
+  for (const name of readdirSync(workflowDir).filter((item) => /\\.ya?ml$/i.test(item))) {
+    const source = readFileSync(join(workflowDir, name), 'utf8');
+    const refs = [...source.matchAll(/^\\s*uses:\\s*([^\\s#]+)/gm)].map((match) => match[1]);
+    for (const ref of refs) {
+      if (ref.startsWith('./') || ref.startsWith('docker://')) continue;
+      assert.match(ref, /^[^@]+@[0-9a-f]{40}$/, `${name}: ${ref} must be pinned to a full commit SHA`);
+    }
   }
 });
