@@ -26,7 +26,7 @@ ORBIT is pre-release (no package or Marketplace release has been published). The
 | CAPSULE polyglot toolchain, dependency, container and workspace manifest inspection | Extended prototype on `main`; build replay is not implemented |
 | FLIGHT RECORDER recorded telemetry parser, caller-defined analysis and hash-verified graph persistence | Implemented on `main` as recorded-file prototype; physical serial/USB capture unavailable |
 | Change Passport graph correlation, versioned history, comparisons and non-executing reproduction plan | Implemented on `main` as backend/CLI prototype; visual Replay Room UI not implemented |
-| App Business Module | Implemented on `main` via PR #9: strategy, market references, local actual-vs-forecast calculator and pricing simulator; no live accounting/CRM/billing data |
+| App Business Module | Strategy and local actual-vs-forecast / pricing simulator on `main`; local opportunity pipeline and JSON backup/restore proposed on PR #52; no live accounting/CRM/billing data |
 | GitHub Action for PR verification | Prototype on `main` (PR #25); see [docs/GITHUB_ACTION.md](docs/GITHUB_ACTION.md). Not published to the Marketplace |
 | Full Command Center, durable FLARE history | On `main` (PRs #23, #29, #38) |
 | ORBIT AI | Opt-in preview on `main` (PR #39); no live-provider results are claimed |
