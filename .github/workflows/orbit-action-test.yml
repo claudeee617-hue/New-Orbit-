@@ -45,12 +45,6 @@ jobs:
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Preview exact Prettier correction (temporary diagnostic)
-        run: |
-          pnpm exec prettier --write .github/scripts/orbit-action-security.mjs
-          git --no-pager diff -- .github/scripts/orbit-action-security.mjs
-          node --input-type=module -e 'import { readFileSync } from "node:fs"; console.log("PRETTIER_B64:" + readFileSync(".github/scripts/orbit-action-security.mjs").toString("base64"))'
-
       - name: Verify fork-safe Action permissions and trusted checkout
         run: node --test .github/scripts/orbit-action-security.mjs
 
