@@ -52,7 +52,7 @@ test('all third-party actions in repository workflows are pinned to immutable co
   const workflowDir = '.github/workflows';
   for (const name of readdirSync(workflowDir).filter((item) => /\.ya?ml$/i.test(item))) {
     const source = readFileSync(join(workflowDir, name), 'utf8');
-    const refs = [...source.matchAll(/^\s*uses:\s*([^\s#]+)/gm)].map((match) => match[1]);
+    const refs = [...source.matchAll(/^\s*(?:-\s*)?uses:\s*([^\s#]+)/gm)].map((match) => match[1]);
     for (const ref of refs) {
       if (ref.startsWith('./') || ref.startsWith('docker://')) continue;
       assert.match(ref, /^[^@]+@[0-9a-f]{40}$/, `${name}: ${ref} must be pinned to a full commit SHA`);
