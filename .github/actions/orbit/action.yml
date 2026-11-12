@@ -48,21 +48,21 @@ runs:
   using: composite
   steps:
     - name: Check out trusted ORBIT runtime
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       with:
         # This SHA is the reviewed ORBIT runtime snapshot, not the caller repository's PR base SHA.
         # Bump it only after reviewing and testing a newer ORBIT runtime commit.
-        ref: fde44b79d97a9e9c8e62120816799dee48c41233
+        ref: 65c90cf450a15a1bd8c44919cf78fd2928b41ecb
         path: .orbit-action-runtime
         persist-credentials: false
 
     - name: Set up Node.js
-      uses: actions/setup-node@v7
+      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
       with:
         node-version: 22
 
     - name: Set up pnpm
-      uses: pnpm/action-setup@v6
+      uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
       with:
         version: 10.28.0
 
@@ -90,7 +90,7 @@ runs:
 
     - name: Upsert pull-request verification comment
       if: inputs.comment == 'true' && inputs.github-token != '' && github.event_name == 'pull_request'
-      uses: actions/github-script@v7
+      uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
       env:
         ORBIT_REPORT_PATH: ${{ steps.verify.outputs.report-path }}
       with:
@@ -122,7 +122,7 @@ runs:
 
     - name: Upload ORBIT SARIF
       if: inputs.upload-sarif == 'true' && steps.verify.outputs.sarif-path != ''
-      uses: github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4
       with:
         sarif_file: ${{ steps.verify.outputs.sarif-path }}
         category: orbit-witness

@@ -1,4 +1,11 @@
-import { appendFileSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import {
+  appendFileSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  writeFileSync,
+} from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
 
@@ -116,9 +123,12 @@ if (coverageFile) {
   if (!insideWorkspace(workspace, coveragePath)) {
     throw new Error('coverage-file must be a path inside the workspace.');
   }
+  // The checked-out PR head is untrusted: the coverage path may be a symlink the PR author
+  // committed. Refuse symlinks and re-check containment on the real path so a link cannot make
+  // the Action read runner files outside the workspace.
   let coverageStat;
   try {
-    coverageStat = statSync(coveragePath);
+    coverageStat = lstatSync(coveragePath);
   } catch {
     throw new Error(
       'coverage-file was set but the file does not exist: ' +
@@ -126,7 +136,13 @@ if (coverageFile) {
         '. ORBIT will not treat a missing report as 0% coverage.',
     );
   }
+  if (coverageStat.isSymbolicLink()) {
+    throw new Error('coverage-file must not be a symbolic link.');
+  }
   if (!coverageStat.isFile()) throw new Error('coverage-file must be a regular file.');
+  if (!insideWorkspace(realpathSync(workspace), realpathSync(coveragePath))) {
+    throw new Error('coverage-file must be a path inside the workspace.');
+  }
   markdown = runCli(['verify', diffPath, option, coveragePath, '--format', 'markdown']);
   const sarif = runCli(['verify', diffPath, option, coveragePath, '--format', 'sarif']);
   const json = runCli(['verify', diffPath, option, coveragePath, '--format', 'json']);
