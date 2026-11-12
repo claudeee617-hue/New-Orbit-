@@ -1,6 +1,6 @@
-# ORBIT Command Center — Business Module (Prompts 0–3)
+# ORBIT Command Center — Business Module (Prompts 0–5)
 
-**Status:** Implemented as a read-only strategy view. No billing, CRM, subscription or financial ledger is connected.  
+**Status:** Prompts 0–5 are implemented as local-only strategy, planning, unit-economics and opportunity-operations surfaces. No billing, CRM, subscription or financial ledger is connected.  
 **Research snapshot:** 2026-11-08  
 **Product boundary:** This module is a planning and market-research surface, not an operating finance system.
 
