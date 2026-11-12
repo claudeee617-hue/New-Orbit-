@@ -108,6 +108,10 @@ A fresh `git clone` of `main` into an empty directory, `pnpm install --frozen-lo
 - SEC-01 (merged, #45): restored reverted API hardening, Origin allow-list, 62 API abuse-case tests, Action symlink refusal and SHA pins. See `docs/SECURITY_REVIEW.md`.
 - AUD-01/02/03: code review of FLARE, CAPSULE and the flight recorder with 15 findings fixed and 39 regression tests (`flare-audit`, `capsule-audit`, `flight-recorder-audit`). Reports: `docs/audits/FLARE.md`, `CAPSULE.md`, `FLIGHT_RECORDER.md`. The reviewer was the AI author, so these are **not independent reviews** and the independent-review item below stays open. Full check: 19/19 tasks, 674 tests (atlas 218, api 98).
 
+## Scenarios S1–S10 (2026-11-12)
+
+Canonical definitions are in `docs/TEST_STRATEGY.md` §4. Automated tests: `packages/witness/src/scenarios.test.ts` (S1, S2, S3, S9, S10) and `packages/atlas/src/scenarios.test.ts` (S4–S8). Traceability and honest per-row status (3 PASS, 7 PARTIAL with named gaps and 4 deviations from the written expectations): `docs/SCENARIO_TRACEABILITY.md`.
+
 ## Merge note (2026-11-11)
 
 While merging #23 the squash silently reverted the evidence tie-break fix from #36 (same-millisecond evidence listed by hash instead of insertion order, which made MCP "newest history first" flaky on macOS). It was caught by CI on #40 and restored with its regression test. Playwright's `--with-deps` apt step failed once on a hosted runner (mirror error); the step now retries three times. macOS runner capacity also caused two cancelled jobs on #41 that were unrelated to the code.
