@@ -84,6 +84,12 @@ Known Prompt 5 limitations:
 - MCP reads only data already present in the local ORBIT database. The server does not index the repository or create/migrate a database when launched.
 - MCP transport currently supports stdio only; remote HTTP transport, authentication and hosted multi-tenant operation are not included.
 
+## Prompt 15/16 hardening (2026-11-12)
+
+- Seeded, deterministic mutation fuzzing (400–500 inputs per parser) of every parser that reads untrusted text: JUnit, Cobertura, LCOV, unified diff, pytest/Jest/Go reports, telemetry (JSON/NDJSON/CSV/key-value), environment manifests and WITNESS' own diff/coverage/JUnit parsers. Contract: return a value or throw an ordinary `Error`; never TypeError/RangeError, never slower than 2 s. No defects were found by this round. This is bounded mutation testing, not an exhaustive proof.
+- SARIF output is validated against the vendored OASIS SARIF 2.1.0 (errata 01) JSON schema (`packages/witness/test-schemas`), with a negative control proving the validator rejects malformed logs.
+- Migration tests build older schemas from truncated copies of the real migration journal (versions 0–3), write real graph data with the real store, upgrade with current code, and check data, hash-chained ledger integrity, append-only triggers, idempotency and read-only refusal. Version 0–2 schemas predate the graph views and are tested as empty upgrades only.
+
 ## Merge note (2026-11-11)
 
 While merging #23 the squash silently reverted the evidence tie-break fix from #36 (same-millisecond evidence listed by hash instead of insertion order, which made MCP "newest history first" flaky on macOS). It was caught by CI on #40 and restored with its regression test. Playwright's `--with-deps` apt step failed once on a hosted runner (mirror error); the step now retries three times. macOS runner capacity also caused two cancelled jobs on #41 that were unrelated to the code.
@@ -189,7 +195,7 @@ Created: root config (pnpm workspace, Turborepo, strict tsconfig, ESLint 10 flat
 | -------------------- | ---------------------------------------- |
 | `pnpm run build`     | passes (part of 19/19 `check` tasks)     |
 | `pnpm run typecheck` | passes                                   |
-| `pnpm run test`      | 546 tests pass (shared 36, core 66, database 47, graph 14, atlas 168, mcp 16, witness 63, ai 9, api 36, cli 47, web 44) — counts from the last local `pnpm run check`, 19/19 tasks |
+| `pnpm run test`      | 573 tests pass (shared 36, core 66, database 55, graph 14, atlas 179, mcp 16, witness 71, ai 9, api 36, cli 47, web 44) — counts from the last local `pnpm run check`, 19/19 tasks |
 | `pnpm run lint`      | clean                                    |
 | `pnpm run format:check` | clean (Markdown excluded)             |
 
