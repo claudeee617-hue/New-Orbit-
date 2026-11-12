@@ -103,3 +103,37 @@ No purchase, billing, CRM, workspace sync, subscription validation, revenue repo
 - Revenue bars share a common maximum scale; neither side is incorrectly fixed at 100%.
 - The financial surface remains explicitly disconnected from live accounting, payments, CRM and analytics.
 - The web package passes formatting, lint, typecheck, test and production build checks.
+
+
+## Prompt 5 — Local commercial operations workspace
+
+**Status:** Implemented on the feature branch; CI and review pending. This is a local planning tracker, not a connected CRM or source of revenue truth.
+
+### Delivered capabilities
+
+- Opportunity records for discovery, qualified, pilot, won and lost stages.
+- Segment classification for product engineering, embedded / IoT, open source, consultancy and enterprise.
+- Estimated monthly opportunity value, next action, follow-up date and evidence / discovery notes.
+- Derived open-account, qualified, active-pilot, due-follow-up and open-pipeline estimate summaries.
+- Filters by open pipeline or individual stage; edit and delete actions.
+- Browser-local persistence under a versioned key; no server, API or cloud sync.
+- Versioned JSON import/export with size, schema, field, date, value, record-count and duplicate-ID validation.
+- Explicit empty states: no demo accounts, opportunities or revenue are seeded.
+
+### Privacy and data boundary
+
+- Browser local storage is scoped to the current browser profile and device; it is not encrypted by this app and may be cleared by browser settings.
+- Users should store organisation-level labels only; do not enter personal customer data, credentials, payment-card data or secrets.
+- Currency selection formats the estimate only; it does not convert exchange rates.
+- The pipeline estimate is not recognised revenue, contract value, a forecast commitment or a verified CRM record.
+- Malformed or unsupported saved workspaces are not silently replaced. Export JSON backups before changing devices or clearing browser data.
+
+### Acceptance criteria
+
+- A clean browser shows a useful empty state without fabricated accounts.
+- Valid opportunity records can be added, edited, deleted, filtered and persisted locally.
+- JSON export can be parsed back through the same schema validator.
+- Invalid versions, stages, segments, dates, numeric values, oversized files and duplicate IDs are rejected.
+- Derived pipeline totals exclude won and lost opportunities and do not claim actual revenue.
+- No server request is made by the workspace.
+- Business module tests, web typecheck, lint, formatting and production build pass before merge.
