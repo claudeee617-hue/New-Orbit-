@@ -126,7 +126,7 @@ test(
   'all third-party actions in repository workflows are pinned to immutable references',
   () => {
     const workflowDir = '.github/workflows';
-    const workflowFiles = readdirSync(workflowDir).filter((item) => /\\.ya?ml$/i.test(item));
+    const workflowFiles = readdirSync(workflowDir).filter((item) => /\.ya?ml$/i.test(item));
 
     for (const name of workflowFiles) {
       const source = readFileSync(join(workflowDir, name), 'utf8');
