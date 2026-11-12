@@ -97,6 +97,19 @@ test('flow-style and quoted action references are parsed before pin validation',
 `;
   assert.doesNotThrow(() => assertPinnedWorkflowUses('flow.yml', flowStyle));
 
+  const quotedPinned = `jobs:
+  check:
+    steps:
+      - uses: 'actions/checkout@${sha}'
+`;
+  assert.doesNotThrow(() => assertPinnedWorkflowUses('quoted-pinned.yml', quotedPinned));
+
+  const reusableWorkflow = `jobs:
+  reusable:
+    uses: 'actions/reusable-workflow/.github/workflows/test.yml@${sha}'
+`;
+  assert.doesNotThrow(() => assertPinnedWorkflowUses('job-level.yml', reusableWorkflow));
+
   const quotedMutable = `jobs:
   check:
     steps:
