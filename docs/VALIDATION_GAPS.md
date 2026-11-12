@@ -52,10 +52,10 @@
 
 - Add Playwright or equivalent browser E2E infrastructure.
 - Complete controlled scenarios S1–S10 from docs/TEST_STRATEGY.md.
-- Add migration tests across supported schema versions.
-- Add SARIF schema validation.
+- ~~Add migration tests across supported schema versions.~~ Done (2026-11-12) for versions 0–3; see ORBIT_BUILD_STATE.md.
+- ~~Add SARIF schema validation.~~ Done (2026-11-12): WITNESS SARIF validates against the SARIF 2.1.0 schema.
 - Add action event fixtures and local action runner tests.
-- Add fuzz/property tests for untrusted parsers.
+- ~~Add fuzz/property tests for untrusted parsers.~~ Seeded mutation fuzzing added for all report/diff/telemetry/manifest parsers (2026-11-12); true property-based/coverage-guided fuzzing remains open.
 - Measure performance on a documented fixture repository; do not publish unmeasured claims.
 
 ## Prompt 17 — Release
