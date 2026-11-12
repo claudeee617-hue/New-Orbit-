@@ -9,6 +9,8 @@ on:
       - '.github/workflows/orbit-action-test.yml'
       - '.github/workflows/**'
       - '.github/scripts/orbit-action-security.mjs'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
       - '.github/fixtures/orbit-action-coverage.lcov'
       - 'apps/cli/**'
       - 'packages/atlas/**'
@@ -30,6 +32,18 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Verify fork-safe Action permissions and trusted checkout
         run: node --test .github/scripts/orbit-action-security.mjs
