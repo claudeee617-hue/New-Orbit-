@@ -3,13 +3,7 @@ export const BUSINESS_WORKSPACE_STORAGE_KEY = 'orbit.business-workspace.v1';
 export const MAX_BUSINESS_OPPORTUNITIES = 250;
 export const MAX_BUSINESS_WORKSPACE_BYTES = 2_000_000;
 
-export const OPPORTUNITY_STAGES = [
-  'discovery',
-  'qualified',
-  'pilot',
-  'won',
-  'lost',
-] as const;
+export const OPPORTUNITY_STAGES = ['discovery', 'qualified', 'pilot', 'won', 'lost'] as const;
 
 export type OpportunityStage = (typeof OPPORTUNITY_STAGES)[number];
 
@@ -155,9 +149,7 @@ export function normaliseBusinessWorkspace(value: unknown): BusinessWorkspace {
     throw new Error('Business workspace opportunities must be an array.');
   }
   if (value.opportunities.length > MAX_BUSINESS_OPPORTUNITIES) {
-    throw new Error(
-      `A workspace can contain at most ${MAX_BUSINESS_OPPORTUNITIES} opportunities.`,
-    );
+    throw new Error(`A workspace can contain at most ${MAX_BUSINESS_OPPORTUNITIES} opportunities.`);
   }
 
   const opportunities = value.opportunities.map(parseOpportunity);
@@ -196,14 +188,11 @@ export function calculateBusinessPipelineSummary(
   workspace: BusinessWorkspace,
   today = getLocalDateKey(),
 ): BusinessPipelineSummary {
-  const open = workspace.opportunities.filter(
-    ({ stage }) => stage !== 'won' && stage !== 'lost',
-  );
+  const open = workspace.opportunities.filter(({ stage }) => stage !== 'won' && stage !== 'lost');
   return {
     activeAccounts: open.length,
-    qualifiedAccounts: open.filter(
-      ({ stage }) => stage === 'qualified' || stage === 'pilot',
-    ).length,
+    qualifiedAccounts: open.filter(({ stage }) => stage === 'qualified' || stage === 'pilot')
+      .length,
     pilotAccounts: open.filter(({ stage }) => stage === 'pilot').length,
     wonAccounts: workspace.opportunities.filter(({ stage }) => stage === 'won').length,
     dueFollowUps: open.filter(({ dueDate }) => dueDate !== '' && dueDate <= today).length,
