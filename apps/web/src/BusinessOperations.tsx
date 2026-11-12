@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import {
   BUSINESS_WORKSPACE_STORAGE_KEY,
+  MAX_BUSINESS_WORKSPACE_BYTES,
   calculateBusinessPipelineSummary,
   emptyBusinessWorkspace,
   getLocalDateKey,
@@ -176,6 +177,9 @@ export function BusinessOperations() {
   async function importBackup(file: File | undefined) {
     if (!file) return;
     try {
+      if (file.size > MAX_BUSINESS_WORKSPACE_BYTES) {
+        throw new Error('Business workspace backup is larger than 2 MB.');
+      }
       const restored = parseBusinessWorkspace(await file.text());
       setCanPersist(true);
       setWorkspace(restored);
