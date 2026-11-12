@@ -44,13 +44,13 @@
 - Secret redaction and report export review.
 - MCP prompt-injection boundary and output caps.
 - Local API token file permissions and Windows ACL review.
-- Dependency audit and CodeQL review.
+- Automated dependency audit and CodeQL CI gates are active. Release owner must still review and record alert triage on the release candidate; independent security review remains separate.
 - Review of GitHub Action permissions and fork threat model.
 - Review every new network, provider and hardware boundary.
 
 ## Prompt 16 — Testing
 
-- Add Playwright or equivalent browser E2E infrastructure.
+- ~~Add Playwright or equivalent browser E2E infrastructure.~~ Done: Chromium browser E2E runs in CI against the real local API and a disposable fixture workspace. The full S1–S10 product-scenario acceptance suite remains partial; see `docs/SCENARIO_TRACEABILITY.md`.
 - Complete controlled scenarios S1–S10 from docs/TEST_STRATEGY.md.
 - ~~Add migration tests across supported schema versions.~~ Done (2026-11-12) for versions 0–3; see ORBIT_BUILD_STATE.md.
 - ~~Add SARIF schema validation.~~ Done (2026-11-12): WITNESS SARIF validates against the SARIF 2.1.0 schema.
@@ -60,7 +60,7 @@
 
 ## Prompt 17 — Release
 
-- Clean-machine install walkthrough on all supported OSs.
+- ~~Clean-machine install walkthrough on Linux.~~ Done (2026-11-12): fresh clone, frozen install, full check and CLI smoke scan were verified on Linux. Repeat the clean-machine walkthrough on Windows and macOS before release.
 - Confirm package metadata, licensing, third-party notices and trademark availability.
 - Versioning, changelog, release automation and rollback instructions.
 - Publish only after explicit owner approval.
