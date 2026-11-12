@@ -23,12 +23,39 @@ export interface TelemetrySession {
 const MAX_TELEMETRY_BYTES = 10 * 1024 * 1024;
 const METRIC_NAME = /^[A-Za-z][A-Za-z0-9_.-]{0,63}$/;
 
-function normaliseEvent(value: string): string {
+/** Event names produced by {@link normaliseEvent}; already-canonical values are kept as they are. */
+export const CANONICAL_EVENTS: ReadonlySet<string> = new Set([
+  'watchdog_reset',
+  'watchdog',
+  'watchdog_info',
+  'reset',
+  'boot',
+  'panic',
+  'brownout',
+  'fault',
+  'crash',
+  'disconnected',
+  'connected',
+  'start',
+  'stop',
+  'other',
+]);
+
+/** Wording that says a watchdog actually acted, as opposed to a log line that merely mentions one. */
+const WATCHDOG_ACTION =
+  /timeout|time-out|timed out|expire|bite|bitten|bark|trigger|fire|fail|hang|hung|stuck|starv|overflow|trip/;
+
+/**
+ * Keyword classification of a free-text event. A line that only mentions a watchdog ("watchdog
+ * fed", "WDT configured", "watchdog enabled") is `watchdog_info`, not an anomaly; only wording
+ * that says it acted (timeout, bite, trigger, reset…) is `watchdog` or `watchdog_reset`.
+ */
+export function normaliseEvent(value: string): string {
   const event = value.toLowerCase();
-  const hasWatchdog = event.includes('watchdog') || event.includes('wdt');
-  const hasReset = event.includes('reset') || event.includes('reboot');
+  const hasWatchdog = event.includes('watchdog') || /\bwdt\b/.test(event) || event.includes('wdt');
+  const hasReset = event.includes('reset') || event.includes('reboot') || event.includes('restart');
   if (hasWatchdog && hasReset) return 'watchdog_reset';
-  if (hasWatchdog) return 'watchdog';
+  if (hasWatchdog) return WATCHDOG_ACTION.test(event) ? 'watchdog' : 'watchdog_info';
   if (hasReset) return 'reset';
   if (event.includes('boot')) return 'boot';
   if (event.includes('panic')) return 'panic';
@@ -41,6 +68,11 @@ function normaliseEvent(value: string): string {
   if (event.includes('start')) return 'start';
   if (event.includes('stop')) return 'stop';
   return 'other';
+}
+
+/** Idempotent: a value that is already a canonical event is returned unchanged. */
+export function canonicalEvent(value: string): string {
+  return CANONICAL_EVENTS.has(value) ? value : normaliseEvent(value);
 }
 
 const ISO_LIKE =
@@ -235,8 +267,8 @@ export function parseTelemetry(
     for (const name of Object.keys(point.metrics)) metricNames.add(name);
     const event = point.event?.toLowerCase() ?? '';
     if (event) eventCounts[event] = (eventCounts[event] ?? 0) + 1;
-    if (event.includes('watchdog') || event.includes('wdt')) watchdogEvents += 1;
-    if (event.includes('reset') || event.includes('reboot')) resetEvents += 1;
+    if (event === 'watchdog' || event === 'watchdog_reset') watchdogEvents += 1;
+    if (event === 'reset' || event === 'watchdog_reset') resetEvents += 1;
   }
   return {
     schemaVersion: 1,
@@ -253,7 +285,7 @@ export function parseTelemetry(
       'This parser analyses supplied log data only; it does not connect to or control hardware.',
       'Metric names and units are source-defined. ORBIT does not infer units from numeric values.',
       'Raw log lines are not copied into parsed records because they may contain credentials or personal data; the raw artifact is represented by its SHA-256 digest.',
-      'Event classification is keyword-based and must be checked against the device firmware log format.',
+      'Event classification is keyword-based and must be checked against the device firmware log format. A watchdog is reported as an anomaly only when the text says it acted (timeout, bite, trigger, reset…); mentions such as "watchdog fed" are watchdog_info. Negated phrases such as "no watchdog reset" are not understood.',
     ],
   };
 }

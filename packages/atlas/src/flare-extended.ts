@@ -1,5 +1,10 @@
 import { createHash } from 'node:crypto';
-import { summarizeTestHistory, type TestCaseResult, type TestHistorySummary } from './flare.js';
+import {
+  sanitizeDuration,
+  summarizeTestHistory,
+  type TestCaseResult,
+  type TestHistorySummary,
+} from './flare.js';
 
 const MAX_JSON_BYTES = 10 * 1024 * 1024;
 const MAX_TESTS = 100_000;
@@ -26,16 +31,24 @@ function text(value: unknown, fallback = ''): string {
 }
 
 function duration(value: unknown, unit: 'seconds' | 'milliseconds' = 'seconds'): number | null {
-  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return null;
-  return unit === 'milliseconds' ? value / 1000 : value;
+  if (typeof value !== 'number') return null;
+  return sanitizeDuration(unit === 'milliseconds' ? value / 1000 : value);
 }
 
 function outcome(value: unknown): TestCaseResult['outcome'] | undefined {
   if (value === 'passed' || value === 'pass' || value === 'success') return 'passed';
   if (value === 'failed' || value === 'fail' || value === 'failure' || value === 'error')
     return 'failed';
-  if (value === 'skipped' || value === 'skip' || value === 'pending' || value === 'todo')
+  if (
+    value === 'skipped' ||
+    value === 'skip' ||
+    value === 'pending' ||
+    value === 'todo' ||
+    value === 'disabled' ||
+    value === 'xfailed' // expected failure: not a signal about reliability
+  )
     return 'skipped';
+  if (value === 'xpassed') return 'passed';
   return undefined;
 }
 
@@ -78,19 +91,29 @@ export function parsePytestJsonReport(content: string): TestCaseResult[] {
     const parsed = phaseOutcomes
       .map(outcome)
       .filter((v): v is TestCaseResult['outcome'] => v !== undefined);
+    // Precedence: any failing phase fails the test; otherwise a skipped phase (setup skip,
+    // pytest.skip in the body) means the test did not run and must not be counted as a pass
+    // just because teardown succeeded; otherwise it passed.
     const result = parsed.includes('failed')
       ? 'failed'
-      : parsed.includes('passed')
-        ? 'passed'
-        : (parsed[0] ?? outcome(item.outcome));
+      : parsed.includes('skipped')
+        ? 'skipped'
+        : parsed.includes('passed')
+          ? 'passed'
+          : outcome(item.outcome);
     if (!result) continue;
     const seconds = duration(item.duration);
     const longrepr = text(phase?.longrepr, text(setup?.longrepr, text(teardown?.longrepr)));
-    const suite = nodeid.includes('::') ? nodeid.split('::').slice(0, -1).join('::') : 'pytest';
+    // Parametrisation ids may themselves contain `::`; split only the part before the first `[`.
+    const bracket = nodeid.indexOf('[');
+    const head = bracket === -1 ? nodeid : nodeid.slice(0, bracket);
+    const params = bracket === -1 ? '' : nodeid.slice(bracket);
+    const parts = head.split('::');
+    const suite = parts.length > 1 ? parts.slice(0, -1).join('::') : 'pytest';
     results.push(
       makeResult({
         id: nodeid,
-        name: nodeid.split('::').at(-1) ?? nodeid,
+        name: (parts.at(-1) ?? head) + params,
         suite,
         outcome: result,
         durationSeconds: seconds,
@@ -182,7 +205,7 @@ export function parseGoTestJson(content: string): TestCaseResult[] {
             ? 'skipped'
             : undefined;
     if (!parsed) continue;
-    const message = outputByTest.get(id)?.join('\n');
+    const message = parsed === 'failed' ? outputByTest.get(id)?.join('\n') : undefined;
     terminal.set(
       id,
       makeResult({
@@ -228,11 +251,43 @@ function percentile(values: number[], fraction: number): number | null {
   return sorted[Math.max(0, Math.ceil(fraction * sorted.length) - 1)] ?? null;
 }
 
-function failureSignature(message: string): string {
-  return message
-    .toLowerCase()
-    .replace(/https?:\/\/\S+/g, '<url>')
-    .replace(/(?:[a-z]:)?[^\s:]+\.(?:ts|tsx|js|jsx|py|java|go|rs):\d+(?::\d+)?/g, '<location>')
+const LOCATION_SUFFIX = /\.(?:ts|tsx|js|jsx|py|java|go|rs):\d+(?::\d+)?/g;
+const MAX_SIGNATURE_INPUT = 4000;
+
+/**
+ * Replace `path/to/file.ext:line[:col]` with `<location>` in linear time. The obvious single
+ * regex `[^\s:]+\.ext:\d+` backtracks quadratically on long dot-free tokens (base64 blobs in
+ * assertion messages), so the suffix is matched first and the path is walked back by hand.
+ */
+function maskLocations(input: string): string {
+  let out = '';
+  let cursor = 0;
+  LOCATION_SUFFIX.lastIndex = 0;
+  for (let match = LOCATION_SUFFIX.exec(input); match; match = LOCATION_SUFFIX.exec(input)) {
+    let start = match.index;
+    while (start > cursor && !/[\s:]/.test(input.charAt(start - 1))) start -= 1;
+    // Optional Windows drive prefix such as `c:` directly before the path.
+    if (
+      start - 2 >= cursor &&
+      input.charAt(start - 1) === ':' &&
+      /[a-z]/i.test(input.charAt(start - 2))
+    ) {
+      start -= 2;
+    }
+    if (start === match.index) continue; // `.ts:3` with no file name before it
+    out += input.slice(cursor, start) + '<location>';
+    cursor = match.index + match[0].length;
+  }
+  return out + input.slice(cursor);
+}
+
+export function failureSignature(message: string): string {
+  return maskLocations(
+    message
+      .slice(0, MAX_SIGNATURE_INPUT)
+      .toLowerCase()
+      .replace(/https?:\/\/\S+/g, '<url>'),
+  )
     .replace(/0x[0-9a-f]+/g, '<address>')
     .replace(/\b\d+\b/g, '<n>')
     .replace(/\s+/g, ' ')

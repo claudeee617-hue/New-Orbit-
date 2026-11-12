@@ -1,5 +1,11 @@
 import { createHash } from 'node:crypto';
-import { inspectEnvironment, type EnvironmentSnapshot } from './capsule.js';
+import {
+  dict,
+  inspectEnvironment,
+  redactSecrets,
+  scopedKey,
+  type EnvironmentSnapshot,
+} from './capsule.js';
 
 export interface ExtendedEnvironmentSnapshot {
   schemaVersion: 1;
@@ -21,7 +27,7 @@ function sortedRecord(source: Record<string, string>): Record<string, string> {
   return Object.fromEntries(Object.entries(source).sort(([a], [b]) => a.localeCompare(b)));
 }
 
-function parseToolVersions(content: string, target: Record<string, string>): void {
+function parseToolVersions(path: string, content: string, target: Record<string, string>): void {
   const aliases: Record<string, string> = {
     nodejs: 'node',
     python: 'python',
@@ -35,20 +41,20 @@ function parseToolVersions(content: string, target: Record<string, string>): voi
     const match = /^\s*([A-Za-z0-9_-]+)\s+([^\s#]+)/.exec(line);
     if (!match) continue;
     const tool = aliases[match[1]!.toLowerCase()];
-    if (tool) target[tool] = match[2]!;
+    if (tool) target[scopedKey(path, tool)] = match[2]!;
   }
 }
 
-function parseRequirements(content: string, target: Record<string, string>): void {
+function parseRequirements(path: string, content: string, target: Record<string, string>): void {
   for (const line of content.split(/\r?\n/)) {
     const value = line.trim();
     if (!value || value.startsWith('#') || value.startsWith('-') || value.startsWith('[')) continue;
     const match = /^([A-Za-z0-9_.-]+)\s*(?:===|==|~=|>=|<=|>|<)\s*([^;\s#]+)/.exec(value);
-    if (match) target[match[1]!] = match[2]!;
+    if (match) target[scopedKey(path, match[1]!)] = redactSecrets(match[2]!);
   }
 }
 
-function parsePyproject(content: string, target: Record<string, string>): void {
+function parsePyproject(path: string, content: string, target: Record<string, string>): void {
   const lines = content.split(/\r?\n/);
   let section = '';
   for (const line of lines) {
@@ -62,7 +68,7 @@ function parsePyproject(content: string, target: Record<string, string>): void {
     )
       continue;
     const item = /^\s*([A-Za-z0-9_.-]+)\s*=\s*["']([^"']+)["']/.exec(line);
-    if (item) target[item[1]!] = item[2]!;
+    if (item) target[scopedKey(path, item[1]!)] = redactSecrets(item[2]!);
   }
 }
 
@@ -70,7 +76,7 @@ function parseDockerImages(path: string, content: string): Array<{ file: string;
   const images: Array<{ file: string; image: string }> = [];
   for (const line of content.split(/\r?\n/)) {
     const match = /^\s*FROM\s+(?:--platform=\S+\s+)?([^\s]+)(?:\s+AS\s+[^\s]+)?\s*$/i.exec(line);
-    if (match) images.push({ file: path, image: match[1]! });
+    if (match) images.push({ file: path, image: redactSecrets(match[1]!) });
   }
   return images;
 }
@@ -104,32 +110,32 @@ export function inspectExtendedEnvironment(
   }
 
   const base = inspectEnvironment(files);
-  const toolchains = { ...base.runtimes };
-  const declaredDependencies: Record<string, string> = { ...base.dependencies };
+  const toolchains = Object.assign(dict(), base.runtimes);
+  const declaredDependencies = Object.assign(dict(), base.dependencies);
   const containerImages: Array<{ file: string; image: string }> = [];
   const workspaceSignals = new Set<string>();
   const ignoredOrUnparsedManifests: string[] = [];
 
   for (const [path, content] of entries) {
-    const basename = path.split('/').at(-1) ?? path;
+    const basename = path.split(/[\\/]/).at(-1) ?? path;
     if (basename === '.tool-versions') {
-      parseToolVersions(content, toolchains);
+      parseToolVersions(path, content, toolchains);
     } else if (basename === 'rust-toolchain' || basename === 'rust-toolchain.toml') {
       const channel =
         /(?:^|\n)\s*channel\s*=\s*["']([^"']+)["']/.exec(content)?.[1] ??
         content.trim().split(/\r?\n/)[0];
-      if (channel) toolchains.rust = channel.slice(0, 100);
+      if (channel) toolchains[scopedKey(path, 'rust')] = channel.slice(0, 100);
     } else if (basename === 'requirements.txt' || basename === 'requirements-dev.txt') {
-      parseRequirements(content, declaredDependencies);
+      parseRequirements(path, content, declaredDependencies);
     } else if (basename === 'pyproject.toml') {
-      parsePyproject(content, declaredDependencies);
+      parsePyproject(path, content, declaredDependencies);
     } else if (basename === 'Dockerfile' || basename.startsWith('Dockerfile.')) {
       containerImages.push(...parseDockerImages(path, content));
     } else if (basename === 'devcontainer.json') {
       try {
         const config = JSON.parse(content) as Record<string, unknown>;
         if (typeof config.image === 'string')
-          containerImages.push({ file: path, image: config.image });
+          containerImages.push({ file: path, image: redactSecrets(config.image) });
         if (typeof config.dockerFile === 'string')
           workspaceSignals.add(`devcontainer-dockerfile:${config.dockerFile}`);
         const features = config.features;

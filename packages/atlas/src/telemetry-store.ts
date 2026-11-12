@@ -134,10 +134,13 @@ export async function storeTelemetrySession(
   const analysis = analyseTelemetry(verifiedSession, input.analysisOptions);
   if (input.commitSha && !/^[0-9a-f]{7,64}$/i.test(input.commitSha))
     throw new OrbitError('INVALID_INPUT', 'commit SHA is invalid');
-  const timestamp =
-    input.startedAt ??
-    verifiedSession.points.find((point) => point.timestamp)?.timestamp ??
-    new Date().toISOString();
+  const recordedStart = verifiedSession.points.find((point) => point.timestamp)?.timestamp;
+  const startedAtSource: 'input' | 'telemetry' | 'ingestion-time' = input.startedAt
+    ? 'input'
+    : recordedStart
+      ? 'telemetry'
+      : 'ingestion-time';
+  const timestamp = input.startedAt ?? recordedStart ?? new Date().toISOString();
   const timestampDate = new Date(timestamp);
   if (!Number.isFinite(timestampDate.getTime()))
     throw new OrbitError('INVALID_INPUT', 'telemetry session timestamp is invalid');
@@ -172,6 +175,11 @@ export async function storeTelemetrySession(
         ...verifiedSession.limitations,
         ...analysis.limitations,
         'Evidence status PARTIAL describes bounded parser output; it is not a judgement that the device passed or failed.',
+        ...(startedAtSource === 'ingestion-time'
+          ? [
+              'The recording has no usable timestamps and no start time was supplied, so the session time is the time ORBIT ingested it, not when the device ran.',
+            ]
+          : []),
         ...(input.isDemo
           ? [
               'This recording is synthetic demonstration data (DEMO), not a physical device capture.',
@@ -194,6 +202,8 @@ export async function storeTelemetrySession(
         source: input.source.slice(0, 512),
         format: verifiedSession.format,
         startedAt: canonicalTimestamp,
+        startedAtSource,
+        unmatchedRuleIds: analysis.unmatchedRuleIds,
         pointCount: verifiedSession.points.length,
         metricNames: verifiedSession.metricNames.slice(0, MAX_STORED_METRICS),
         eventCounts: verifiedSession.eventCounts,
