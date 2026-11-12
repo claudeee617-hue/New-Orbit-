@@ -12,6 +12,11 @@ ORBIT uses CodeRabbit as an advisory pull-request reviewer. Human review and det
 
 The repository policy lives in `.coderabbit.yaml`. Automatic review is enabled for non-draft pull requests, including incremental review after pushes.
 
+### Automatic-review title exclusions
+
+Automatic review is skipped when a pull-request title contains any configured exclusion keyword: `WIP`, `DO NOT MERGE`, or `NO REVIEW`. These exclusions are intentional safeguards for work that is not ready for automated review; they can also prevent an incremental automatic review after a push. Before expecting automatic review, remove the matching keyword from the PR title. To request a review without changing the title, use a manual PR command such as `@coderabbitai review` or `@coderabbitai full review`.
+
+
 ## Pull-request workflow
 
 1. Open a pull request against `main`; keep it non-draft when ready for review.
