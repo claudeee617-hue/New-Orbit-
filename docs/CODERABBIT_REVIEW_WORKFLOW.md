@@ -23,7 +23,8 @@ The repository policy lives in `.coderabbit.yaml`. Automatic review is enabled f
 
 ## Useful PR commands
 
-- `@coderabbitai review` — request a review when a manual rerun is needed.
+- `@coderabbitai review` — review changes since the last review; it does not rerun previously reviewed changes.
+- `@coderabbitai full review` — rerun a complete review, including changes that were already reviewed.
 - `@coderabbitai summary` — request a concise change summary.
 - `@coderabbitai configuration` — inspect the effective CodeRabbit configuration when the app is active.
 
