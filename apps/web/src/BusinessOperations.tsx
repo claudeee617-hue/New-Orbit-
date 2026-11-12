@@ -16,15 +16,6 @@ import {
   type OpportunityStage,
 } from './business/operations.js';
 
-function loadLocalWorkspace(): BusinessWorkspace {
-  try {
-    const saved = window.localStorage.getItem(BUSINESS_WORKSPACE_STORAGE_KEY);
-    return saved ? parseBusinessWorkspace(saved) : emptyBusinessWorkspace();
-  } catch {
-    return emptyBusinessWorkspace();
-  }
-}
-
 function MetricTile({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
     <article className="rounded-lg border border-edge bg-void p-4">
@@ -56,6 +47,7 @@ function money(value: number, currency: 'INR' | 'USD'): string {
 export function BusinessOperations() {
   const [workspace, setWorkspace] = useState<BusinessWorkspace>(emptyBusinessWorkspace);
   const [loaded, setLoaded] = useState(false);
+  const [canPersist, setCanPersist] = useState(true);
   const [currency, setCurrency] = useState<'INR' | 'USD'>('INR');
   const [form, setForm] = useState(EMPTY_FORM);
   const [notice, setNotice] = useState('');
@@ -69,13 +61,14 @@ export function BusinessOperations() {
       const saved = window.localStorage.getItem(BUSINESS_WORKSPACE_STORAGE_KEY);
       if (saved) setWorkspace(parseBusinessWorkspace(saved));
     } catch {
+      setCanPersist(false);
       setError('Saved workspace could not be read. It has not been overwritten; import a valid backup or clear the browser storage manually.');
     }
     setLoaded(true);
   }, []);
 
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || !canPersist) return;
     try {
       window.localStorage.setItem(
         BUSINESS_WORKSPACE_STORAGE_KEY,
@@ -85,7 +78,7 @@ export function BusinessOperations() {
     } catch {
       setError('Browser storage is unavailable or full. Export a JSON backup before leaving this page.');
     }
-  }, [loaded, workspace]);
+  }, [canPersist, loaded, workspace]);
 
   const summary = calculateBusinessPipelineSummary(workspace);
   const visible = workspace.opportunities.filter((item) => {
