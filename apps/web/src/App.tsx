@@ -100,7 +100,9 @@ export function App() {
       {view === 'business' ? (
         <main>
           <BusinessModule />
-          <div className="mt-10"><BusinessOperations /></div>
+          <div className="mt-10">
+            <BusinessOperations />
+          </div>
         </main>
       ) : (
         <main className="flex flex-col gap-8">
