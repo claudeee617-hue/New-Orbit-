@@ -50,11 +50,11 @@ test('action inputs reach shell steps only through env, never interpolated into 
 
 test('all third-party actions in repository workflows are pinned to immutable commit SHAs', () => {
   const workflowDir = '.github/workflows';
-  const workflowFiles = readdirSync(workflowDir).filter((item) => /\\.ya?ml$/i.test(item));
+  const workflowFiles = readdirSync(workflowDir).filter((item) => /\.ya?ml$/i.test(item));
 
   for (const name of workflowFiles) {
     const source = readFileSync(join(workflowDir, name), 'utf8');
-    const refs = [...source.matchAll(/^\\s*(?:-\\s*)?uses:\\s*([^\\s#]+)/gm)].map(
+    const refs = [...source.matchAll(/^\s*(?:-\s*)?uses:\s*([^\s#]+)/gm)].map(
       (match) => match[1],
     );
 
