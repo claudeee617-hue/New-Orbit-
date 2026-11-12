@@ -3,7 +3,7 @@
 // Without ORBIT_RUNTIME_DIR the suite is skipped (it is not a substitute for CI).
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
@@ -147,5 +147,47 @@ test('very large reports are truncated below the GitHub comment limit', { skip }
     assert.match(r.report, /Report truncated/);
   } finally {
     rmSync(repo.dir, { recursive: true, force: true });
+  }
+});
+
+test('a coverage-file that is a symlink committed by the PR is refused', { skip }, () => {
+  const secretDir = mkdtempSync(join(tmpdir(), 'orbit-secret-'));
+  const secret = join(secretDir, 'runner-secret.txt');
+  writeFileSync(secret, 'SF:/etc/shadow\nDA:1,1\nTOP-SECRET-RUNNER-VALUE\n');
+  const repo = makeRepo({ 'src/x.ts': 'export const x = 1;\n' });
+  try {
+    symlinkSync(secret, join(repo.dir, 'coverage.lcov'));
+  } catch {
+    rmSync(secretDir, { recursive: true, force: true });
+    return; // Symlink creation needs privileges on some Windows runners.
+  }
+  const result = run(repo, { INPUT_COVERAGE_FILE: 'coverage.lcov' });
+  try {
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /symbolic link/);
+    assert.doesNotMatch(result.stdout + result.stderr + result.report, /TOP-SECRET-RUNNER-VALUE/);
+  } finally {
+    rmSync(repo.dir, { recursive: true, force: true });
+    rmSync(secretDir, { recursive: true, force: true });
+  }
+});
+
+test('a coverage-file reached through a symlinked directory is refused', { skip }, () => {
+  const outside = mkdtempSync(join(tmpdir(), 'orbit-outside-'));
+  writeFileSync(join(outside, 'lcov.info'), 'SF:src/x.ts\nDA:1,1\nend_of_record\n');
+  const repo = makeRepo({ 'src/x.ts': 'export const x = 1;\n' });
+  try {
+    symlinkSync(outside, join(repo.dir, 'linked'), 'dir');
+  } catch {
+    rmSync(outside, { recursive: true, force: true });
+    return;
+  }
+  const result = run(repo, { INPUT_COVERAGE_FILE: 'linked/lcov.info' });
+  try {
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /inside the workspace/);
+  } finally {
+    rmSync(repo.dir, { recursive: true, force: true });
+    rmSync(outside, { recursive: true, force: true });
   }
 });

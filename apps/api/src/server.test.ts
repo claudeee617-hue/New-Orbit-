@@ -646,3 +646,106 @@ describe('unknown routes', () => {
     expect(response.json()).toEqual({ error: 'NOT_FOUND', message: 'Route not found' });
   });
 });
+
+describe('authentication is default-deny', () => {
+  const host = { host: '127.0.0.1:4317' };
+
+  it.each([
+    '/api/v1/repositories',
+    '/%61pi/v1/repositories',
+    '/api/%76%31/repositories',
+    '/api/v1/repositories?x=/health',
+    '/api/v1/repositories/',
+  ])('rejects %s without a token', async (url) => {
+    const { server } = setup();
+    const response = await server.inject({ method: 'GET', url, headers: host });
+    expect(response.statusCode).toBe(401);
+    expect(response.json<{ error: string }>().error).toBe('UNAUTHENTICATED');
+  });
+
+  it.each(['//api/v1/repositories', '/API/v1/repositories', '/nope', '/health/x'])(
+    'serves no data for unmatched URL %s',
+    async (url) => {
+      const { server } = setup();
+      const response = await server.inject({ method: 'GET', url, headers: host });
+      expect(response.statusCode).toBe(404);
+      expect(JSON.stringify(response.json())).not.toContain('example');
+    },
+  );
+
+  it('keeps /health public and rejects a wrong token', async () => {
+    const { server } = setup();
+    expect((await server.inject({ method: 'GET', url: '/health', headers: host })).statusCode).toBe(
+      200,
+    );
+    const wrong = await server.inject({
+      method: 'GET',
+      url: '/%61pi/v1/repositories',
+      headers: { ...host, authorization: 'Bearer ' + 'y'.repeat(API_TOKEN.length) },
+    });
+    expect(wrong.statusCode).toBe(401);
+    const ok = await server.inject({
+      method: 'GET',
+      url: '/%61pi/v1/repositories',
+      headers: { ...host, authorization: auth.authorization },
+    });
+    expect(ok.statusCode).toBe(200);
+  });
+});
+
+describe('client mistakes are 4xx with a stable error code', () => {
+  const headers = { host: '127.0.0.1:4317', ...auth };
+  const post = (server: ReturnType<typeof buildServer>, path: string, payload: unknown) =>
+    server.inject({
+      method: 'POST',
+      url: `/api/v1/repositories/example/${path}`,
+      headers,
+      payload: payload as object,
+    });
+
+  it('rejects unparseable and empty test reports instead of recording a pass', async () => {
+    const { server } = setup();
+    for (const [format, content] of [
+      ['junit', '<<<'],
+      ['junit', '<testsuite></testsuite>'],
+      ['jest-json', 'nope'],
+      ['pytest-json', '{"tests":[]}'],
+    ] as const) {
+      const response = await post(server, 'ingest/test-report', { format, content });
+      expect(response.statusCode, `${format} ${content}`).toBe(400);
+      expect(response.json<{ error: string }>().error).toBe('INVALID_INPUT');
+    }
+    const list = await server.inject({
+      method: 'GET',
+      url: '/api/v1/repositories/example/evidence',
+      headers,
+    });
+    expect(JSON.stringify(list.json())).not.toContain('PASS');
+  });
+
+  it('rejects bad telemetry, bad units and bad passport bodies', async () => {
+    const { server } = setup();
+    const bad = [
+      post(server, 'ingest/telemetry', { content: '\u0000garbage{{', format: 'json' }),
+      post(server, 'ingest/telemetry', { content: 'a=1', format: 'key-value', units: 'str' }),
+      post(server, 'passports', {}),
+      post(server, 'passports', { commitSha: 'zzz', evidence: [] }),
+    ];
+    for (const response of await Promise.all(bad)) {
+      expect(response.statusCode).toBe(400);
+      expect(response.json<{ error: string }>().error).toBe('INVALID_INPUT');
+    }
+  });
+
+  it('labels malformed JSON bodies as client errors', async () => {
+    const { server } = setup();
+    const response = await server.inject({
+      method: 'POST',
+      url: '/api/v1/repositories/example/ingest/test-report',
+      headers: { ...headers, 'content-type': 'application/json' },
+      payload: '{not json',
+    });
+    expect(response.statusCode).toBe(400);
+    expect(response.json<{ error: string }>().error).toBe('INVALID_INPUT');
+  });
+});

@@ -188,15 +188,48 @@ export interface BuildServerOptions {
   env?: Record<string, string | undefined>;
 }
 
-/** Strip the port from a Host header value, keeping IPv6 brackets. */
+/** Parsers run on caller-supplied content, so anything they throw is a client error. */
+function parseInput<T>(what: string, fn: () => T): T {
+  try {
+    return fn();
+  } catch (error) {
+    if (error instanceof OrbitError) throw error;
+    throw new OrbitError('INVALID_INPUT', `${what} could not be parsed`, { cause: error });
+  }
+}
+
+const HOST_HEADER = /^(\[[0-9a-f:.]+\]|[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?)(?::(\d{1,5}))?$/i;
+
+/**
+ * Host name (without port, IPv6 brackets kept) of a Host header value, or '' when the value is
+ * not a plain `host[:port]` pair. Anything else (userinfo, paths, trailing garbage after an IPv6
+ * literal, non-numeric or out-of-range ports) is treated as invalid rather than guessed at.
+ */
 function hostnameOf(hostHeader: string | undefined): string {
   if (!hostHeader) return '';
-  if (hostHeader.startsWith('[')) {
-    const end = hostHeader.indexOf(']');
-    return end === -1 ? hostHeader : hostHeader.slice(0, end + 1);
+  const match = HOST_HEADER.exec(hostHeader);
+  if (!match) return '';
+  if (match[2] !== undefined && Number(match[2]) > 65535) return '';
+  return match[1]!;
+}
+
+/**
+ * Host name of a browser `Origin` header, or '' when it is not a plain http(s) origin
+ * (`null`, opaque schemes, paths, userinfo).
+ */
+function originHostname(origin: string): string {
+  let url: URL;
+  try {
+    url = new URL(origin);
+  } catch {
+    return '';
   }
-  const colon = hostHeader.lastIndexOf(':');
-  return colon === -1 ? hostHeader : hostHeader.slice(0, colon);
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return '';
+  if (url.username !== '' || url.password !== '' || url.pathname !== '/' || url.search !== '') {
+    return '';
+  }
+  if (origin !== url.origin) return '';
+  return url.hostname.toLowerCase();
 }
 
 type JsonRecord = Record<string, JsonValue>;
@@ -452,11 +485,24 @@ export function buildServer(options: BuildServerOptions) {
     if (!allowed.has(hostnameOf(request.headers.host).toLowerCase())) {
       return reply.code(403).send({ error: 'FORBIDDEN_HOST', message: 'Host header not allowed' });
     }
-    if (request.url.startsWith('/api/v1/')) {
+    // Browsers attach Origin to cross-site requests. A request whose Origin is not itself an
+    // allowed local host is refused before it can reach any route, even a public one, so a page
+    // on another site cannot drive the API even if it learns the token. Non-browser clients
+    // (CLI, curl, the Vite proxy for same-origin calls) send no Origin and are unaffected.
+    const origin = request.headers.origin;
+    if (origin !== undefined && !allowed.has(originHostname(origin))) {
+      return reply.code(403).send({ error: 'FORBIDDEN_ORIGIN', message: 'Origin not allowed' });
+    }
+    // Decide on the route the router actually matched, not on the URL text: the router decodes
+    // %-escapes, so a prefix test on the raw URL can be bypassed (`/%61pi/v1/...`). Only the
+    // exact `/health` route is public; unmatched URLs reach the 404 handler, which returns no data.
+    const matched = request.routeOptions.url;
+    const isPublic = matched === undefined || matched === '/health' || matched === '*';
+    if (!isPublic) {
       if (!apiToken || !authenticate(request.headers.authorization, apiToken)) {
         return reply.code(401).send({
           error: 'UNAUTHENTICATED',
-          message: 'Provide the local ORBIT session token using Authorization: ***',
+          message: 'Provide the local ORBIT session token using Authorization: Bearer <token>',
         });
       }
     }
@@ -466,7 +512,11 @@ export function buildServer(options: BuildServerOptions) {
   server.setErrorHandler((error, _request, reply) => {
     const status = httpStatus(error);
     const code =
-      error instanceof OrbitError || error instanceof OrbitAIError ? error.code : 'INTERNAL';
+      error instanceof OrbitError || error instanceof OrbitAIError
+        ? error.code
+        : status < 500
+          ? 'INVALID_INPUT'
+          : 'INTERNAL';
     const message =
       status >= 500
         ? 'The ORBIT API could not complete the request'
@@ -970,15 +1020,21 @@ export function buildServer(options: BuildServerOptions) {
       if (commitSha && !/^[0-9a-f]{7,64}$/i.test(commitSha))
         throw new OrbitError('INVALID_INPUT', 'commitSha is invalid');
       let cases;
-      if (format === 'junit') cases = parseJunitXml(content);
-      else if (format === 'pytest-json') cases = parsePytestJsonReport(content);
-      else if (format === 'jest-json') cases = parseJestJsonReport(content);
-      else if (format === 'go-json') cases = parseGoTestJson(content);
+      if (format === 'junit') cases = parseInput('JUnit report', () => parseJunitXml(content));
+      else if (format === 'pytest-json')
+        cases = parseInput('pytest report', () => parsePytestJsonReport(content));
+      else if (format === 'jest-json')
+        cases = parseInput('Jest report', () => parseJestJsonReport(content));
+      else if (format === 'go-json')
+        cases = parseInput('Go test output', () => parseGoTestJson(content));
       else
         throw new OrbitError(
           'INVALID_INPUT',
           'format must be junit, pytest-json, jest-json or go-json',
         );
+      // A report with no test cases is not evidence that anything passed.
+      if (cases.length === 0)
+        throw new OrbitError('INVALID_INPUT', 'The test report contains no test cases');
       const summary = {
         format,
         total: cases.length,
@@ -1057,10 +1113,10 @@ export function buildServer(options: BuildServerOptions) {
       if (format !== undefined && !['json', 'ndjson', 'csv', 'key-value'].includes(format)) {
         throw new OrbitError('INVALID_INPUT', 'format must be json, ndjson, csv or key-value');
       }
-      const session = parseTelemetry(content, format);
-      const analysis = analyseTelemetry(session, {
-        units: (body.units ?? {}) as Record<string, string>,
-      });
+      const session = parseInput('Telemetry', () => parseTelemetry(content, format));
+      const analysis = parseInput('Telemetry analysis', () =>
+        analyseTelemetry(session, { units: safeStringMap(body.units ?? {}, 'units') }),
+      );
       const contentHash = hashArtifact(content);
       const key = `telemetry:${contentHash}`;
       const nodeId = nodeIdFor(repository.id, 'TelemetrySession', key);

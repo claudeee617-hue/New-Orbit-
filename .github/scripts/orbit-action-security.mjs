@@ -27,3 +27,22 @@ test('composite action checks out a fixed trusted runtime SHA rather than caller
   assert.doesNotMatch(action, /ref:\s*\$\{\{\s*inputs\.(base|head)-sha/);
   assert.match(action, /persist-credentials:\s*false/);
 });
+
+test('every third-party step in the composite action is pinned to a full commit SHA', () => {
+  const uses = [...action.matchAll(/^\s*uses:\s*(\S+)/gm)].map((m) => m[1]);
+  assert.ok(uses.length >= 4);
+  for (const ref of uses) {
+    assert.match(ref, /@[0-9a-f]{40}$/, `${ref} must be pinned to a commit SHA, not a tag`);
+  }
+});
+
+test('action inputs reach shell steps only through env, never interpolated into run scripts', () => {
+  for (const block of action.matchAll(/^\s*run:\s*(.+)$/gm)) {
+    assert.doesNotMatch(block[1], /\$\{\{\s*inputs\./, `inputs interpolated into run: ${block[1]}`);
+    assert.doesNotMatch(
+      block[1],
+      /\$\{\{\s*github\.event\./,
+      `event data interpolated into run: ${block[1]}`,
+    );
+  }
+});
