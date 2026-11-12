@@ -15,7 +15,6 @@
 - Evidence Explorer hash verification.
 - MCP & AI, Integrations and Settings.
 - Responsive sidebar/mobile navigation, keyboard operation, WCAG AA review and reduced-motion handling.
-- Playwright end-to-end tests against a real local API and fixture workspace.
 
 ## Prompt 13 — GitHub Action
 
