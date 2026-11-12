@@ -16,15 +16,7 @@ import {
   type OpportunityStage,
 } from './business/operations.js';
 
-function MetricTile({
-  label,
-  value,
-  detail,
-}: {
-  label: string;
-  value: string;
-  detail: string;
-}) {
+function MetricTile({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
     <article className="rounded-lg border border-edge bg-void p-4">
       <p className="text-xs text-mute">{label}</p>
@@ -303,7 +295,10 @@ export function BusinessOperations() {
       )}
 
       <div className="grid gap-5 xl:grid-cols-[minmax(280px,0.85fr)_minmax(0,1.4fr)]">
-        <form onSubmit={submitOpportunity} className="space-y-3 rounded-lg border border-edge bg-void p-4">
+        <form
+          onSubmit={submitOpportunity}
+          className="space-y-3 rounded-lg border border-edge bg-void p-4"
+        >
           <div>
             <h3 className="font-medium text-ink">
               {editingId ? 'Edit opportunity' : 'Add an opportunity'}
@@ -323,7 +318,7 @@ export function BusinessOperations() {
                 setForm((current) => ({ ...current, account: event.target.value }))
               }
               className="mt-1 w-full rounded-md border border-edge bg-panel px-3 py-2 text-sm text-ink"
-              placeholder="Example: Acme Engineering"
+              placeholder="Example: Your organisation"
             />
           </label>
           <div className="grid grid-cols-2 gap-2">
@@ -471,8 +466,8 @@ export function BusinessOperations() {
             <div className="rounded-lg border border-dashed border-edge p-8 text-center">
               <p className="text-sm font-medium text-ink">No opportunities in this view</p>
               <p className="mt-2 text-xs leading-5 text-mute">
-                Add a real discovery conversation or import a workspace backup. No sample
-                customers are preloaded.
+                Add a real discovery conversation or import a workspace backup. No sample customers
+                are preloaded.
               </p>
             </div>
           ) : (
