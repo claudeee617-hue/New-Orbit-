@@ -7,9 +7,7 @@ on:
       - '.github/scripts/orbit-action.mjs'
       - '.github/scripts/orbit-action.test.mjs'
       - '.github/workflows/orbit-action-test.yml'
-      - '.github/workflows/ci.yml'
-      - '.github/workflows/security.yml'
-      - '.github/workflows/accelq-regression.yml'
+      - '.github/workflows/**'
       - '.github/scripts/orbit-action-security.mjs'
       - '.github/fixtures/orbit-action-coverage.lcov'
       - 'apps/cli/**'
@@ -17,6 +15,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: orbit-action-test-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   action:
