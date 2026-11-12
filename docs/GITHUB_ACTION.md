@@ -79,7 +79,7 @@ The example assumes a trusted ORBIT release has been merged to `main`. For a Cob
 
 All third-party actions in repository-maintained GitHub workflows must use immutable full commit SHAs, with the upstream release tag retained as an inline comment for readability. Do not replace a SHA with a mutable version tag. Dependabot is configured to propose GitHub Actions dependency updates; review the upstream release and resulting diff before accepting an update.
 
-The Action integration's security-policy test scans every YAML workflow and fails when an external `uses:` reference is not pinned to a 40-character commit SHA. Local composite actions (for example, `./.github/actions/orbit`) are exempt because their source is reviewed in this repository.
+The Action integration's security-policy test parses every YAML workflow and checks job- and step-level `uses` values. External repository actions must use a 40-character commit SHA. Local composite actions (for example, `./.github/actions/orbit`) are exempt because their source is reviewed in this repository. Docker-based actions are not exempt: `docker://` references must use an immutable `@sha256:` image digest; mutable tags such as `:latest` are rejected.
 
 For downstream consumers, the `ORBIT_RELEASE_SHA` placeholder in the example is intentional: replace it with the full immutable commit SHA of the reviewed release, never with a branch name or mutable tag.
 
