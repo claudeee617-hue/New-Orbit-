@@ -96,6 +96,27 @@ describe('Business operations workspace', () => {
     ).toThrow('YYYY-MM-DD');
   });
 
+  it('rejects workspaces beyond the 250-opportunity limit', () => {
+    const tooMany = Array.from({ length: 251 }, (_, index) => ({
+      ...sample[0],
+      id: `opportunity-${index}`,
+    }));
+    expect(() =>
+      normaliseBusinessWorkspace({ version: 1, opportunities: tooMany }),
+    ).toThrow('at most 250 opportunities');
+  });
+
+  it('keeps a maximum-size valid workspace below the formatted backup limit', () => {
+    const worstCase = Array.from({ length: 250 }, (_, index) => ({
+      ...sample[0],
+      id: `opportunity-${index}`,
+      evidence: '\\u0001'.repeat(1_000),
+    }));
+    const serialized = serialiseBusinessWorkspace({ version: 1, opportunities: worstCase });
+    expect(new TextEncoder().encode(serialized).byteLength).toBeLessThan(2_000_000);
+    expect(parseBusinessWorkspace(serialized).opportunities).toHaveLength(250);
+  });
+
   it('rejects excessive values and oversized or malformed backups', () => {
     expect(() =>
       normaliseBusinessWorkspace({
