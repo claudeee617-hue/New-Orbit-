@@ -1,34 +1,30 @@
 # ORBIT — Build State
 
 Durable progress log. Update after every implementation phase.
-Last updated: 2026-11-11 (late)
+Last updated: 2026-11-12 (after PRs #43 and #45; PR #49 in progress)
 
 ## Current phase
 
-**Engineering roadmap Prompts 0–11 and App Business Module sub-prompts 0–4 are on `main` (PRs #5, #9, #11). `main` also contains the git-based WITNESS package (PR #32), ATLAS 0.2.0, MCP acceptance tests (PR #26), parser regression tests (PR #31) and the prototype GitHub Action (PR #25). Also merged on 2026-11-11: Command Center (PR #23), durable FLARE history (PRs #29, #38), ORBIT AI preview (PR #39), opt-in ACCELQ regression plus local API E2E (PR #40) and a dependency-audit CI gate (PR #41). No product PRs are open. ORBIT is pre-release.**
+**Prompts 0–14 and App Business Module sub-prompts 0–4 are implemented on `main` within their documented prototype boundaries.** PR #43 is merged: seeded parser mutation tests, SARIF 2.1.0 schema validation, and schema migration tests. PR #45 is merged: restored API security hardening, Origin enforcement, API abuse-case tests, Action symlink refusal, and SHA-pinned Action dependencies. FLARE/CAPSULE/Flight Recorder audit fixes and regression tests are recorded below; those audits were author-led, not independent. ORBIT remains pre-release. PR #49 is a documentation/configuration PR and is not yet merged.
 
 ## Phase checklist
 
-| Prompt | Scope                                          | Status                                         |
-| ------ | ---------------------------------------------- | ---------------------------------------------- |
-| 0      | Master plan and planning documents             | Done (docs only)                               |
-| 1      | Technical design and architecture finalisation | Done (docs, versions verified)                 |
-| 2      | Monorepo foundation                            | Done (see results below)                       |
-| 3      | ORBIT Core graph                               | Done on `main` (see results below)           |
-| 4      | ATLAS scanning                                 | Done (see results below)                       |
-| 5      | ATLAS memory and MCP                           | Implemented on `main` via PR #5; CI run #109 passed on Ubuntu, macOS and Windows |
-| 6      | WITNESS                                        | Prototype on `main` via PR #5; full git-based verifier in `packages/witness` merged via PR #32 (see Prompt 6 section) |
-| 7      | FLARE                                          | Merged to `main` via PR #5; durable per-test history via PR #29 and Command Center view via PR #38 |
-| 8      | CAPSULE                                        | Merged to `main` via PR #5: polyglot manifest inspection and CLI; build replay remains out of scope |
-| 9      | FLIGHT RECORDER                                | Merged to `main` via PR #5: recorded-log analysis + hash-verified graph persistence; no physical serial connection |
-| 10     | Change Passport and Replay Room                | Merged to `main` via PR #5: commit-scoped evidence correlation, immutable history, comparison and non-executing reproduction plan; no visual Replay Room UI |
-| 11     | API and CLI (full)                             | Done on `main` via PR #11: local API and engine CLI commands; full Ubuntu/macOS/Windows CI passed |
-| 12     | Command Center (full)                          | Done on `main` via PR #23: dashboard reads real API data with honest empty states; Chromium E2E in CI; durable FLARE history view via PR #38 |
-| 13     | GitHub Action                                  | Prototype on `main` via PR #25 (`docs/GITHUB_ACTION.md`); not published to the Marketplace |
-| 14     | ORBIT AI                                       | Opt-in preview on `main` via PR #39 (policy in `docs/AI_PROVIDER_POLICY.md`); core works without an API key; tested with a fake provider only, no live-provider results claimed |
-| 15     | Security review                                | Partial: SECURITY.md, privacy policy, CodeQL workflow and Dependabot config added; independent review and security tests pending |
-| 16     | Testing and validation                         | Partial: existing unit/API/CLI tests plus validation-gap checklist; browser E2E, fuzz, migration and action tests pending |
-| 17     | Release polish                                 | Partial: contributor docs, Apache-2.0 license, citation metadata, issue templates and release checklist added; clean-machine validation and release approval pending |
+| Prompt | Scope | Status |
+| ------ | ----- | ------ |
+| 0–4 | Plan, design, foundation, Core and ATLAS | Implemented on `main`; see sections below for parser and scale limitations |
+| 5 | ATLAS memory and MCP | Implemented on `main`; read-only stdio MCP with bounded output and acceptance tests |
+| 6 | WITNESS | Git-based verifier in `packages/witness`; SARIF schema test merged in PR #43 |
+| 7 | FLARE | Report adapters, history and Command Center view merged; author-led audit fixes and regression tests added |
+| 8 | CAPSULE | Manifest inspection and CLI merged; author-led audit fixes and regression tests added; no build replay |
+| 9 | FLIGHT RECORDER | Recorded-file telemetry and persistence merged; author-led audit fixes and regression tests added; no physical serial capture |
+| 10 | Change Passport / Replay Room | Evidence correlation, immutable history, comparison and non-executing plan implemented; visual Replay Room UI remains incomplete |
+| 11 | API and CLI | Local API and engine CLI implemented on `main`; SEC-01 hardening merged via PR #45 |
+| 12 | Command Center | Real local API data and Chromium E2E in CI; several advanced screens, accessibility and UX acceptance items remain in `docs/VALIDATION_GAPS.md` |
+| 13 | GitHub Action | Prototype on `main`; same-repo/fork event acceptance, Marketplace publication and release readiness remain open |
+| 14 | ORBIT AI | Opt-in preview with fake-provider tests only; live provider contracts and privacy acceptance remain unverified |
+| 15 | Security review | Partial: PR #45 hardening, CodeQL, dependency audit and automated regression tests exist; independent security review, token-file/Windows ACL review and residual-risk sign-off remain open |
+| 16 | Testing and validation | Partial: PR #43 added seeded parser mutation tests, SARIF schema validation and migration tests; browser E2E exists, but S1–S10 are only 3 PASS / 7 PARTIAL, action fork tests, true property/coverage-guided fuzzing and benchmarks remain open |
+| 17 | Release polish | Partial: docs, Apache-2.0 license, contributor/governance files and checklist exist; clean-machine validation has been run on Linux, but cross-OS release validation, legal/name checks, changelog/versioning, reproducible artifacts and owner approval remain open |
 
 
 ## Cross-engine implementation merged via PR #5
