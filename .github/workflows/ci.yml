@@ -10,7 +10,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
+  # Isolate each commit: an orphaned runner for an older PR head must not block the current head.
+  group: ci-${{ github.workflow }}-${{ github.sha }}
   cancel-in-progress: true
 
 jobs:
