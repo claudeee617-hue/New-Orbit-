@@ -126,13 +126,10 @@ test('the most recently selected backup wins when earlier file reads finish late
       window.__slowReadStarted = true;
       return new Promise((resolve, reject) => {
         window.__completeSlowRead = () => {
-          originalText.call(this).then(
-            (text) => {
-              window.__slowReadCompleted = true;
-              resolve(text);
-            },
-            reject,
-          );
+          originalText.call(this).then((text) => {
+            window.__slowReadCompleted = true;
+            resolve(text);
+          }, reject);
         };
       });
     };
@@ -166,9 +163,7 @@ test('the most recently selected backup wins when earlier file reads finish late
   expect(saved.opportunities.map((item) => item.account)).toEqual(['Fast latest selection']);
 });
 
-test('a validated backup imported in another tab recovers a read-only tab', async ({
-  page,
-}) => {
+test('a validated backup imported in another tab recovers a read-only tab', async ({ page }) => {
   await page.addInitScript((key) => localStorage.setItem(key, '{invalid-json'), storageKey);
   await openBusiness(page);
   await expect(page.getByLabel('Account / organisation')).toBeDisabled();
@@ -184,7 +179,9 @@ test('a validated backup imported in another tab recovers a read-only tab', asyn
     buffer: Buffer.from(restored),
   });
 
-  await expect(secondTab.getByRole('heading', { name: 'Cross-tab recovered account' })).toBeVisible();
+  await expect(
+    secondTab.getByRole('heading', { name: 'Cross-tab recovered account' }),
+  ).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Cross-tab recovered account' })).toBeVisible();
   await expect(page.getByLabel('Account / organisation')).toBeEnabled();
 
@@ -211,7 +208,9 @@ test('edits decimal estimates from imported backups and deletes persisted record
 
   await page.getByRole('button', { name: 'Edit' }).click();
   await expect(page.getByLabel('Estimated monthly value')).toHaveValue('1.234');
-  await page.getByLabel('Evidence / discovery note').fill('Updated without changing the imported estimate.');
+  await page
+    .getByLabel('Evidence / discovery note')
+    .fill('Updated without changing the imported estimate.');
   await page.getByRole('button', { name: 'Save changes' }).click();
 
   let saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)), storageKey);
@@ -230,10 +229,10 @@ test('enforces the 250-record limit and does not report a failed storage write a
   const records = Array.from({ length: 250 }, (_, index) =>
     opportunity('seed-' + index, 'Seed account ' + index),
   );
-  await page.addInitScript(
-    ({ key, value }) => localStorage.setItem(key, value),
-    { key: storageKey, value: backup(records) },
-  );
+  await page.addInitScript(({ key, value }) => localStorage.setItem(key, value), {
+    key: storageKey,
+    value: backup(records),
+  });
   await openBusiness(page);
   await expect(page.getByText('250 locally recorded opportunities')).toBeVisible();
   await addOpportunity(page, 'Overflow account');
@@ -244,7 +243,8 @@ test('enforces the 250-record limit and does not report a failed storage write a
   await page.addInitScript((key) => {
     const original = Storage.prototype.setItem;
     Storage.prototype.setItem = function (name, value) {
-      if (name === key) throw new DOMException('Storage quota blocked by test', 'QuotaExceededError');
+      if (name === key)
+        throw new DOMException('Storage quota blocked by test', 'QuotaExceededError');
       return original.call(this, name, value);
     };
   }, storageKey);
