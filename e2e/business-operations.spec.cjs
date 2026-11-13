@@ -185,7 +185,7 @@ test('enforces the 250-record limit and does not report a failed storage write a
   page,
 }) => {
   const records = Array.from({ length: 250 }, (_, index) =>
-    opportunity(\`seed-\${index}\`, \`Seed account \${index}\`),
+    opportunity('seed-' + index, 'Seed account ' + index),
   );
   await page.addInitScript(
     ({ key, value }) => localStorage.setItem(key, value),
