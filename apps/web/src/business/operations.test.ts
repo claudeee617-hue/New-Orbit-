@@ -110,7 +110,7 @@ describe('Business operations workspace', () => {
     const worstCase = Array.from({ length: 250 }, (_, index) => ({
       ...sample[0],
       id: `opportunity-${index}`,
-      evidence: '\\u0001'.repeat(1_000),
+      evidence: '\u0001'.repeat(1_000),
     }));
     const serialized = serialiseBusinessWorkspace({ version: 1, opportunities: worstCase });
     expect(new TextEncoder().encode(serialized).byteLength).toBeLessThan(2_000_000);
