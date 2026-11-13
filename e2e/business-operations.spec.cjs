@@ -118,13 +118,23 @@ test('the most recently selected backup wins when earlier file reads finish late
   await openBusiness(page);
   await page.evaluate(() => {
     const originalText = File.prototype.text;
+    window.__slowReadStarted = false;
+    window.__slowReadCompleted = false;
+    window.__completeSlowRead = null;
     File.prototype.text = function () {
-      if (this.name === 'slow.json') {
-        return new Promise((resolve, reject) => {
-          setTimeout(() => originalText.call(this).then(resolve, reject), 350);
-        });
-      }
-      return originalText.call(this);
+      if (this.name !== 'slow.json') return originalText.call(this);
+      window.__slowReadStarted = true;
+      return new Promise((resolve, reject) => {
+        window.__completeSlowRead = () => {
+          originalText.call(this).then(
+            (text) => {
+              window.__slowReadCompleted = true;
+              resolve(text);
+            },
+            reject,
+          );
+        };
+      });
     };
   });
 
@@ -143,10 +153,43 @@ test('the most recently selected backup wins when earlier file reads finish late
     buffer: Buffer.from(fast),
   });
 
+  await expect.poll(() => page.evaluate(() => window.__slowReadStarted)).toBe(true);
   await expect(page.getByRole('heading', { name: 'Fast latest selection' })).toBeVisible();
   await expect(page.getByText('1 locally recorded opportunities')).toBeVisible();
+
+  // Let the earlier file read complete only after the newer selection has been saved.
+  await page.evaluate(() => window.__completeSlowRead());
+  await expect.poll(() => page.evaluate(() => window.__slowReadCompleted)).toBe(true);
+  await expect(page.getByRole('heading', { name: 'Fast latest selection' })).toBeVisible();
+
   const saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)), storageKey);
   expect(saved.opportunities.map((item) => item.account)).toEqual(['Fast latest selection']);
+});
+
+test('a validated backup imported in another tab recovers a read-only tab', async ({
+  page,
+}) => {
+  await page.addInitScript((key) => localStorage.setItem(key, '{invalid-json'), storageKey);
+  await openBusiness(page);
+  await expect(page.getByLabel('Account / organisation')).toBeDisabled();
+
+  const secondTab = await page.context().newPage();
+  await openBusiness(secondTab);
+  await expect(secondTab.getByLabel('Account / organisation')).toBeDisabled();
+
+  const restored = backup([opportunity('cross-tab-recovery', 'Cross-tab recovered account')]);
+  await secondTab.locator('input[type="file"]').setInputFiles({
+    name: 'cross-tab-recovery.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(restored),
+  });
+
+  await expect(secondTab.getByRole('heading', { name: 'Cross-tab recovered account' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Cross-tab recovered account' })).toBeVisible();
+  await expect(page.getByLabel('Account / organisation')).toBeEnabled();
+
+  const saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)), storageKey);
+  expect(saved.opportunities.map((item) => item.account)).toEqual(['Cross-tab recovered account']);
 });
 
 test('edits decimal estimates from imported backups and deletes persisted records', async ({
