@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import {
   BUSINESS_WORKSPACE_STORAGE_KEY,
+  MAX_BUSINESS_OPPORTUNITIES,
   MAX_BUSINESS_WORKSPACE_BYTES,
   calculateBusinessPipelineSummary,
   emptyBusinessWorkspace,
@@ -37,6 +38,8 @@ const EMPTY_FORM = {
   evidence: '',
 };
 
+type WorkspaceChange = (latest: BusinessWorkspace) => BusinessWorkspace;
+
 function money(value: number, currency: 'INR' | 'USD'): string {
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
@@ -45,10 +48,26 @@ function money(value: number, currency: 'INR' | 'USD'): string {
   }).format(value);
 }
 
+function requestWorkspaceLock<T>(operation: () => Promise<T>): Promise<T> {
+  if (typeof navigator === 'undefined' || !navigator.locks?.request) {
+    return Promise.reject(
+      new Error(
+        'This browser does not support safe multi-tab workspace saves. Export a JSON backup and use a browser with Web Locks support.',
+      ),
+    );
+  }
+  return navigator.locks.request(
+    `${BUSINESS_WORKSPACE_STORAGE_KEY}.write`,
+    { mode: 'exclusive' },
+    operation,
+  );
+}
+
 export function BusinessOperations() {
   const [workspace, setWorkspace] = useState<BusinessWorkspace>(emptyBusinessWorkspace);
   const [loaded, setLoaded] = useState(false);
   const [canPersist, setCanPersist] = useState(true);
+  const [recoveryRequired, setRecoveryRequired] = useState(false);
   const [currency, setCurrency] = useState<'INR' | 'USD'>('INR');
   const [form, setForm] = useState(EMPTY_FORM);
   const [notice, setNotice] = useState('');
@@ -56,34 +75,90 @@ export function BusinessOperations() {
   const [filter, setFilter] = useState<'open' | 'all' | OpportunityStage>('open');
   const [editingId, setEditingId] = useState<string | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
+  const latestImportRef = useRef(0);
+  const storedWorkspaceRef = useRef(false);
 
   useEffect(() => {
     try {
       const saved = window.localStorage.getItem(BUSINESS_WORKSPACE_STORAGE_KEY);
-      if (saved) setWorkspace(parseBusinessWorkspace(saved));
+      if (saved) {
+        setWorkspace(parseBusinessWorkspace(saved));
+        storedWorkspaceRef.current = true;
+      }
     } catch {
       setCanPersist(false);
+      setRecoveryRequired(true);
       setError(
-        'Saved workspace could not be read. It has not been overwritten; import a valid backup or clear the browser storage manually.',
+        'Saved workspace could not be read. It has not been overwritten. Import a valid JSON backup to recover it.',
       );
     }
     setLoaded(true);
   }, []);
 
   useEffect(() => {
-    if (!loaded || !canPersist) return;
-    try {
-      window.localStorage.setItem(
-        BUSINESS_WORKSPACE_STORAGE_KEY,
-        serialiseBusinessWorkspace(workspace),
-      );
-      setNotice('Saved in this browser');
-    } catch {
-      setError(
-        'Browser storage is unavailable or full. Export a JSON backup before leaving this page.',
+    function handleStorage(event: StorageEvent) {
+      if (event.storageArea !== window.localStorage) return;
+      if (event.key !== BUSINESS_WORKSPACE_STORAGE_KEY && event.key !== null) return;
+      if (event.key === null || event.newValue === null) {
+        setCanPersist(false);
+        setRecoveryRequired(true);
+        setError(
+          'Workspace storage was removed in another tab. Import a valid backup before editing.',
+        );
+        return;
+      }
+      try {
+        const latest = parseBusinessWorkspace(event.newValue);
+        setWorkspace(latest);
+        setCanPersist(true);
+        setRecoveryRequired(false);
+        storedWorkspaceRef.current = true;
+        setNotice('Updated from another tab');
+        setError('');
+      } catch {
+        setCanPersist(false);
+        setRecoveryRequired(true);
+        setError(
+          'Another tab saved an invalid workspace. Editing is paused; import a valid JSON backup to recover.',
+        );
+      }
+    }
+
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
+  async function persistWorkspace(change: WorkspaceChange): Promise<BusinessWorkspace> {
+    if (!canPersist) {
+      throw new Error(
+        'Workspace editing is paused until a valid JSON backup is imported and saved.',
       );
     }
-  }, [canPersist, loaded, workspace]);
+
+    const next = await requestWorkspaceLock(async () => {
+      const saved = window.localStorage.getItem(BUSINESS_WORKSPACE_STORAGE_KEY);
+      if (storedWorkspaceRef.current && saved === null) {
+        throw new Error(
+          'Workspace storage disappeared. Import a valid JSON backup before editing.',
+        );
+      }
+      const latest = saved ? parseBusinessWorkspace(saved) : emptyBusinessWorkspace();
+      const updated = change(latest);
+      const validated = parseBusinessWorkspace(serialiseBusinessWorkspace(updated));
+      window.localStorage.setItem(
+        BUSINESS_WORKSPACE_STORAGE_KEY,
+        serialiseBusinessWorkspace(validated),
+      );
+      storedWorkspaceRef.current = true;
+      return validated;
+    });
+
+    setWorkspace(next);
+    setCanPersist(true);
+    setRecoveryRequired(false);
+    setError('');
+    return next;
+  }
 
   const summary = calculateBusinessPipelineSummary(workspace);
   const visible = workspace.opportunities
@@ -103,18 +178,30 @@ export function BusinessOperations() {
     setEditingId(null);
   }
 
-  function submitOpportunity(event: FormEvent<HTMLFormElement>) {
+  async function submitOpportunity(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
+    if (!canPersist || recoveryRequired) {
+      setError('Import a valid JSON backup to recover workspace storage before editing.');
+      return;
+    }
+
+    const account = form.account.trim();
+    if (!account) {
+      setError('Account / organisation cannot be empty or whitespace only.');
+      return;
+    }
+
     const amount = Number(form.estimatedMonthlyValue || 0);
     if (!Number.isFinite(amount) || amount < 0 || amount > 1_000_000_000_000) {
       setError('Enter a valid non-negative monthly value estimate.');
       return;
     }
 
+    const targetId = editingId;
     const opportunity: BusinessOpportunity = {
-      id: editingId ?? `opp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      account: form.account.trim(),
+      id: targetId ?? `opp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      account,
       segment: form.segment,
       stage: form.stage,
       estimatedMonthlyValue: amount,
@@ -123,17 +210,42 @@ export function BusinessOperations() {
       evidence: form.evidence.trim(),
     };
 
-    setWorkspace((current) => ({
-      ...current,
-      opportunities: editingId
-        ? current.opportunities.map((item) => (item.id === editingId ? opportunity : item))
-        : [...current.opportunities, opportunity],
-    }));
-    setNotice(editingId ? 'Opportunity updated' : 'Opportunity added');
-    resetForm();
+    try {
+      const next = await persistWorkspace((latest) => {
+        if (targetId) {
+          if (!latest.opportunities.some((item) => item.id === targetId)) {
+            throw new Error('This opportunity was removed in another tab. Refresh the pipeline and try again.');
+          }
+          return {
+            ...latest,
+            opportunities: latest.opportunities.map((item) =>
+              item.id === targetId ? opportunity : item,
+            ),
+          };
+        }
+        if (latest.opportunities.length >= MAX_BUSINESS_OPPORTUNITIES) {
+          throw new Error(
+            `Workspace limit reached: at most ${MAX_BUSINESS_OPPORTUNITIES} opportunities are allowed.`,
+          );
+        }
+        return { ...latest, opportunities: [...latest.opportunities, opportunity] };
+      });
+      setNotice(targetId ? 'Opportunity updated' : 'Opportunity added');
+      if (!targetId && next.opportunities.length >= MAX_BUSINESS_OPPORTUNITIES) {
+        setNotice('Opportunity added — workspace is now at its 250-record limit');
+      }
+      resetForm();
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : 'Opportunity could not be saved.';
+      if (/saved workspace|workspace storage|storage disappeared|safe multi-tab/i.test(message)) {
+        setCanPersist(false);
+      }
+      setError(message);
+    }
   }
 
   function editOpportunity(item: BusinessOpportunity) {
+    if (!canPersist || recoveryRequired) return;
     setEditingId(item.id);
     setForm({
       account: item.account,
@@ -147,20 +259,32 @@ export function BusinessOperations() {
     setError('');
   }
 
-  function deleteOpportunity(id: string) {
-    setWorkspace((current) => ({
-      ...current,
-      opportunities: current.opportunities.filter((item) => item.id !== id),
-    }));
-    if (editingId === id) resetForm();
-    setNotice('Opportunity deleted from this browser');
+  async function deleteOpportunity(id: string) {
+    if (!canPersist || recoveryRequired) return;
+    try {
+      await persistWorkspace((latest) => ({
+        ...latest,
+        opportunities: latest.opportunities.filter((item) => item.id !== id),
+      }));
+      if (editingId === id) resetForm();
+      setNotice('Opportunity deleted from this browser');
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : 'Opportunity could not be deleted.';
+      if (/saved workspace|workspace storage|storage disappeared|safe multi-tab/i.test(message)) {
+        setCanPersist(false);
+      }
+      setError(message);
+    }
   }
 
   function exportBackup() {
+    if (recoveryRequired) {
+      setError('A valid saved workspace could not be loaded. Import a valid backup before exporting.');
+      return;
+    }
     try {
-      const blob = new Blob([serialiseBusinessWorkspace(workspace)], {
-        type: 'application/json',
-      });
+      const serialized = serialiseBusinessWorkspace(workspace);
+      const blob = new Blob([serialized], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = url;
@@ -168,31 +292,49 @@ export function BusinessOperations() {
       anchor.click();
       URL.revokeObjectURL(url);
       setNotice('JSON backup exported');
-      setError('');
-    } catch {
-      setError('Backup could not be exported in this browser.');
+      if (canPersist) setError('');
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Backup could not be exported.');
     }
   }
 
   async function importBackup(file: File | undefined) {
     if (!file) return;
+    const requestId = ++latestImportRef.current;
     try {
       if (file.size > MAX_BUSINESS_WORKSPACE_BYTES) {
         throw new Error('Business workspace backup is larger than 2 MB.');
       }
       const restored = parseBusinessWorkspace(await file.text());
+      if (requestId !== latestImportRef.current) return;
+
+      const saved = await requestWorkspaceLock(async () => {
+        if (requestId !== latestImportRef.current) return null;
+        const serialized = serialiseBusinessWorkspace(restored);
+        window.localStorage.setItem(BUSINESS_WORKSPACE_STORAGE_KEY, serialized);
+        storedWorkspaceRef.current = true;
+        return restored;
+      });
+      if (!saved || requestId !== latestImportRef.current) return;
+
+      setWorkspace(saved);
       setCanPersist(true);
-      setWorkspace(restored);
+      setRecoveryRequired(false);
       resetForm();
       setFilter('open');
-      setNotice(`Imported ${restored.opportunities.length} opportunities`);
+      setNotice(`Imported ${saved.opportunities.length} opportunities`);
       setError('');
     } catch (caught) {
+      if (requestId !== latestImportRef.current) return;
       setError(caught instanceof Error ? caught.message : 'Backup could not be imported.');
     } finally {
-      if (importRef.current) importRef.current.value = '';
+      if (requestId === latestImportRef.current && importRef.current) {
+        importRef.current.value = '';
+      }
     }
   }
+
+  const editingDisabled = !loaded || !canPersist || recoveryRequired;
 
   return (
     <section
@@ -216,14 +358,19 @@ export function BusinessOperations() {
           <button
             type="button"
             onClick={exportBackup}
-            className="rounded-md border border-edge px-3 py-2 text-xs text-ink hover:border-cyan hover:text-cyan"
+            disabled={recoveryRequired}
+            className="rounded-md border border-edge px-3 py-2 text-xs text-ink hover:border-cyan hover:text-cyan disabled:cursor-not-allowed disabled:opacity-50"
           >
             Export JSON
           </button>
           <button
             type="button"
-            onClick={() => importRef.current?.click()}
-            className="rounded-md border border-edge px-3 py-2 text-xs text-ink hover:border-cyan hover:text-cyan"
+            onClick={() => {
+              latestImportRef.current += 1;
+              importRef.current?.click();
+            }}
+            disabled={!loaded}
+            className="rounded-md border border-edge px-3 py-2 text-xs text-ink hover:border-cyan hover:text-cyan disabled:cursor-not-allowed disabled:opacity-50"
           >
             Import JSON
           </button>
@@ -268,7 +415,8 @@ export function BusinessOperations() {
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-y border-edge py-3">
         <p className="text-xs text-mute">
-          Records stay in this browser&apos;s local storage. No sync or CRM connection.
+          Records stay in this browser&apos;s local storage. Safe multi-tab saves use the browser&apos;s
+          Web Locks API.
         </p>
         <div className="flex items-center gap-3">
           <label className="text-xs text-mute" htmlFor="business-currency">
@@ -284,7 +432,7 @@ export function BusinessOperations() {
             <option value="USD">USD</option>
           </select>
           <span role="status" className="text-[11px] text-ok">
-            {loaded ? notice || 'Ready' : 'Loading…'}
+            {!loaded ? 'Loading…' : recoveryRequired ? 'Recovery required' : !canPersist ? 'Read-only recovery mode' : notice || 'Ready'}
           </span>
         </div>
       </div>
@@ -317,11 +465,12 @@ export function BusinessOperations() {
             <input
               required
               maxLength={120}
+              disabled={editingDisabled}
               value={form.account}
               onChange={(event) =>
                 setForm((current) => ({ ...current, account: event.target.value }))
               }
-              className="mt-1 w-full rounded-md border border-edge bg-panel px-3 py-2 text-sm text-ink"
+              className="mt-1 w-full rounded-md border border-edge bg-panel px-3 py-2 text-sm text-ink disabled:opacity-50"
               placeholder="Example: Your organisation"
             />
           </label>
@@ -329,6 +478,7 @@ export function BusinessOperations() {
             <label className="block text-xs text-mute">
               Segment
               <select
+                disabled={editingDisabled}
                 value={form.segment}
                 onChange={(event) =>
                   setForm((current) => ({
@@ -336,7 +486,7 @@ export function BusinessOperations() {
                     segment: event.target.value as OpportunitySegment,
                   }))
                 }
-                className="mt-1 w-full rounded-md border border-edge bg-panel px-2 py-2 text-xs text-ink"
+                className="mt-1 w-full rounded-md border border-edge bg-panel px-2 py-2 text-xs text-ink disabled:opacity-50"
               >
                 {OPPORTUNITY_SEGMENTS.map((segment) => (
                   <option key={segment} value={segment}>
@@ -348,6 +498,7 @@ export function BusinessOperations() {
             <label className="block text-xs text-mute">
               Stage
               <select
+                disabled={editingDisabled}
                 value={form.stage}
                 onChange={(event) =>
                   setForm((current) => ({
@@ -355,7 +506,7 @@ export function BusinessOperations() {
                     stage: event.target.value as OpportunityStage,
                   }))
                 }
-                className="mt-1 w-full rounded-md border border-edge bg-panel px-2 py-2 text-xs text-ink"
+                className="mt-1 w-full rounded-md border border-edge bg-panel px-2 py-2 text-xs text-ink disabled:opacity-50"
               >
                 {OPPORTUNITY_STAGES.map((stage) => (
                   <option key={stage} value={stage}>
@@ -371,7 +522,8 @@ export function BusinessOperations() {
               type="number"
               min="0"
               max="1000000000000"
-              step="0.01"
+              step="any"
+              disabled={editingDisabled}
               value={form.estimatedMonthlyValue}
               onChange={(event) =>
                 setForm((current) => ({
@@ -379,7 +531,7 @@ export function BusinessOperations() {
                   estimatedMonthlyValue: event.target.value,
                 }))
               }
-              className="mt-1 w-full rounded-md border border-edge bg-panel px-3 py-2 text-sm text-ink"
+              className="mt-1 w-full rounded-md border border-edge bg-panel px-3 py-2 text-sm text-ink disabled:opacity-50"
               placeholder="0"
             />
           </label>
@@ -387,11 +539,12 @@ export function BusinessOperations() {
             Next action
             <input
               maxLength={180}
+              disabled={editingDisabled}
               value={form.nextAction}
               onChange={(event) =>
                 setForm((current) => ({ ...current, nextAction: event.target.value }))
               }
-              className="mt-1 w-full rounded-md border border-edge bg-panel px-3 py-2 text-sm text-ink"
+              className="mt-1 w-full rounded-md border border-edge bg-panel px-3 py-2 text-sm text-ink disabled:opacity-50"
               placeholder="Send a pilot outline"
             />
           </label>
@@ -399,11 +552,12 @@ export function BusinessOperations() {
             Follow-up date
             <input
               type="date"
+              disabled={editingDisabled}
               value={form.dueDate}
               onChange={(event) =>
                 setForm((current) => ({ ...current, dueDate: event.target.value }))
               }
-              className="mt-1 w-full rounded-md border border-edge bg-panel px-3 py-2 text-sm text-ink"
+              className="mt-1 w-full rounded-md border border-edge bg-panel px-3 py-2 text-sm text-ink disabled:opacity-50"
             />
           </label>
           <label className="block text-xs text-mute">
@@ -411,18 +565,20 @@ export function BusinessOperations() {
             <textarea
               rows={3}
               maxLength={1000}
+              disabled={editingDisabled}
               value={form.evidence}
               onChange={(event) =>
                 setForm((current) => ({ ...current, evidence: event.target.value }))
               }
-              className="mt-1 w-full rounded-md border border-edge bg-panel px-3 py-2 text-sm text-ink"
+              className="mt-1 w-full rounded-md border border-edge bg-panel px-3 py-2 text-sm text-ink disabled:opacity-50"
               placeholder="Pain observed, workflow, buyer, pilot success criteria…"
             />
           </label>
           <div className="flex flex-wrap gap-2">
             <button
               type="submit"
-              className="rounded-md border border-cyan bg-cyan/10 px-3 py-2 text-xs font-medium text-cyan hover:bg-cyan/20"
+              disabled={editingDisabled}
+              className="rounded-md border border-cyan bg-cyan/10 px-3 py-2 text-xs font-medium text-cyan hover:bg-cyan/20 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {editingId ? 'Save changes' : 'Add opportunity'}
             </button>
@@ -514,15 +670,17 @@ export function BusinessOperations() {
                     <div className="mt-3 flex gap-2 border-t border-edge pt-3">
                       <button
                         type="button"
+                        disabled={editingDisabled}
                         onClick={() => editOpportunity(item)}
-                        className="text-xs text-cyan underline underline-offset-4"
+                        className="text-xs text-cyan underline underline-offset-4 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         Edit
                       </button>
                       <button
                         type="button"
-                        onClick={() => deleteOpportunity(item.id)}
-                        className="text-xs text-bad underline underline-offset-4"
+                        disabled={editingDisabled}
+                        onClick={() => void deleteOpportunity(item.id)}
+                        className="text-xs text-bad underline underline-offset-4 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         Delete
                       </button>
@@ -537,8 +695,9 @@ export function BusinessOperations() {
 
       <p className="text-[11px] leading-5 text-mute">
         Privacy boundary: this workspace is stored in browser-local storage on this device/profile.
-        It is not encrypted by the app, not synchronised, and may be cleared by browser settings.
-        Use JSON export for backup; never enter secrets, personal customer data, or card details.
+        It is not encrypted by the app or synchronised to a server. Concurrent tab writes are
+        serialized with Web Locks where supported. Use JSON export for backup; never enter secrets,
+        personal customer data, or card details.
       </p>
     </section>
   );
