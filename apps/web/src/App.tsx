@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ORBIT_TAGLINE } from '@orbit/shared/health';
 import { BusinessModule } from './BusinessModule.js';
+import { BusinessOperations } from './BusinessOperations.js';
 import { CommandCenter } from './CommandCenter.js';
 import { loadHealth, type HealthState } from './health.js';
 
@@ -99,6 +100,9 @@ export function App() {
       {view === 'business' ? (
         <main>
           <BusinessModule />
+          <div className="mt-10">
+            <BusinessOperations />
+          </div>
         </main>
       ) : (
         <main className="flex flex-col gap-8">
