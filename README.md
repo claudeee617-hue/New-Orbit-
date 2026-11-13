@@ -13,7 +13,7 @@ Its central artifact is the **Change Passport**: a content-hashed record of a ch
 
 ## Current status
 
-ORBIT is pre-release (no package or Marketplace release has been published). The public `main` branch contains engineering roadmap Prompts 0–11 and the App Business Module sub-prompts 0–4, including the local API and CLI (PR #11), the git-based WITNESS package (PR #32), ATLAS 0.2.0, the read-only MCP server with production acceptance tests (PR #26), parser regression tests (PR #31) and a prototype GitHub Action (PR #25). CI runs the full format, lint, typecheck, test and build matrix on Ubuntu, macOS and Windows, plus CodeQL and a dependency audit. The Command Center (real API data, Chromium E2E in CI), durable FLARE history, an opt-in ORBIT AI preview (core works without a key) and an opt-in ACCELQ regression workflow are also on `main`. A local `pnpm run check` runs 573 tests across eleven workspace suites.
+ORBIT is pre-release (no package or Marketplace release has been published). The public `main` branch contains engineering roadmap Prompts 0–11 and the App Business Module sub-prompts 0–5 (Prompt 5 local Business Operations workspace is in PR #52), including the local API and CLI (PR #11), the git-based WITNESS package (PR #32), ATLAS 0.2.0, the read-only MCP server with production acceptance tests (PR #26), parser regression tests (PR #31) and a prototype GitHub Action (PR #25). CI runs the full format, lint, typecheck, test and build matrix on Ubuntu, macOS and Windows, plus CodeQL and a dependency audit. The Command Center (real API data, Chromium E2E in CI), durable FLARE history, an opt-in ORBIT AI preview (core works without a key) and an opt-in ACCELQ regression workflow are also on `main`. A local `pnpm run check` runs 573 tests across eleven workspace suites.
 
 | Capability | Current implementation |
 | --- | --- |
@@ -26,7 +26,7 @@ ORBIT is pre-release (no package or Marketplace release has been published). The
 | CAPSULE polyglot toolchain, dependency, container and workspace manifest inspection | Extended prototype on `main`; build replay is not implemented |
 | FLIGHT RECORDER recorded telemetry parser, caller-defined analysis and hash-verified graph persistence | Implemented on `main` as recorded-file prototype; physical serial/USB capture unavailable |
 | Change Passport graph correlation, versioned history, comparisons and non-executing reproduction plan | Implemented on `main` as backend/CLI prototype; visual Replay Room UI not implemented |
-| App Business Module | Strategy and local actual-vs-forecast / pricing simulator on `main`; local opportunity pipeline and JSON backup/restore proposed on PR #52; no live accounting/CRM/billing data |
+| App Business Module | Strategy, market research, actual-vs-forecast and pricing simulator; PR #52 implements the local opportunity pipeline, multi-tab-safe storage and validated JSON recovery; no live accounting/CRM/billing integration |
 | GitHub Action for PR verification | Prototype on `main` (PR #25); see [docs/GITHUB_ACTION.md](docs/GITHUB_ACTION.md). Not published to the Marketplace |
 | Full Command Center, durable FLARE history | On `main` (PRs #23, #29, #38) |
 | ORBIT AI | Opt-in preview on `main` (PR #39); no live-provider results are claimed |
