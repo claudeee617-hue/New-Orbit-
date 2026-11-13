@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out PR data
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -74,6 +74,14 @@ The example assumes a trusted ORBIT release has been merged to `main`. For a Cob
 - No source files are uploaded to an ORBIT hosted service. The action does not send data to an AI provider.
 - Coverage and diff files are untrusted input and are bounded by ORBIT's parser limits.
 - A passing changed-line coverage result is not proof of correctness, security, or approval to merge.
+
+## Maintainer dependency pinning
+
+All third-party actions in repository-maintained GitHub workflows must use immutable full commit SHAs, with the upstream release tag retained as an inline comment for readability. Do not replace a SHA with a mutable version tag. Dependabot is configured to propose GitHub Actions dependency updates; review the upstream release and resulting diff before accepting an update.
+
+The Action integration's security-policy test parses every YAML workflow and checks job- and step-level `uses` values. External repository actions must use a 40-character commit SHA. Local composite actions (for example, `./.github/actions/orbit`) are exempt because their source is reviewed in this repository. Docker-based actions are not exempt: `docker://` references must use an immutable `@sha256:` image digest; mutable tags such as `:latest` are rejected.
+
+For downstream consumers, the `ORBIT_RELEASE_SHA` placeholder in the example is intentional: replace it with the full immutable commit SHA of the reviewed release, never with a branch name or mutable tag.
 
 ## Current limitations
 
