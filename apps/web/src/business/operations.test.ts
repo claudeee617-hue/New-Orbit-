@@ -79,31 +79,31 @@ describe('Business operations workspace', () => {
     expect(() =>
       normaliseBusinessWorkspace({
         version: 1,
-        opportunities: [{ ...sample[0], stage: 'maybe' }],
+        opportunities: [{ ...sample[0]!, stage: 'maybe' }],
       }),
     ).toThrow('unsupported stage');
     expect(() =>
       normaliseBusinessWorkspace({
         version: 1,
-        opportunities: [sample[0], sample[0]],
+        opportunities: [sample[0]!, sample[0]!],
       }),
     ).toThrow('unique');
     expect(() =>
       normaliseBusinessWorkspace({
         version: 1,
-        opportunities: [{ ...sample[0], dueDate: '2026-02-30' }],
+        opportunities: [{ ...sample[0]!, dueDate: '2026-02-30' }],
       }),
     ).toThrow('YYYY-MM-DD');
   });
 
   it('rejects workspaces beyond the 250-opportunity limit', () => {
     const tooMany = Array.from({ length: 251 }, (_, index) => ({
-      ...sample[0],
+      ...sample[0]!,
       id: `opportunity-${index}`,
     }));
-    expect(() =>
-      normaliseBusinessWorkspace({ version: 1, opportunities: tooMany }),
-    ).toThrow('at most 250 opportunities');
+    expect(() => normaliseBusinessWorkspace({ version: 1, opportunities: tooMany })).toThrow(
+      'at most 250 opportunities',
+    );
   });
 
   it('keeps a maximum-size valid workspace below the formatted backup limit', () => {
@@ -123,7 +123,7 @@ describe('Business operations workspace', () => {
     expect(() =>
       normaliseBusinessWorkspace({
         version: 1,
-        opportunities: [{ ...sample[0], estimatedMonthlyValue: Number.POSITIVE_INFINITY }],
+        opportunities: [{ ...sample[0]!, estimatedMonthlyValue: Number.POSITIVE_INFINITY }],
       }),
     ).toThrow('estimated monthly value');
     expect(() => parseBusinessWorkspace('{invalid')).toThrow('valid JSON');
