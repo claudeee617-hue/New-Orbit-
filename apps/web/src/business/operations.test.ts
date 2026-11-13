@@ -107,8 +107,10 @@ describe('Business operations workspace', () => {
   });
 
   it('keeps a maximum-size valid workspace below the formatted backup limit', () => {
+    const base = sample.find(({ id }) => id === 'acme');
+    if (!base) throw new Error('Expected the base fixture opportunity.');
     const worstCase = Array.from({ length: 250 }, (_, index) => ({
-      ...sample[0],
+      ...base,
       id: `opportunity-${index}`,
       evidence: '\u0001'.repeat(1_000),
     }));
