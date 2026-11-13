@@ -149,6 +149,38 @@ test('the most recently selected backup wins when earlier file reads finish late
   expect(saved.opportunities.map((item) => item.account)).toEqual(['Fast latest selection']);
 });
 
+test('edits decimal estimates from imported backups and deletes persisted records', async ({
+  page,
+}) => {
+  await openBusiness(page);
+  const imported = backup([
+    {
+      ...opportunity('decimal-id', 'Decimal estimate account'),
+      estimatedMonthlyValue: 1.234,
+    },
+  ]);
+  await page.locator('input[type="file"]').setInputFiles({
+    name: 'decimal.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(imported),
+  });
+  await expect(page.getByRole('heading', { name: 'Decimal estimate account' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Edit' }).click();
+  await expect(page.getByLabel('Estimated monthly value')).toHaveValue('1.234');
+  await page.getByLabel('Evidence / discovery note').fill('Updated without changing the imported estimate.');
+  await page.getByRole('button', { name: 'Save changes' }).click();
+
+  let saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)), storageKey);
+  expect(saved.opportunities[0].estimatedMonthlyValue).toBe(1.234);
+  expect(saved.opportunities[0].evidence).toBe('Updated without changing the imported estimate.');
+
+  await page.getByRole('button', { name: 'Delete' }).click();
+  await expect(page.getByText('0 locally recorded opportunities')).toBeVisible();
+  saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)), storageKey);
+  expect(saved.opportunities).toEqual([]);
+});
+
 test('enforces the 250-record limit and does not report a failed storage write as saved', async ({
   page,
 }) => {
