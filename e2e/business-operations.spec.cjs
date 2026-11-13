@@ -223,9 +223,7 @@ test('edits decimal estimates from imported backups and deletes persisted record
   expect(saved.opportunities).toEqual([]);
 });
 
-test('enforces the 250-record limit and does not report a failed storage write as saved', async ({
-  page,
-}) => {
+test('enforces the 250-record limit without changing the stored workspace', async ({ page }) => {
   const records = Array.from({ length: 250 }, (_, index) =>
     opportunity('seed-' + index, 'Seed account ' + index),
   );
@@ -239,20 +237,32 @@ test('enforces the 250-record limit and does not report a failed storage write a
   await expect(page.getByRole('alert')).toContainText('at most 250 opportunities');
   await expect(page.getByText('250 locally recorded opportunities')).toBeVisible();
 
-  await page.reload();
-  await page.addInitScript((key) => {
+  const saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)), storageKey);
+  expect(saved.opportunities).toHaveLength(250);
+});
+
+test('does not report success or mutate UI state when local storage rejects a write', async ({
+  browser,
+}) => {
+  const quotaContext = await browser.newContext();
+  const quotaPage = await quotaContext.newPage();
+  await quotaPage.addInitScript((key) => {
     const original = Storage.prototype.setItem;
     Storage.prototype.setItem = function (name, value) {
-      if (name === key)
+      if (name === key) {
         throw new DOMException('Storage quota blocked by test', 'QuotaExceededError');
+      }
       return original.call(this, name, value);
     };
   }, storageKey);
-  await page.reload();
-  await page.getByRole('button', { name: 'Business', exact: true }).click();
-  await expect(page.getByText('250 locally recorded opportunities')).toBeVisible();
-  await addOpportunity(page, 'Unsaved account');
-  await expect(page.getByRole('alert')).toContainText('QuotaExceededError');
-  await expect(page.getByText('250 locally recorded opportunities')).toBeVisible();
-  await expect(page.getByText('Opportunity added')).toHaveCount(0);
+
+  await openBusiness(quotaPage);
+  await expect(quotaPage.getByText('0 locally recorded opportunities')).toBeVisible();
+  await addOpportunity(quotaPage, 'Unsaved account');
+  await expect(quotaPage.getByRole('alert')).toContainText('Storage quota blocked by test');
+  await expect(quotaPage.getByText('0 locally recorded opportunities')).toBeVisible();
+  await expect(quotaPage.getByLabel('Account / organisation')).toBeDisabled();
+  await expect(quotaPage.getByText('Opportunity added')).toHaveCount(0);
+
+  await quotaContext.close();
 });
