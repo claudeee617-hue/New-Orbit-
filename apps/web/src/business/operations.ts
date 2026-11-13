@@ -162,21 +162,34 @@ export function normaliseBusinessWorkspace(value: unknown): BusinessWorkspace {
   return { version: BUSINESS_WORKSPACE_VERSION, opportunities };
 }
 
-export function parseBusinessWorkspace(serialized: string): BusinessWorkspace {
+function assertBackupSize(serialized: string, phase: 'input' | 'formatted'): void {
   if (new TextEncoder().encode(serialized).byteLength > MAX_BUSINESS_WORKSPACE_BYTES) {
-    throw new Error('Business workspace backup is larger than 2 MB.');
+    const suffix = phase === 'formatted' ? ' after formatting' : '';
+    throw new Error(`Business workspace backup is larger than 2 MB${suffix}.`);
   }
+}
+
+function stringifyWorkspace(workspace: BusinessWorkspace): string {
+  const serialized = JSON.stringify(workspace, null, 2);
+  assertBackupSize(serialized, 'formatted');
+  return serialized;
+}
+
+export function parseBusinessWorkspace(serialized: string): BusinessWorkspace {
+  assertBackupSize(serialized, 'input');
   let parsed: unknown;
   try {
     parsed = JSON.parse(serialized);
   } catch {
     throw new Error('The selected file is not valid JSON.');
   }
-  return normaliseBusinessWorkspace(parsed);
+  const workspace = normaliseBusinessWorkspace(parsed);
+  stringifyWorkspace(workspace);
+  return workspace;
 }
 
 export function serialiseBusinessWorkspace(workspace: BusinessWorkspace): string {
-  return JSON.stringify(normaliseBusinessWorkspace(workspace), null, 2);
+  return stringifyWorkspace(normaliseBusinessWorkspace(workspace));
 }
 
 export function getLocalDateKey(date = new Date()): string {
