@@ -365,10 +365,7 @@ export function BusinessOperations() {
           </button>
           <button
             type="button"
-            onClick={() => {
-              latestImportRef.current += 1;
-              importRef.current?.click();
-            }}
+            onClick={() => importRef.current?.click()}
             disabled={!loaded}
             className="rounded-md border border-edge px-3 py-2 text-xs text-ink hover:border-cyan hover:text-cyan disabled:cursor-not-allowed disabled:opacity-50"
           >
