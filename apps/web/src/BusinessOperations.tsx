@@ -287,7 +287,7 @@ export function BusinessOperations() {
     } catch (caught) {
       const message =
         caught instanceof Error ? caught.message : 'Opportunity could not be deleted.';
-      if (/saved workspace|workspace storage|storage disappeared|safe multi-tab/i.test(message)) {
+      if (isStorageUnavailable(caught)) {
         setCanPersist(false);
       }
       setError(message);
