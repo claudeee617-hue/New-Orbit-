@@ -48,6 +48,20 @@ function money(value: number, currency: 'INR' | 'USD'): string {
   }).format(value);
 }
 
+function isStorageUnavailable(error: unknown): boolean {
+  if (
+    typeof DOMException !== 'undefined' &&
+    error instanceof DOMException &&
+    ['QuotaExceededError', 'SecurityError'].includes(error.name)
+  ) {
+    return true;
+  }
+  return (
+    error instanceof Error &&
+    /saved workspace|workspace storage|storage disappeared|safe multi-tab/i.test(error.message)
+  );
+}
+
 function requestWorkspaceLock<T>(operation: () => Promise<T>): Promise<T> {
   if (typeof navigator === 'undefined' || !navigator.locks?.request) {
     return Promise.reject(
@@ -239,7 +253,7 @@ export function BusinessOperations() {
       resetForm();
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : 'Opportunity could not be saved.';
-      if (/saved workspace|workspace storage|storage disappeared|safe multi-tab/i.test(message)) {
+      if (isStorageUnavailable(caught)) {
         setCanPersist(false);
       }
       setError(message);
@@ -439,7 +453,7 @@ export function BusinessOperations() {
               : recoveryRequired
                 ? 'Recovery required'
                 : !canPersist
-                  ? 'Read-only recovery mode'
+                  ? 'Read-only (storage unavailable)'
                   : notice || 'Ready'}
           </span>
         </div>
