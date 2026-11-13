@@ -214,7 +214,9 @@ export function BusinessOperations() {
       const next = await persistWorkspace((latest) => {
         if (targetId) {
           if (!latest.opportunities.some((item) => item.id === targetId)) {
-            throw new Error('This opportunity was removed in another tab. Refresh the pipeline and try again.');
+            throw new Error(
+              'This opportunity was removed in another tab. Refresh the pipeline and try again.',
+            );
           }
           return {
             ...latest,
@@ -269,7 +271,8 @@ export function BusinessOperations() {
       if (editingId === id) resetForm();
       setNotice('Opportunity deleted from this browser');
     } catch (caught) {
-      const message = caught instanceof Error ? caught.message : 'Opportunity could not be deleted.';
+      const message =
+        caught instanceof Error ? caught.message : 'Opportunity could not be deleted.';
       if (/saved workspace|workspace storage|storage disappeared|safe multi-tab/i.test(message)) {
         setCanPersist(false);
       }
@@ -279,7 +282,9 @@ export function BusinessOperations() {
 
   function exportBackup() {
     if (recoveryRequired) {
-      setError('A valid saved workspace could not be loaded. Import a valid backup before exporting.');
+      setError(
+        'A valid saved workspace could not be loaded. Import a valid backup before exporting.',
+      );
       return;
     }
     try {
@@ -412,8 +417,8 @@ export function BusinessOperations() {
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-y border-edge py-3">
         <p className="text-xs text-mute">
-          Records stay in this browser&apos;s local storage. Safe multi-tab saves use the browser&apos;s
-          Web Locks API.
+          Records stay in this browser&apos;s local storage. Safe multi-tab saves use the
+          browser&apos;s Web Locks API.
         </p>
         <div className="flex items-center gap-3">
           <label className="text-xs text-mute" htmlFor="business-currency">
@@ -429,7 +434,13 @@ export function BusinessOperations() {
             <option value="USD">USD</option>
           </select>
           <span role="status" className="text-[11px] text-ok">
-            {!loaded ? 'Loading…' : recoveryRequired ? 'Recovery required' : !canPersist ? 'Read-only recovery mode' : notice || 'Ready'}
+            {!loaded
+              ? 'Loading…'
+              : recoveryRequired
+                ? 'Recovery required'
+                : !canPersist
+                  ? 'Read-only recovery mode'
+                  : notice || 'Ready'}
           </span>
         </div>
       </div>
