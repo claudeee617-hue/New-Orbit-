@@ -41,12 +41,6 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: pnpm audit --audit-level=moderate
 
-      - name: DEBUG apply canonical Prettier formatting
-        shell: bash
-        run: |
-          pnpm exec prettier --write apps/web/src/business/operations.test.ts apps/web/src/BusinessOperations.tsx e2e/business-operations.spec.cjs
-          git diff -- apps/web/src/business/operations.test.ts apps/web/src/BusinessOperations.tsx e2e/business-operations.spec.cjs
-
       # format:check, lint, typecheck, test, build
       - name: Check
         run: pnpm run check
