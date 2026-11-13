@@ -118,16 +118,16 @@ test('the most recently selected backup wins when earlier file reads finish late
   await openBusiness(page);
   await page.evaluate(() => {
     const originalText = File.prototype.text;
-    window.__slowReadStarted = false;
-    window.__slowReadCompleted = false;
-    window.__completeSlowRead = null;
+    globalThis.__slowReadStarted = false;
+    globalThis.__slowReadCompleted = false;
+    globalThis.__completeSlowRead = null;
     File.prototype.text = function () {
       if (this.name !== 'slow.json') return originalText.call(this);
-      window.__slowReadStarted = true;
+      globalThis.__slowReadStarted = true;
       return new Promise((resolve, reject) => {
-        window.__completeSlowRead = () => {
+        globalThis.__completeSlowRead = () => {
           originalText.call(this).then((text) => {
-            window.__slowReadCompleted = true;
+            globalThis.__slowReadCompleted = true;
             resolve(text);
           }, reject);
         };
@@ -150,13 +150,13 @@ test('the most recently selected backup wins when earlier file reads finish late
     buffer: Buffer.from(fast),
   });
 
-  await expect.poll(() => page.evaluate(() => window.__slowReadStarted)).toBe(true);
+  await expect.poll(() => page.evaluate(() => globalThis.__slowReadStarted)).toBe(true);
   await expect(page.getByRole('heading', { name: 'Fast latest selection' })).toBeVisible();
   await expect(page.getByText('1 locally recorded opportunities')).toBeVisible();
 
   // Let the earlier file read complete only after the newer selection has been saved.
-  await page.evaluate(() => window.__completeSlowRead());
-  await expect.poll(() => page.evaluate(() => window.__slowReadCompleted)).toBe(true);
+  await page.evaluate(() => globalThis.__completeSlowRead());
+  await expect.poll(() => page.evaluate(() => globalThis.__slowReadCompleted)).toBe(true);
   await expect(page.getByRole('heading', { name: 'Fast latest selection' })).toBeVisible();
 
   const saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)), storageKey);
