@@ -20,7 +20,7 @@ This is a separate, edge-native cloud control plane. It does **not** replace the
 5. Deploy from this directory with `wrangler deploy`.
 6. Put the API behind the Cloudflare Access application before exposing it to users.
 
-Do not deploy with the placeholder values. The worker deliberately returns 401 for protected routes when Access is absent or misconfigured.
+Do not deploy with the placeholder values. Protected routes return 401 when the Access assertion is missing or invalid. A missing or invalid Worker configuration fails closed with a generic 500 response.
 
 ## API
 
@@ -38,4 +38,4 @@ The cloud API is intentionally a separate package: existing local endpoints rely
 
 ## Verification
 
-Run the repository's standard checks after installing the workspace dependencies. For local Worker testing, use Wrangler with a local D1 database and a test Access JWT issuer/audience fixture. Never use a production Access audience or production D1 database in automated tests.
+Run the repository's standard checks after installing the workspace dependencies. The typecheck generates the Wrangler binding declarations locally; the generated file is ignored by Git. For local Worker testing, use Wrangler with a local D1 database and a test Access JWT issuer/audience fixture. Never use a production Access audience or production D1 database in automated tests.
