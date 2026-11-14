@@ -35,9 +35,16 @@ Run from the ORBIT repository root after checkout:
 
 ```powershell
 pnpm install --frozen-lockfile
+pnpm --filter @orbit/shared build
 pnpm --filter @orbit/web typecheck
 pnpm --filter @orbit/web test
 pnpm --filter @orbit/web build
+pnpm run format:check
+pnpm run lint
 ```
+
+The shared workspace package must be built before invoking the web package's typecheck directly. Alternatively, `pnpm run check` runs the root formatting, lint, workspace typecheck, unit-test and production-build sequence with Turbo dependency ordering.
+
+Before merge, require the GitHub Actions Ubuntu, Windows and macOS check matrix, Chromium browser E2E, MCP stdio/SQLite read-only acceptance, and Security/CodeQL gates to pass. Browser E2E verifies mobile navigation focus containment, modal/inert semantics, Escape/close behavior, short-viewport scrolling and desktop-resize dismissal.
 
 Then exercise keyboard navigation, collapse/expand, mobile drawer open/close, reduced-motion behavior, Business Workspace and the API disconnected/connected states at desktop, tablet and phone widths.
