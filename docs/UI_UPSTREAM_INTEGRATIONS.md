@@ -25,6 +25,8 @@
 - Engine entries are informational labels unless they already have a functioning route. They do not pretend to be active controls.
 - Runtime connection state comes from the existing local API health endpoint.
 - Dashboard counters continue to come from the authenticated API. No sample repository counts, build status, coverage or evidence records are fabricated.
+- The responsive mobile drawer traps Tab/Shift+Tab focus while open, closes on Escape, hides closed navigation from the focus order, and restores focus to its trigger.
+- A Chromium regression test exercises the mobile drawer keyboard cycle, Escape dismissal and trigger-focus restoration.
 - Existing Command Center, business forms, API calls and local token handling remain in their existing components.
 
 ## Verification required
