@@ -14,7 +14,7 @@ React compatibility is promising. Astryx ships prebuilt ESM and CSS for consumer
 
 Evaluate Astryx through a narrow, isolated integration spike. Keep ORBIT's application architecture, API contracts, domain components and Tailwind setup intact. Do not vendor the upstream monorepo or perform a wholesale UI replacement.
 
-The first runtime adoption must be limited to one low-risk component behind an ORBIT-owned wrapper. The exact package version and transform configuration must be verified against the published package manifest before dependency changes are made.
+The first runtime adoption must be limited to one low-risk component behind an ORBIT-owned wrapper. The exact package versions, peer dependencies, and CSS import order must be verified against the published manifests before dependency changes are made.
 
 ## Consequences
 
