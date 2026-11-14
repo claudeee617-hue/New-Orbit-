@@ -346,6 +346,7 @@ export function App() {
             <button
               className="orbit-refresh"
               type="button"
+              aria-label="Refresh status"
               onClick={refresh}
               disabled={state.kind === 'loading'}
             >
