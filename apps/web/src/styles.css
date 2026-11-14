@@ -999,6 +999,44 @@ body {
   .orbit-collapse {
     display: none;
   }
+  .orbit-app.is-collapsed .orbit-brand-copy,
+  .orbit-app.is-collapsed .orbit-workspace-name,
+  .orbit-app.is-collapsed .orbit-nav-text,
+  .orbit-app.is-collapsed .orbit-engine-item > span:nth-child(2),
+  .orbit-app.is-collapsed .orbit-sidebar-user > span:nth-child(2) {
+    display: grid;
+  }
+  .orbit-app.is-collapsed .orbit-workspace-chevron,
+  .orbit-app.is-collapsed .orbit-nav-label,
+  .orbit-app.is-collapsed .orbit-nav-active,
+  .orbit-app.is-collapsed .orbit-engine-item > i,
+  .orbit-app.is-collapsed .orbit-local-card,
+  .orbit-app.is-collapsed .orbit-user-menu {
+    display: block;
+  }
+  .orbit-app.is-collapsed .orbit-sidebar {
+    padding: 20px 16px;
+  }
+  .orbit-app.is-collapsed .orbit-brand-row {
+    justify-content: flex-start;
+    padding: 0 5px;
+  }
+  .orbit-app.is-collapsed .orbit-workspace-switcher {
+    justify-content: flex-start;
+    padding: 10px;
+    margin: 29px 2px 28px;
+  }
+  .orbit-app.is-collapsed .orbit-nav-item {
+    justify-content: flex-start;
+    padding: 8px 10px;
+  }
+  .orbit-app.is-collapsed .orbit-engine-list {
+    padding: 0 6px;
+  }
+  .orbit-app.is-collapsed .orbit-engine-item,
+  .orbit-app.is-collapsed .orbit-sidebar-user {
+    justify-content: flex-start;
+  }
   .orbit-mobile-scrim {
     position: fixed;
     inset: 0;
