@@ -16,15 +16,17 @@ function base64Url(value: string | Uint8Array): string {
   return encoded;
 }
 
-async function createToken(options: { aud?: string; exp?: number } = {}): Promise<string> {
+async function createToken(
+  options: { aud?: string; exp?: number; nbf?: number; kid?: string; signingKey?: CryptoKey } = {},
+): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
-  const header = { alg: 'RS256', kid: 'orbit-test-key', typ: 'JWT' };
+  const header = { alg: 'RS256', kid: options.kid ?? 'orbit-test-key', typ: 'JWT' };
   const claims = {
     sub: 'orbit-test-user',
     iss: issuer,
     aud: options.aud ?? audience,
     exp: options.exp ?? now + 300,
-    nbf: now - 1,
+    nbf: options.nbf ?? now - 1,
     email: 'test@example.invalid',
     email_verified: true,
   };
@@ -208,6 +210,89 @@ describe('ORBIT cloud API boundary', () => {
     expect(prepare).toHaveBeenCalledTimes(2);
     expect(batch).toHaveBeenCalledTimes(1);
     expect(batch.mock.calls[0]?.[0]).toHaveLength(2);
+  });
+
+  it('refreshes Access signing keys when a rotated key id is first observed', async () => {
+    const pair = (await crypto.subtle.generateKey(
+      {
+        name: 'RSASSA-PKCS1-v1_5',
+        modulusLength: 2048,
+        publicExponent: new Uint8Array([1, 0, 1]),
+        hash: 'SHA-256',
+      },
+      true,
+      ['sign', 'verify'],
+    )) as CryptoKeyPair;
+    const rotatedJwk = {
+      ...(await crypto.subtle.exportKey('jwk', pair.publicKey)),
+      kid: 'orbit-rotated-key',
+      alg: 'RS256',
+      use: 'sig',
+    };
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ keys: [rotatedJwk] }), {
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    const token = await createToken({
+      kid: 'orbit-rotated-key',
+      signingKey: pair.privateKey,
+    });
+    const rows = vi.fn().mockResolvedValue({ results: [], success: true });
+    const prepare = vi.fn().mockReturnValue({ bind: vi.fn().mockReturnValue({ all: rows }) });
+    const env = authenticatedEnv({ prepare, batch: vi.fn() });
+
+    const response = await worker.fetch(
+      new Request('https://orbit.test/v1/workspaces', {
+        headers: { 'Cf-Access-Jwt-Assertion': token },
+      }),
+      env,
+    );
+
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects future not-before claims', async () => {
+    const prepare = vi.fn();
+    const token = await createToken({ nbf: Math.floor(Date.now() / 1000) + 60 });
+    const response = await worker.fetch(
+      new Request('https://orbit.test/v1/workspaces', {
+        headers: { 'Cf-Access-Jwt-Assertion': token },
+      }),
+      authenticatedEnv({ prepare, batch: vi.fn() }),
+    );
+
+    expect(response.status).toBe(401);
+    expect(prepare).not.toHaveBeenCalled();
+  });
+
+  it('rejects non-JSON workspace requests and oversized request bodies', async () => {
+    const token = await createToken();
+    const env = authenticatedEnv({ prepare: vi.fn(), batch: vi.fn() });
+    const unsupported = await worker.fetch(
+      new Request('https://orbit.test/v1/workspaces', {
+        method: 'POST',
+        headers: { 'Cf-Access-Jwt-Assertion': token },
+        body: 'name=Research',
+      }),
+      env,
+    );
+    const oversized = await worker.fetch(
+      new Request('https://orbit.test/v1/workspaces', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'Cf-Access-Jwt-Assertion': token,
+        },
+        body: JSON.stringify({ name: 'x'.repeat(5000) }),
+      }),
+      env,
+    );
+
+    expect(unsupported.status).toBe(415);
+    expect(oversized.status).toBe(413);
   });
 
   it('does not enable browser preflight or wildcard CORS', async () => {
