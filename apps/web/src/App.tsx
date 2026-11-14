@@ -510,8 +510,12 @@ export function App() {
           ) : (
             <>
               <section className="orbit-business-heading">
-                <div className="orbit-eyebrow"><span /> SECURE CLOUD WORKSPACES</div>
-                <h1>Cloud <em>workspace.</em></h1>
+                <div className="orbit-eyebrow">
+                  <span /> SECURE CLOUD WORKSPACES
+                </div>
+                <h1>
+                  Cloud <em>workspace.</em>
+                </h1>
                 <p>Manage private team spaces through authenticated ORBIT cloud services.</p>
               </section>
               <CloudWorkspace />
