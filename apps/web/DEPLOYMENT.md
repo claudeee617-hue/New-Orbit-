@@ -19,7 +19,7 @@ The public-facing dashboard is published through Cloudflare Pages. Only the clou
 6. The Worker independently verifies the RS256 signature, issuer, audience, expiry and not-before claims.
 7. D1 reads and writes are scoped to the authenticated Access subject and workspace membership.
 
-The Worker hostname is protected at `/v1/*`; the Pages dashboard root remains public. The browser calls only the same-origin Pages route and never receives a service token, API secret or cross-origin Access assertion.
+The Worker hostname is protected at `/v1/*`; the Pages dashboard root remains public. The browser calls only the same-origin Pages route and never receives a service token, API secret or cross-origin Access assertion. Static assets and the rest of the dashboard are intentionally not behind the cloud-workspace sign-in gate.
 
 The Access policy currently permits Cloudflare account members only. This is a private cloud-workspace beta, not public self-service signup. Do not change its policy to Everyone or open email signup without an explicit product decision, abuse controls and a tested account onboarding flow.
 
