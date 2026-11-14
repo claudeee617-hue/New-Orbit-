@@ -260,15 +260,17 @@ async function handle(request: Request, env: Env): Promise<Response> {
           ) VALUES (?, ?, ?, 'owner')`,
         ).bind(id, identity.sub, identity.email ?? null),
       ]);
-    } catch {
-      return json(
-        {
-          error: 'WORKSPACE_CONFLICT',
-          message:
-            'A workspace with this key already exists, or the workspace could not be created.',
-        },
-        409,
-      );
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
+        return json(
+          {
+            error: 'WORKSPACE_CONFLICT',
+            message: 'A workspace with this key already exists.',
+          },
+          409,
+        );
+      }
+      throw error;
     }
     return json({ workspace: { id, name: cleanName, workspaceKey: key, role: 'owner' } }, 201);
   }
