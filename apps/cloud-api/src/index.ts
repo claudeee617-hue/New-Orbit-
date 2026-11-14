@@ -31,12 +31,18 @@ interface AccessClaims {
   nbf?: number;
 }
 
+interface AccessJwk extends JsonWebKey {
+  kid?: string;
+  alg?: string;
+  use?: string;
+}
+
 interface JwkSet {
-  keys: JsonWebKey[];
+  keys: AccessJwk[];
 }
 
 const encoder = new TextEncoder();
-const jwksCache = new Map<string, { expiresAt: number; keys: CryptoKey[] }>();
+const jwksCache = new Map<string, { expiresAt: number; keys: Map<string, CryptoKey> }>();
 const MAX_CLOCK_SKEW_SECONDS = 60;
 
 function json(data: unknown, status = 200): Response {
@@ -63,29 +69,33 @@ function decodeJsonPart<T>(value: string): T {
   return JSON.parse(new TextDecoder().decode(decodeBase64Url(value))) as T;
 }
 
-async function accessKeys(issuer: string): Promise<CryptoKey[]> {
+async function accessKeys(issuer: string): Promise<Map<string, CryptoKey>> {
   const cached = jwksCache.get(issuer);
   if (cached && cached.expiresAt > Date.now()) return cached.keys;
 
-  const response = await fetch(`${issuer}/cdn-cgi/access/certs`, {
+  const response = await fetch(issuer + "/cdn-cgi/access/certs", {
     headers: { accept: "application/json" },
-    cf: { cacheTtl: 300, cacheEverything: true },
-  } as RequestInit);
+  });
   if (!response.ok) throw new Error("Access signing keys unavailable");
 
   const jwks = (await response.json()) as JwkSet;
-  const keys = await Promise.all(
-    jwks.keys
-      .filter((key) => key.kty === "RSA" && key.use === "sig" && key.alg === "RS256")
-      .map((key) => crypto.subtle.importKey(
+  const supported = jwks.keys.filter(
+    (key) => key.kty === "RSA" && key.use === "sig" && key.alg === "RS256" && typeof key.kid === "string",
+  );
+  const imported = await Promise.all(
+    supported.map(async (key) => [
+      key.kid!,
+      await crypto.subtle.importKey(
         "jwk",
         key,
         { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
         false,
         ["verify"],
-      )),
+      ),
+    ] as const),
   );
-  if (keys.length === 0) throw new Error("No supported Access signing keys");
+  const keys = new Map(imported);
+  if (keys.size === 0) throw new Error("No supported Access signing keys");
   jwksCache.set(issuer, { keys, expiresAt: Date.now() + 5 * 60 * 1000 });
   return keys;
 }
@@ -106,7 +116,7 @@ async function authenticate(request: Request, env: Env): Promise<AccessClaims | 
     const header = decodeJsonPart<{ alg?: string; kid?: string }>(parts[0]!);
     const claims = decodeJsonPart<AccessClaims>(parts[1]!);
     if (header.alg !== "RS256" || !header.kid) return null;
-    if (claims.iss !== issuer || !claims.sub) return null;
+    if (claims.iss !== issuer || typeof claims.sub !== "string" || claims.sub.length === 0) return null;
     const audiences = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
     if (!audiences.includes(env.ACCESS_AUD)) return null;
 
@@ -115,26 +125,15 @@ async function authenticate(request: Request, env: Env): Promise<AccessClaims | 
     if (claims.nbf !== undefined && claims.nbf > now + MAX_CLOCK_SKEW_SECONDS) return null;
     if (claims.email_verified === false) return null;
 
-    const keys = await accessKeys(issuer);
-    const jwksResponse = await fetch(`${issuer}/cdn-cgi/access/certs`);
-    const jwks = (await jwksResponse.json()) as JwkSet;
-    const matchingJwk = jwks.keys.find((key) => key.kid === header.kid && key.alg === "RS256");
-    if (!matchingJwk) return null;
-    const signingKey = await crypto.subtle.importKey(
-      "jwk",
-      matchingJwk,
-      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-      false,
-      ["verify"],
-    );
-    const signed = encoder.encode(`${parts[0]}.${parts[1]}`);
+    const signingKey = (await accessKeys(issuer)).get(header.kid);
+    if (!signingKey) return null;
+    const signed = encoder.encode(parts[0] + "." + parts[1]);
     const valid = await crypto.subtle.verify(
       "RSASSA-PKCS1-v1_5",
       signingKey,
       decodeBase64Url(parts[2]!),
       signed,
     );
-    void keys;
     return valid ? claims : null;
   } catch {
     return null;
