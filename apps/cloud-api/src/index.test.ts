@@ -33,7 +33,7 @@ async function createToken(
   const signingInput = base64Url(JSON.stringify(header)) + '.' + base64Url(JSON.stringify(claims));
   const signature = await crypto.subtle.sign(
     'RSASSA-PKCS1-v1_5',
-    privateKey,
+    options.signingKey ?? privateKey,
     encoder.encode(signingInput),
   );
   return signingInput + '.' + base64Url(new Uint8Array(signature));
