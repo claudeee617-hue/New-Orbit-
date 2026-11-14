@@ -68,6 +68,8 @@ importers:
         specifier: 4.23.15
         version: 4.23.15
 
+  apps/cloud-api: {}
+
   apps/cli:
     dependencies:
       '@orbit/atlas':

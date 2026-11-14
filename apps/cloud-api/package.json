@@ -1,0 +1,14 @@
+{
+  "name": "@orbit/cloud-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm dlx wrangler@4.136.0 dev",
+    "typecheck": "pnpm run types:generate && tsc --noEmit --skipLibCheck --target ES2022 --module ESNext --moduleResolution Bundler --lib ES2022,DOM worker-configuration.d.ts src/index.ts",
+    "test": "vitest run",
+    "deploy": "pnpm dlx wrangler@4.136.0 deploy",
+    "build": "pnpm dlx wrangler@4.136.0 deploy --dry-run",
+    "types:generate": "pnpm dlx wrangler@4.136.0 types worker-configuration.d.ts --config wrangler.jsonc --env-interface Env"
+  }
+}
