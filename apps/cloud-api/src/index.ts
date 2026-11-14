@@ -176,12 +176,26 @@ async function readLimitedBody(request: Request, limit: number): Promise<string 
 }
 
 function workspaceKey(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9-]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 48);
+  let key = '';
+  let separatorPending = false;
+
+  for (const character of value.trim().toLowerCase()) {
+    const isAsciiAlphaNumeric =
+      (character >= 'a' && character <= 'z') ||
+      (character >= '0' && character <= '9');
+
+    if (isAsciiAlphaNumeric) {
+      if (separatorPending && key.length > 0 && key.length < 48) key += '-';
+      separatorPending = false;
+      if (key.length < 48) key += character;
+    } else if (key.length > 0) {
+      separatorPending = true;
+    }
+
+    if (key.length >= 48) break;
+  }
+
+  return key.endsWith('-') ? key.slice(0, -1) : key;
 }
 
 async function handle(request: Request, env: Env): Promise<Response> {
