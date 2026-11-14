@@ -21,9 +21,3 @@ CREATE TABLE IF NOT EXISTS workspace_members (
 CREATE INDEX IF NOT EXISTS workspace_members_identity_idx
   ON workspace_members(identity_sub, workspace_id);
 
-CREATE TABLE IF NOT EXISTS cloud_schema_migrations (
-  version INTEGER PRIMARY KEY NOT NULL,
-  applied_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
-);
-
-INSERT OR IGNORE INTO cloud_schema_migrations(version) VALUES (1);
