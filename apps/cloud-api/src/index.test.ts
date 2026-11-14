@@ -88,7 +88,10 @@ const unauthenticatedEnv = authenticatedEnv({
 
 describe('ORBIT cloud API boundary', () => {
   it('exposes only a minimal liveness response without authentication', async () => {
-    const response = await worker.fetch(new Request('https://orbit.test/health'), unauthenticatedEnv);
+    const response = await worker.fetch(
+      new Request('https://orbit.test/health'),
+      unauthenticatedEnv,
+    );
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
       service: 'orbit-cloud-api',
