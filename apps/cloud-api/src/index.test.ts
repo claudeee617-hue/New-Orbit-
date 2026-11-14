@@ -241,7 +241,8 @@ describe('ORBIT cloud API boundary', () => {
   it('creates a workspace and owner membership in one D1 batch', async () => {
     const workspaceStatement = { bind: vi.fn().mockReturnThis() };
     const membershipStatement = { bind: vi.fn().mockReturnThis() };
-    const prepare = vi.fn()
+    const prepare = vi
+      .fn()
       .mockReturnValueOnce(workspaceStatement)
       .mockReturnValueOnce(membershipStatement);
     const batch = vi.fn().mockResolvedValue([]);

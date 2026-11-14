@@ -250,8 +250,7 @@ async function handle(request: Request, env: Env): Promise<Response> {
     const hasMore = rows.results.length > requestedLimit;
     const workspaces = hasMore ? rows.results.slice(0, requestedLimit) : rows.results;
     const last = workspaces[workspaces.length - 1] as
-      | { createdAt?: unknown; id?: unknown }
-      | undefined;
+      { createdAt?: unknown; id?: unknown } | undefined;
     const nextCursor =
       hasMore && typeof last?.createdAt === 'string' && typeof last.id === 'string'
         ? btoa(JSON.stringify({ createdAt: last.createdAt, id: last.id }))
