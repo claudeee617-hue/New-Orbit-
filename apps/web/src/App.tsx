@@ -377,11 +377,15 @@ export function App() {
                     <button
                       type="button"
                       className="orbit-primary-action"
-                      onClick={() =>
-                        document
-                          .getElementById('orbit-command-center')
-                          ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                      }
+                      onClick={() => {
+                        const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+                          ? 'instant'
+                          : 'smooth';
+                        document.getElementById('orbit-command-center')?.scrollIntoView({
+                          behavior,
+                          block: 'start',
+                        });
+                      }}
                     >
                       Open command center <span>↘</span>
                     </button>
