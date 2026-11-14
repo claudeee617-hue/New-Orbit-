@@ -322,6 +322,18 @@ test('mobile navigation traps focus, closes with Escape, and restores the trigge
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
   await expect(trigger).toBeFocused();
 
+  await page.setViewportSize({ width: 390, height: 360 });
+  await trigger.click();
+  await expect(sidebar).toHaveCSS('overflow-y', 'auto');
+  await expect
+    .poll(() => sidebar.evaluate((element) => element.scrollHeight > element.clientHeight))
+    .toBe(true);
+  const scrollTop = await sidebar.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+    return element.scrollTop;
+  });
+  expect(scrollTop).toBeGreaterThan(0);
+
   await trigger.click();
   await page.setViewportSize({ width: 1440, height: 1000 });
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
