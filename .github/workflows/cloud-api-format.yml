@@ -1,0 +1,40 @@
+name: Format Cloud API sources
+
+on:
+  push:
+    branches:
+      - feat/cloud-api-foundation
+    paths:
+      - apps/cloud-api/src/index.ts
+      - apps/cloud-api/src/index.test.ts
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/cloud-api-foundation
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.28.0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec prettier --write apps/cloud-api/src/index.ts apps/cloud-api/src/index.test.ts
+      - name: Commit formatting if needed
+        run: |
+          if git diff --quiet; then
+            echo "Formatting already clean"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/cloud-api/src/index.ts apps/cloud-api/src/index.test.ts
+          git commit -m "style(cloud-api): apply Prettier formatting"
+          git push origin HEAD:feat/cloud-api-foundation
