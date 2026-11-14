@@ -4,7 +4,7 @@ const officialLinks = [
   { label: 'DPDP Act, 2023', href: 'https://www.meity.gov.in/static/uploads/2024/02/Digital-Personal-Data-Protection-Act-2023.pdf' },
   { label: 'DPDP Rules, 2025', href: 'https://www.meity.gov.in/static/uploads/2025/11/53450e6e5dc0bfa85ebd78686cadad39.pdf' },
   { label: 'Commencement notification G.S.R. 843(E)', href: 'https://www.meity.gov.in/static/uploads/2025/11/c56ceae6c383460ca69577428d36828b.pdf' },
-  { label: 'IT (SPDI) Rules, 2011', href: 'https://indiacode.ecourtsindia.com/rules/the-information-technology-reasonable-security-practices-and-a1af21b5/' },
+  { label: 'IT (SPDI) Rules, 2011', href: 'https://meity.gov.in/sites/upload_files/dit/files/GSR313E_10511%281%29.pdf' },
 ];
 
 function Row({ title, detail, status }: { title: string; detail: string; status: string }) {
