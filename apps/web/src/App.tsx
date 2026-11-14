@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { Building2, Command, FileCheck2, GitBranch, ShieldCheck } from 'lucide-react';
 import { ORBIT_TAGLINE } from '@orbit/shared/health';
 import { BusinessModule } from './BusinessModule.js';
 import { BusinessOperations } from './BusinessOperations.js';
@@ -8,16 +9,17 @@ import { loadHealth, type HealthState } from './health.js';
 type WorkspaceView = 'overview' | 'business';
 type IconName = 'overview' | 'business' | 'scan' | 'evidence' | 'passport';
 
-const glyphs: Record<IconName, ReactNode> = {
-  overview: <><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></>,
-  business: <><path d="M4 20V8.5L12 4l8 4.5V20" /><path d="M9 20v-5h6v5M8 10h.01M16 10h.01M12 10h.01" /></>,
-  scan: <><circle cx="10.8" cy="10.8" r="6.8" /><path d="m16 16 5 5M8 10.8h5.6M10.8 8v5.6" /></>,
-  evidence: <><path d="M7 3.5h7l4 4V20a1 1 0 0 1-1 1H7a2 2 0 0 1-2-2V5.5a2 2 0 0 1 2-2Z" /><path d="M14 3.5v4h4M8.5 12h7M8.5 16h7" /></>,
-  passport: <><rect x="3.5" y="3" width="17" height="18" rx="2.5" /><circle cx="12" cy="10" r="3" /><path d="M7.5 17c1.2-2.1 7.8-2.1 9 0M8 6h.01" /></>,
+const glyphs: Record<IconName, typeof Command> = {
+  overview: Command,
+  business: Building2,
+  scan: GitBranch,
+  evidence: FileCheck2,
+  passport: ShieldCheck,
 };
 
 function Glyph({ name }: { name: IconName }) {
-  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round">{glyphs[name]}</svg>;
+  const Icon = glyphs[name];
+  return <Icon aria-hidden="true" size={17} strokeWidth={1.65} />;
 }
 
 function StatusBadge({ state }: { state: HealthState }) {
