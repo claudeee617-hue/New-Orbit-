@@ -23,7 +23,6 @@ interface JwkSet {
 
 const encoder = new TextEncoder();
 const jwksCache = new Map<string, { expiresAt: number; keys: Map<string, CryptoKey> }>();
-const MAX_CLOCK_SKEW_SECONDS = 60;
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -111,8 +110,8 @@ async function authenticate(request: Request, env: Env): Promise<AccessClaims | 
     if (!audiences.includes(env.ACCESS_AUD)) return null;
 
     const now = Math.floor(Date.now() / 1000);
-    if (!Number.isFinite(claims.exp) || claims.exp <= now - MAX_CLOCK_SKEW_SECONDS) return null;
-    if (claims.nbf !== undefined && claims.nbf > now + MAX_CLOCK_SKEW_SECONDS) return null;
+    if (!Number.isFinite(claims.exp) || claims.exp <= now) return null;
+    if (claims.nbf !== undefined && claims.nbf > now) return null;
     if (claims.email_verified === false) return null;
 
     const signingKey = (await accessKeys(issuer)).get(header.kid);
