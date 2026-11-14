@@ -19,7 +19,7 @@
     {
       "binding": "DB",
       "database_name": "orbit-cloud",
-      "database_id": "REPLACE_WITH_D1_DATABASE_ID",
+      "database_id": "6ce29c73-2173-40ee-adb2-d98adbcf762d",
       "migrations_dir": "migrations",
     },
   ],
