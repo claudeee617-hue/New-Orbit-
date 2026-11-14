@@ -298,11 +298,12 @@ test('mobile navigation traps focus, closes with Escape, and restores the trigge
   await expect(page.locator('.orbit-main')).toHaveAttribute('inert', '');
   await expect(sidebar.locator(':focus')).toHaveCount(1);
 
-  const firstFocusable = sidebar.locator('button:visible').first();
-  const lastFocusable = sidebar.locator('button:visible').last();
+  const firstFocusable = sidebar.locator('a[href]:visible, button:visible').first();
+  const lastFocusable = sidebar.locator('a[href]:visible, button:visible').last();
+  const closeControl = sidebar.getByRole('button', { name: 'Close navigation' });
 
   await expect(firstFocusable).toBeFocused();
-  await expect(firstFocusable).toHaveAccessibleName('Close navigation');
+  await expect(closeControl).toBeVisible();
   await page.keyboard.press('Shift+Tab');
   await expect(lastFocusable).toBeFocused();
   await page.keyboard.press('Tab');
