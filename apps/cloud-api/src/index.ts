@@ -197,7 +197,7 @@ async function handle(request: Request, env: Env): Promise<Response> {
     );
   }
 
-  // Workspace reads use a bounded, identity-scoped cursor page.
+  // Workspace reads use bounded, identity-scoped cursor pages.
   if (url.pathname === '/v1/workspaces' && request.method === 'GET') {
     const rawLimit = url.searchParams.get('limit');
     const requestedLimit = rawLimit === null ? 50 : Number(rawLimit);
