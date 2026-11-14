@@ -18,7 +18,7 @@ These are compatible at the React level. Astryx's documented prebuilt consumer p
 | Area | ORBIT | Astryx | Integration implication |
 | --- | --- | --- | --- |
 | Runtime | React 19, Vite 8 | React component library, built with StyleX | React compatibility is promising; validate peer requirements |
-| Styling | Tailwind CSS 4, CSS custom properties | StyleX + Astryx theme/CSS exports | Configure and test StyleX before importing components |
+| Styling | Tailwind CSS 4, CSS custom properties | StyleX + Astryx theme/CSS exports | Consume Astryx's prebuilt StyleX components and CSS; no ORBIT StyleX compiler is needed for the first spike |
 | Theme | Dark engineering palette (void/panel/cyan/violet) | Themeable component tokens and theme packages | Map tokens; retain ORBIT brand and dark default |
 | App structure | Small Vite dashboard shell with API-driven views | Large design-system package | Import only selected components, not all packages |
 | Quality | Existing unit/API/CLI checks and CI matrix | Extensive component, a11y, visual and package-boundary checks | Add focused integration tests and browser checks |
