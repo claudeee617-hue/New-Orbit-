@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Building2, Command, FileCheck2, GitBranch, ShieldCheck } from 'lucide-react';
 import { ORBIT_TAGLINE } from '@orbit/shared/health';
 import { BusinessModule } from './BusinessModule.js';
@@ -94,6 +94,8 @@ export function App() {
   const [view, setView] = useState<WorkspaceView>('overview');
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const mobileNavTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const mobileNavSidebarRef = useRef<HTMLElement | null>(null);
 
   const refresh = useCallback(() => {
     setState({ kind: 'loading' });
@@ -110,13 +112,47 @@ export function App() {
     if (!mobileNavOpen) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setMobileNavOpen(false);
+
+    const getFocusableElements = () =>
+      Array.from(
+        mobileNavSidebarRef.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      ).filter((element) => element.getAttribute('aria-hidden') !== 'true');
+
+    getFocusableElements()[0]?.focus();
+
+    const handleDrawerKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setMobileNavOpen(false);
+        return;
+      }
+      if (event.key !== 'Tab') return;
+
+      const focusable = getFocusableElements();
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (!first || !last) {
+        event.preventDefault();
+        return;
+      }
+
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || !mobileNavSidebarRef.current?.contains(active))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (active === last || !mobileNavSidebarRef.current?.contains(active))) {
+        event.preventDefault();
+        first.focus();
+      }
     };
-    window.addEventListener('keydown', closeOnEscape);
+
+    window.addEventListener('keydown', handleDrawerKeyDown);
     return () => {
       document.body.style.overflow = previousOverflow;
-      window.removeEventListener('keydown', closeOnEscape);
+      window.removeEventListener('keydown', handleDrawerKeyDown);
+      mobileNavTriggerRef.current?.focus();
     };
   }, [mobileNavOpen]);
 
@@ -136,6 +172,8 @@ export function App() {
         />
       )}
       <aside
+        id="orbit-mobile-navigation"
+        ref={mobileNavSidebarRef}
         className={`orbit-sidebar ${mobileNavOpen ? 'is-open' : ''}`}
         aria-label="Main workspace navigation"
       >
@@ -248,9 +286,11 @@ export function App() {
         <header className="orbit-topbar">
           <div className="orbit-topbar-left">
             <button
+              ref={mobileNavTriggerRef}
               className="orbit-mobile-menu"
               type="button"
               aria-label="Open navigation"
+              aria-controls="orbit-mobile-navigation"
               aria-expanded={mobileNavOpen}
               onClick={() => setMobileNavOpen(true)}
             >
