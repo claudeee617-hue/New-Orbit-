@@ -1,25 +1,4 @@
-interface Env {
-  DB: D1Database;
-  ACCESS_TEAM_DOMAIN: string;
-  ACCESS_AUD: string;
-}
-
-interface D1Result<T = Record<string, unknown>> {
-  results: T[];
-  success: boolean;
-}
-
-interface D1Statement {
-  bind(...values: unknown[]): D1Statement;
-  first<T = Record<string, unknown>>(): Promise<T | null>;
-  all<T = Record<string, unknown>>(): Promise<D1Result<T>>;
-  run(): Promise<unknown>;
-}
-
-interface D1Database {
-  prepare(query: string): D1Statement;
-  batch<T = unknown>(statements: D1Statement[]): Promise<T[]>;
-}
+/// <reference path="../worker-configuration.d.ts" />
 
 interface AccessClaims {
   sub: string;
@@ -314,4 +293,4 @@ export default {
       );
     }
   },
-};
+} satisfies ExportedHandler<Env>;
