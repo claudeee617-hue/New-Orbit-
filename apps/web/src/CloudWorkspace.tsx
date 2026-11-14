@@ -20,7 +20,9 @@ function readableError(status: number, payload: unknown): string {
   const message = typeof value.message === 'string' ? value.message : '';
 
   if (status === 401) {
-    return 'Cloud identity could not be verified. Refresh your Cloudflare Access session and try again.';
+    return (
+      'Cloud identity could not be verified. Refresh your Cloudflare Access session and try again.'
+    );
   }
   if (status === 403) return 'Your account is not allowed to access this workspace.';
   if (status === 409) return 'A workspace with this name already exists in your account.';
@@ -127,7 +129,9 @@ export function CloudWorkspace() {
   return (
     <section className="space-y-6" aria-labelledby="cloud-workspace-title">
       <div className="overflow-hidden rounded-xl border border-edge bg-panel">
-        <div className="flex flex-col gap-5 border-b border-edge p-6 sm:flex-row sm:items-center sm:justify-between lg:p-8">
+        <div
+          className="flex flex-col gap-5 border-b border-edge p-6 sm:flex-row sm:items-center sm:justify-between lg:p-8"
+        >
           <div className="max-w-2xl">
             <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-cyan">
               ORBIT · SECURE CLOUD
@@ -143,7 +147,9 @@ export function CloudWorkspace() {
               tenant-scoped storage.
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-3 rounded-lg border border-ok/25 bg-ok/5 px-4 py-3">
+          <div
+            className="flex shrink-0 items-center gap-3 rounded-lg border border-ok/25 bg-ok/5 px-4 py-3"
+          >
             <ShieldCheck size={19} className="text-ok" aria-hidden="true" />
             <div>
               <p className="text-xs font-semibold text-ink">Identity protected</p>
@@ -266,7 +272,9 @@ export function CloudWorkspace() {
           )}
 
           {loading ? (
-            <div className="mt-5 rounded-lg border border-dashed border-edge p-8 text-center text-sm text-mute">
+            <div
+              className="mt-5 rounded-lg border border-dashed border-edge p-8 text-center text-sm text-mute"
+            >
               Loading your private workspaces…
             </div>
           ) : workspaces.length === 0 && !error ? (
