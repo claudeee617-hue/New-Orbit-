@@ -88,7 +88,7 @@ const navigation: { id: WorkspaceView; label: string; description: string; icon:
     label: 'Business Workspace',
     description: 'Plan and operate',
     icon: 'business',
-  },,
+  },
   {
     id: 'cloud',
     label: 'Cloud Workspace',
