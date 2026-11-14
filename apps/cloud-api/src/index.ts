@@ -201,7 +201,10 @@ async function handle(request: Request, env: Env): Promise<Response> {
     const rawLimit = url.searchParams.get('limit');
     const requestedLimit = rawLimit === null ? 50 : Number(rawLimit);
     if (!Number.isInteger(requestedLimit) || requestedLimit < 1 || requestedLimit > 100) {
-      return json({ error: 'INVALID_PAGE_SIZE', message: 'Limit must be an integer from 1 to 100.' }, 400);
+      return json(
+        { error: 'INVALID_PAGE_SIZE', message: 'Limit must be an integer from 1 to 100.' },
+        400,
+      );
     }
 
     const rawCursor = url.searchParams.get('cursor');
@@ -239,7 +242,9 @@ async function handle(request: Request, env: Env): Promise<Response> {
            ORDER BY w.created_at DESC, w.id DESC LIMIT ?`,
     );
     const rows = cursor
-      ? await statement.bind(identity.sub, cursor.createdAt, cursor.createdAt, cursor.id, requestedLimit + 1).all()
+      ? await statement
+          .bind(identity.sub, cursor.createdAt, cursor.createdAt, cursor.id, requestedLimit + 1)
+          .all()
       : await statement.bind(identity.sub, requestedLimit + 1).all();
     const hasMore = rows.results.length > requestedLimit;
     const workspaces = hasMore ? rows.results.slice(0, requestedLimit) : rows.results;
