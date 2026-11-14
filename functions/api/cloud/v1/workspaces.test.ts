@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { onRequest } from './workspaces.js';
 
-function request(path = '/api/cloud/v1/workspaces', init: RequestInit = {}) {
+function request(path = '/api/cloud/v1/workspaces', init: RequestInit = {}): Request {
   return new Request('https://orbit-command-center.pages.dev' + path, init);
 }
 
@@ -18,7 +18,9 @@ describe('Pages cloud workspace bridge', () => {
   });
 
   it('forwards the Access assertion and bounded query through the service binding', async () => {
-    const fetch = vi.fn().mockResolvedValue(Response.json({ workspaces: [], nextCursor: null }));
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(Response.json({ workspaces: [], nextCursor: null }));
     const response = await onRequest({
       request: request('/api/cloud/v1/workspaces?limit=50', {
         headers: { 'Cf-Access-Jwt-Assertion': 'signed-access-assertion' },
@@ -35,7 +37,9 @@ describe('Pages cloud workspace bridge', () => {
   });
 
   it('forwards only JSON workspace creation bodies', async () => {
-    const fetch = vi.fn().mockResolvedValue(Response.json({ workspace: { id: 'w1' } }, { status: 201 }));
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(Response.json({ workspace: { id: 'w1' } }, { status: 201 }));
     const response = await onRequest({
       request: request('/api/cloud/v1/workspaces', {
         method: 'POST',
@@ -65,7 +69,10 @@ describe('Pages cloud workspace bridge', () => {
       env,
     });
     const wrongMethod = await onRequest({
-      request: request('/api/cloud/v1/workspaces', { method: 'DELETE', headers: assertion }),
+      request: request('/api/cloud/v1/workspaces', {
+        method: 'DELETE',
+        headers: assertion,
+      }),
       env,
     });
     const oversized = await onRequest({
