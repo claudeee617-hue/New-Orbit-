@@ -25,8 +25,8 @@
 - Engine entries are informational labels unless they already have a functioning route. They do not pretend to be active controls.
 - Runtime connection state comes from the existing local API health endpoint.
 - Dashboard counters continue to come from the authenticated API. No sample repository counts, build status, coverage or evidence records are fabricated.
-- The responsive mobile drawer traps Tab/Shift+Tab focus while open, closes on Escape, hides closed navigation from the focus order, and restores focus to its trigger.
-- A Chromium regression test exercises the mobile drawer keyboard cycle, Escape dismissal and trigger-focus restoration.
+- The responsive mobile drawer becomes a named modal dialog while open, marks the main workspace inert, traps Tab/Shift+Tab focus, closes on Escape or desktop-width resize, and restores focus without targeting a hidden trigger.
+- A Chromium regression test exercises the drawer keyboard cycle, modal/inert semantics, Escape dismissal, close-button operation, resize dismissal and focus restoration.
 - Existing Command Center, business forms, API calls and local token handling remain in their existing components.
 
 ## Verification required
