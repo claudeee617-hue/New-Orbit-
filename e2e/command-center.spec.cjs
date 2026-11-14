@@ -312,5 +312,5 @@ test(
     await expect(trigger).toHaveAttribute('aria-expanded', 'false');
     await expect(trigger).toBeFocused();
     await expect(sidebar).toHaveCSS('visibility', 'hidden');
-    },
+  },
 );
