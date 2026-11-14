@@ -13,10 +13,10 @@
       "database_name": "orbit-cloud",
       "database_id": "REPLACE_WITH_D1_DATABASE_ID",
       "migrations_dir": "migrations",
-    }
+    },
   ],
   "vars": {
     "ACCESS_TEAM_DOMAIN": "https://REPLACE_WITH_TEAM.cloudflareaccess.com",
     "ACCESS_AUD": "REPLACE_WITH_ACCESS_APPLICATION_AUD",
-  }
+  },
 }
