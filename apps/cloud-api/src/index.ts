@@ -52,9 +52,9 @@ function decodeJsonPart<T>(value: string): T {
   return JSON.parse(new TextDecoder().decode(decodeBase64Url(value))) as T;
 }
 
-async function accessKeys(issuer: string): Promise<Map<string, CryptoKey>> {
+async function accessKeys(issuer: string, refresh = false): Promise<Map<string, CryptoKey>> {
   const cached = jwksCache.get(issuer);
-  if (cached && cached.expiresAt > Date.now()) return cached.keys;
+  if (!refresh && cached && cached.expiresAt > Date.now()) return cached.keys;
 
   const response = await fetch(issuer + '/cdn-cgi/access/certs', {
     headers: { accept: 'application/json' },
@@ -89,7 +89,7 @@ async function accessKeys(issuer: string): Promise<Map<string, CryptoKey>> {
 
 async function authenticate(request: Request, env: Env): Promise<AccessClaims | null> {
   const token = request.headers.get('Cf-Access-Jwt-Assertion');
-  if (!token) return null;
+  if (!token || token.length > 16384) return null;
 
   const issuer = env.ACCESS_TEAM_DOMAIN.replace(/\/$/, '');
   if (!/^https:\/\/[a-z0-9-]+\.cloudflareaccess\.com$/i.test(issuer) || !env.ACCESS_AUD) {
@@ -111,10 +111,16 @@ async function authenticate(request: Request, env: Env): Promise<AccessClaims | 
 
     const now = Math.floor(Date.now() / 1000);
     if (!Number.isFinite(claims.exp) || claims.exp <= now) return null;
-    if (claims.nbf !== undefined && claims.nbf > now) return null;
+    if (
+      claims.nbf !== undefined &&
+      (!Number.isFinite(claims.nbf) || claims.nbf > now)
+    ) return null;
     if (claims.email_verified === false) return null;
 
-    const signingKey = (await accessKeys(issuer)).get(header.kid);
+    let signingKey = (await accessKeys(issuer)).get(header.kid);
+    if (!signingKey) {
+      signingKey = (await accessKeys(issuer, true)).get(header.kid);
+    }
     if (!signingKey) return null;
     const signed = encoder.encode(parts[0] + '.' + parts[1]);
     const valid = await crypto.subtle.verify(
@@ -208,6 +214,9 @@ async function handle(request: Request, env: Env): Promise<Response> {
   }
 
   if (url.pathname === '/v1/workspaces' && request.method === 'POST') {
+    if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json')) {
+      return json({ error: 'UNSUPPORTED_MEDIA_TYPE' }, 415);
+    }
     const contentLength = Number(request.headers.get('content-length') ?? '0');
     if (contentLength > 4096) return json({ error: 'PAYLOAD_TOO_LARGE' }, 413);
 
