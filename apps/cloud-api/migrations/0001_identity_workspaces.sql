@@ -1,7 +1,5 @@
 -- ORBIT cloud identity and tenant boundary foundation.
 -- Data is isolated by workspace membership; never query workspace data without identity_sub.
-PRAGMA foreign_keys = ON;
-
 CREATE TABLE IF NOT EXISTS workspaces (
   id TEXT PRIMARY KEY NOT NULL,
   name TEXT NOT NULL CHECK (length(name) BETWEEN 2 AND 80),
