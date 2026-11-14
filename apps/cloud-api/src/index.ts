@@ -111,10 +111,7 @@ async function authenticate(request: Request, env: Env): Promise<AccessClaims | 
 
     const now = Math.floor(Date.now() / 1000);
     if (!Number.isFinite(claims.exp) || claims.exp <= now) return null;
-    if (
-      claims.nbf !== undefined &&
-      (!Number.isFinite(claims.nbf) || claims.nbf > now)
-    ) return null;
+    if (claims.nbf !== undefined && (!Number.isFinite(claims.nbf) || claims.nbf > now)) return null;
     if (claims.email_verified === false) return null;
 
     let signingKey = (await accessKeys(issuer)).get(header.kid);
@@ -261,10 +258,7 @@ async function handle(request: Request, env: Env): Promise<Response> {
         ).bind(id, identity.sub, identity.email ?? null),
       ]);
     } catch (error) {
-      if (
-        error instanceof Error &&
-        error.message.includes('UNIQUE constraint failed')
-      ) {
+      if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
         return json(
           {
             error: 'WORKSPACE_CONFLICT',
