@@ -3,7 +3,7 @@
   "name": "orbit-cloud-api",
   "main": "src/index.ts",
   "compatibility_date": "2026-11-14",
-  "workers_dev": false,
+  "workers_dev": true,
   "observability": {
     "enabled": true,
     "logs": {
@@ -24,7 +24,7 @@
     },
   ],
   "vars": {
-    "ACCESS_TEAM_DOMAIN": "https://REPLACE_WITH_TEAM.cloudflareaccess.com",
-    "ACCESS_AUD": "REPLACE_WITH_ACCESS_APPLICATION_AUD",
+    "ACCESS_TEAM_DOMAIN": "https://summer-recipe-870a.cloudflareaccess.com",
+    "ACCESS_AUD": "e66cd770b0c5c3a31317bbdcaf274d0d522457a74651df990635ccc3121206e8",
   },
 }
