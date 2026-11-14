@@ -301,7 +301,8 @@ async function handle(request: Request, env: Env): Promise<Response> {
     try {
       await env.DB.batch([
         env.DB.prepare(
-          `INSERT INTO workspaces (id, name, workspace_key, created_by, created_at)\n           VALUES (?, ?, ?, ?, ?)`,
+          `INSERT INTO workspaces (id, name, workspace_key, created_by, created_at)
+           VALUES (?, ?, ?, ?, ?)`,
         ).bind(id, cleanName, key, identity.sub, createdAt),
         env.DB.prepare(
           `INSERT INTO workspace_members (
