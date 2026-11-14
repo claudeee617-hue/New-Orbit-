@@ -94,7 +94,7 @@ const navigation: { id: WorkspaceView; label: string; description: string; icon:
     label: 'Cloud Workspace',
     description: 'Secure team spaces',
     icon: 'cloud',
-  }
+  },
 ];
 
 function openCommandCenter() {
