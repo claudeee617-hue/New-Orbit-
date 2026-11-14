@@ -14,6 +14,14 @@ interface WorkspaceResponse {
   nextCursor: string | null;
 }
 
+async function readApiJson(response: Response): Promise<unknown> {
+  const contentType = response.headers.get('content-type') ?? '';
+  if (response.redirected || !contentType.toLowerCase().includes('application/json')) {
+    throw new Error('CLOUDFLARE_ACCESS_REQUIRED');
+  }
+  return response.json();
+}
+
 function readableError(status: number, payload: unknown): string {
   const value = payload && typeof payload === 'object' ? (payload as { message?: unknown }) : {};
   const message = typeof value.message === 'string' ? value.message : '';
@@ -35,6 +43,7 @@ export function CloudWorkspace() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [needsAuthentication, setNeedsAuthentication] = useState(false);
   const requestGeneration = useRef(0);
 
   const load = useCallback(async (signal?: AbortSignal, cursor?: string, append = false) => {
@@ -53,7 +62,7 @@ export function CloudWorkspace() {
         cache: 'no-store',
         ...(signal ? { signal } : {}),
       });
-      const payload: unknown = await response.json();
+      const payload: unknown = await readApiJson(response);
       if (!response.ok) throw new Error(readableError(response.status, payload));
 
       const result = payload as WorkspaceResponse;
@@ -106,10 +115,11 @@ export function CloudWorkspace() {
         cache: 'no-store',
         body: JSON.stringify({ name: cleanName }),
       });
-      const payload: unknown = await response.json();
+      const payload: unknown = await readApiJson(response);
       if (!response.ok) throw new Error(readableError(response.status, payload));
 
       const created = (payload as { workspace: CloudWorkspaceRecord }).workspace;
+      setNeedsAuthentication(false);
       requestGeneration.current += 1;
       setLoading(false);
       setLoadingMore(false);
@@ -117,7 +127,11 @@ export function CloudWorkspace() {
       setName('');
       setNotice('“' + created.name + '” is ready in your private cloud workspace.');
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Workspace could not be created.');
+      if (cause instanceof Error && cause.message === 'CLOUDFLARE_ACCESS_REQUIRED') {
+        setNeedsAuthentication(true);
+      } else {
+        setError(cause instanceof Error ? cause.message : 'Workspace could not be created.');
+      }
     } finally {
       setCreating(false);
     }
@@ -243,6 +257,25 @@ export function CloudWorkspace() {
             </button>
           </div>
 
+          {needsAuthentication && (
+            <div
+              role="alert"
+              className="mt-5 rounded-md border border-warn/30 bg-warn/5 p-4"
+            >
+              <p className="text-sm font-medium text-ink">
+                Sign in to your ORBIT cloud workspace
+              </p>
+              <p className="mt-1 text-xs leading-5 text-mute">
+                Cloud workspaces are limited to approved Cloudflare account members.
+              </p>
+              <a
+                href="/api/cloud/login"
+                className="mt-3 inline-flex rounded-md bg-cyan px-4 py-2.5 text-xs font-semibold text-void transition hover:brightness-110"
+              >
+                Sign in securely
+              </a>
+            </div>
+          )}
           {error && (
             <p
               role="alert"
