@@ -240,10 +240,6 @@ export function CommandCenter() {
       }),
     [graphPlotNodes],
   );
-  const graph3DEdges = useMemo(
-    () => graphPlotEdges.map((edge) => ({ id: edge.id, fromId: edge.from.id, toId: edge.to.id })),
-    [graphPlotEdges],
-  );
   const graphPlotPositions = useMemo(
     () => new Map(graphPlotNodes.map((item) => [item.id, item])),
     [graphPlotNodes],
@@ -267,6 +263,10 @@ export function CommandCenter() {
         })
         .slice(0, 120),
     [edges, graphPlotPositions],
+  );
+  const graph3DEdges = useMemo(
+    () => graphPlotEdges.map((edge) => ({ id: edge.id, fromId: edge.from.id, toId: edge.to.id })),
+    [graphPlotEdges],
   );
   const selectedGraphNode = nodes.find(
     (item) => display(objectValue(item).id) === selectedGraphNodeId,
