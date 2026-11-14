@@ -8,6 +8,7 @@
     "typecheck": "pnpm run types:check && tsc --noEmit --skipLibCheck --target ES2022 --module ESNext --moduleResolution Bundler --lib ES2022,DOM worker-configuration.d.ts src/index.ts",
     "test": "vitest run",
     "deploy": "pnpm dlx wrangler@4.136.0 deploy",
-    "types:check": "pnpm dlx wrangler@4.136.0 types worker-configuration.d.ts --config wrangler.jsonc --env-interface Env --check"
+    "types:check": "pnpm dlx wrangler@4.136.0 types worker-configuration.d.ts --config wrangler.jsonc --env-interface Env --check",
+    "build": "pnpm dlx wrangler@4.136.0 deploy --dry-run"
   }
 }
