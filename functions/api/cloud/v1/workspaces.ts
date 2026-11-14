@@ -11,6 +11,32 @@ interface PagesContext {
   env: Env;
 }
 
+async function readLimitedBody(request: Request, limit: number): Promise<string | null> {
+  const reader = request.body?.getReader();
+  if (!reader) return '';
+
+  const chunks: Uint8Array[] = [];
+  let length = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    length += value.byteLength;
+    if (length > limit) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+
+  const body = new Uint8Array(length);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(body);
+}
+
 export async function onRequest({ request, env }: PagesContext): Promise<Response> {
   const incoming = new URL(request.url);
   if (incoming.pathname !== '/api/cloud/v1/workspaces') {
@@ -18,6 +44,14 @@ export async function onRequest({ request, env }: PagesContext): Promise<Respons
   }
   if (request.method !== 'GET' && request.method !== 'POST') {
     return new Response(null, { status: 405, headers: { allow: 'GET, POST' } });
+  }
+  if (incoming.search.length > 1024) {
+    return Response.json({ error: 'QUERY_TOO_LARGE' }, { status: 414 });
+  }
+  for (const key of incoming.searchParams.keys()) {
+    if (key !== 'limit' && key !== 'cursor') {
+      return Response.json({ error: 'INVALID_QUERY' }, { status: 400 });
+    }
   }
 
   const assertion = request.headers.get('Cf-Access-Jwt-Assertion');
@@ -41,8 +75,8 @@ export async function onRequest({ request, env }: PagesContext): Promise<Respons
     if (contentLength > 4096) {
       return Response.json({ error: 'PAYLOAD_TOO_LARGE' }, { status: 413 });
     }
-    body = await request.text();
-    if (new TextEncoder().encode(body).byteLength > 4096) {
+    body = (await readLimitedBody(request, 4096)) ?? undefined;
+    if (body === undefined) {
       return Response.json({ error: 'PAYLOAD_TOO_LARGE' }, { status: 413 });
     }
     headers.set('content-type', 'application/json');
