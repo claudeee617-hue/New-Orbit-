@@ -21,19 +21,9 @@ reviews:
   suggested_reviewers: true
   poem: false
 
-  instructions: |
-    ORBIT is a local-first TypeScript engineering-intelligence monorepo. Its purpose is to trace repository changes and connect them to verifiable tests, coverage, build results, telemetry and evidence through Change Passports.
-    Treat evidence integrity as a core invariant: never accept fabricated, inferred or silently upgraded test/build/device results. Distinguish verified, supplied, missing, stale and unavailable evidence.
-    Prioritize exploitable security defects, data loss/corruption, incorrect graph or hash-chain semantics, broken provenance, unsafe filesystem/process/network operations, auth/authorization flaws, secret leakage, injection, path traversal, SSRF, race conditions, resource exhaustion, and false-positive/false-negative verification.
-    For TypeScript, check strict typing, runtime validation at trust boundaries, async error handling, deterministic behavior, backward compatibility and resource cleanup.
-    For CLI/API/MCP interfaces, check input validation, read-only guarantees where promised, stable output contracts, safe defaults and actionable errors.
-    For tests, check meaningful assertions, edge cases, regression coverage, isolation, determinism and cleanup. Do not treat a passing test suite as proof of untested behavior.
-    For GitHub Actions and CI, check least-privilege permissions, pinned third-party actions, untrusted event data in shell commands, token exposure, artifact provenance and platform-matrix consistency.
-    Avoid style-only comments when ESLint, Prettier or TypeScript already enforce the rule. Do not invent findings; cite the exact changed lines and explain a realistic failure scenario.
-
   auto_review:
     enabled: true
-    drafts: false
+    drafts: true
     auto_incremental_review: true
     auto_pause_after_reviewed_commits: 0
     ignore_title_keywords:
@@ -42,6 +32,17 @@ reviews:
       - 'NO REVIEW'
 
   path_instructions:
+    - path: '**'
+      instructions: |
+        ORBIT is a local-first TypeScript engineering-intelligence monorepo. Its purpose is to trace repository changes and connect them to verifiable tests, coverage, build results, telemetry and evidence through Change Passports.
+        Treat evidence integrity as a core invariant: never accept fabricated, inferred or silently upgraded test/build/device results. Distinguish verified, supplied, missing, stale and unavailable evidence.
+        Prioritize exploitable security defects, data loss/corruption, incorrect graph or hash-chain semantics, broken provenance, unsafe filesystem/process/network operations, auth/authorization flaws, secret leakage, injection, path traversal, SSRF, race conditions, resource exhaustion, and false-positive/false-negative verification.
+        For TypeScript, check strict typing, runtime validation at trust boundaries, async error handling, deterministic behavior, backward compatibility and resource cleanup.
+        For CLI/API/MCP interfaces, check input validation, read-only guarantees where promised, stable output contracts, safe defaults and actionable errors.
+        For tests, check meaningful assertions, edge cases, regression coverage, isolation, determinism and cleanup. Do not treat a passing test suite as proof of untested behavior.
+        For GitHub Actions and CI, check least-privilege permissions, pinned third-party actions, untrusted event data in shell commands, token exposure, artifact provenance and platform-matrix consistency.
+        Avoid style-only comments when ESLint, Prettier or TypeScript already enforce the rule. Do not invent findings; cite the exact changed lines and explain a realistic failure scenario.
+    
     - path: '.github/workflows/**'
       instructions: |
         Treat workflow edits as security-sensitive. Check least-privilege permissions, action pinning, pull_request_target misuse, untrusted context interpolation, secrets exposure, cache poisoning, artifact trust and fork-PR behavior.
