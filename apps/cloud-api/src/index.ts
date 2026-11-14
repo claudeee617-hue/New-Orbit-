@@ -261,7 +261,10 @@ async function handle(request: Request, env: Env): Promise<Response> {
         ).bind(id, identity.sub, identity.email ?? null),
       ]);
     } catch (error) {
-      if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
+      if (
+        error instanceof Error &&
+        error.message.includes('UNIQUE constraint failed')
+      ) {
         return json(
           {
             error: 'WORKSPACE_CONFLICT',
