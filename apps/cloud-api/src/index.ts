@@ -81,10 +81,7 @@ async function accessKeys(issuer: string): Promise<Map<string, CryptoKey>> {
   const jwks = (await response.json()) as JwkSet;
   const supported = jwks.keys.filter(
     (key) =>
-      key.kty === 'RSA' &&
-      key.use === 'sig' &&
-      key.alg === 'RS256' &&
-      typeof key.kid === 'string',
+      key.kty === 'RSA' && key.use === 'sig' && key.alg === 'RS256' && typeof key.kid === 'string',
   );
   const imported = await Promise.all(
     supported.map(
