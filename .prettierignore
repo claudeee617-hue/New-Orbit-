@@ -7,3 +7,4 @@ coverage
 .orbit
 *.md
 packages/witness/samples/
+apps/cloud-api/worker-configuration.d.ts
