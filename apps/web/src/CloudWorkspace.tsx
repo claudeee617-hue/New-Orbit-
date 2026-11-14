@@ -129,6 +129,7 @@ export function CloudWorkspace() {
       setWorkspaces((current) => [created, ...current.filter((item) => item.id !== created.id)]);
       setName('');
       setNotice('“' + created.name + '” is ready in your private cloud workspace.');
+      void load();
     } catch (cause) {
       if (cause instanceof Error && cause.message === 'CLOUDFLARE_ACCESS_REQUIRED') {
         setNeedsAuthentication(true);
