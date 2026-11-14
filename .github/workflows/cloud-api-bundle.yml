@@ -26,11 +26,15 @@ jobs:
           node-version: 22
       - run: pnpm install --frozen-lockfile
       - name: Bundle without deploying
-        run: pnpm dlx wrangler@4.136.0 deploy --dry-run --outdir ./cloud-api-bundle --config apps/cloud-api/wrangler.jsonc
-      - name: Inspect bundle
-        run: find cloud-api-bundle -maxdepth 2 -type f -printf '%p %s bytes\n'
+        run: pnpm dlx wrangler@4.136.0 deploy --dry-run --outdir ./cloud-api-bundle --config apps/cloud-api/wrangler.jsonc --metafile
+      - name: Inspect Wrangler output
+        run: |
+          find cloud-api-bundle .wrangler apps/cloud-api/.wrangler -type f -printf '%p %s bytes\\n' 2>/dev/null || true
       - uses: actions/upload-artifact@v4
         with:
           name: orbit-cloud-api-bundle
-          path: cloud-api-bundle/
+          path: |
+            cloud-api-bundle/
+            .wrangler/
+            apps/cloud-api/.wrangler/
           if-no-files-found: error
