@@ -5,9 +5,9 @@ This guide is the implementation recipe for the ORBIT web app. It deliberately u
 ## Verified compatibility
 
 - ORBIT uses React and React DOM 19.3.1.
-- Astryx Core 0.7.17 requires React and React DOM >=19.0.0 and has a peer dependency on `@stylexjs/stylex ^0.19.0`.
+- Astryx Core 0.7.16 requires React and React DOM >=19.0.0 and has a peer dependency on `@stylexjs/stylex ^0.19.0`.
 - Astryx ships precompiled ESM and CSS. Importing its prebuilt CSS does not require compiling Astryx source in ORBIT.
-- Astryx Neutral theme 0.7.17 requires Core 0.7.17 and React >=19.
+- Astryx Neutral theme 0.7.16 requires Core 0.7.16 and React >=19.
 
 Upstream references:
 - [Core README and Quick Start](https://github.com/meta/astryx/blob/main/packages/core/README.md)
@@ -20,7 +20,7 @@ Upstream references:
 From the ORBIT repository root:
 
 ```powershell
-pnpm --filter @orbit/web add @astryxdesign/core@0.7.17 @astryxdesign/theme-neutral@0.7.17 @stylexjs/stylex@^0.19.0
+pnpm --filter @orbit/web add @astryxdesign/core@0.7.16 @astryxdesign/theme-neutral@0.7.16 @stylexjs/stylex@^0.19.0
 ```
 
 This updates `apps/web/package.json` and the root `pnpm-lock.yaml` together. Keep Core and theme versions aligned.
