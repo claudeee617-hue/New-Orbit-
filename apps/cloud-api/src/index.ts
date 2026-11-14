@@ -149,6 +149,32 @@ async function authenticate(request: Request, env: Env): Promise<AccessClaims | 
   }
 }
 
+async function readLimitedBody(request: Request, limit: number): Promise<string | null> {
+  const reader = request.body?.getReader();
+  if (!reader) return '';
+
+  const chunks: Uint8Array[] = [];
+  let length = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    length += value.byteLength;
+    if (length > limit) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+
+  const body = new Uint8Array(length);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(body);
+}
+
 function workspaceKey(value: string): string {
   return value
     .trim()
@@ -194,10 +220,8 @@ async function handle(request: Request, env: Env): Promise<Response> {
 
     let payload: unknown;
     try {
-      const body = await request.text();
-      if (encoder.encode(body).byteLength > 4096) {
-        return json({ error: 'PAYLOAD_TOO_LARGE' }, 413);
-      }
+      const body = await readLimitedBody(request, 4096);
+      if (body === null) return json({ error: 'PAYLOAD_TOO_LARGE' }, 413);
       payload = JSON.parse(body);
     } catch {
       return json({ error: 'INVALID_JSON' }, 400);
