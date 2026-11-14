@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Building2, Cloud, Command, FileCheck2, GitBranch, ShieldCheck } from 'lucide-react';
+import { PrivacyCenter } from './PrivacyCenter.js';
 import { ORBIT_TAGLINE } from '@orbit/shared/health';
 import { BusinessModule } from './BusinessModule.js';
 import { BusinessOperations } from './BusinessOperations.js';
@@ -7,13 +8,14 @@ import { CloudWorkspace } from './CloudWorkspace.js';
 import { CommandCenter } from './CommandCenter.js';
 import { loadHealth, type HealthState } from './health.js';
 
-type WorkspaceView = 'overview' | 'business' | 'cloud';
-type IconName = 'overview' | 'business' | 'cloud' | 'scan' | 'evidence' | 'passport';
+type WorkspaceView = 'overview' | 'business' | 'cloud' | 'privacy';
+type IconName = 'overview' | 'business' | 'cloud' | 'privacy' | 'scan' | 'evidence' | 'passport';
 
 const glyphs: Record<IconName, typeof Command> = {
   overview: Command,
   business: Building2,
   cloud: Cloud,
+  privacy: ShieldCheck,
   scan: GitBranch,
   evidence: FileCheck2,
   passport: ShieldCheck,
@@ -48,7 +50,15 @@ function ApiDetails({ state }: { state: HealthState }) {
       <div className="orbit-api-copy">
         <p>{state.reason}</p>
         <p>
-          Start the local stack from the repository root with <code>pnpm dev</code>.
+          {typeof window !== 'undefined' &&
+          !['localhost', '127.0.0.1'].includes(window.location.hostname)
+            ? 'This is the hosted dashboard. Its local engineering API runs only on your own computer and is not exposed to the public internet.'
+            : ''}
+        </p>
+        <p>
+          For engineering features, run the local stack from the repository root with{' '}
+          <code>pnpm dev</code> and open the local dashboard. Hosted cloud workspaces are a separate
+          feature.
         </p>
       </div>
     );
@@ -94,6 +104,12 @@ const navigation: { id: WorkspaceView; label: string; description: string; icon:
     label: 'Cloud Workspace',
     description: 'Secure team spaces',
     icon: 'cloud',
+  },
+  {
+    id: 'privacy',
+    label: 'Privacy & Trust',
+    description: 'Data and compliance',
+    icon: 'privacy',
   },
 ];
 
@@ -283,7 +299,7 @@ export function App() {
             </span>
             <span>
               <strong>ATLAS</strong>
-              <small>Repository intelligence</small>
+              <small>Repository intelligence · see Command Center</small>
             </span>
             <i />
           </div>
@@ -353,7 +369,9 @@ export function App() {
                   ? 'Command Center'
                   : view === 'business'
                     ? 'Business Workspace'
-                    : 'Cloud Workspace'}
+                    : view === 'cloud'
+                      ? 'Cloud Workspace'
+                      : 'Privacy & Trust'}
               </strong>
             </div>
           </div>
@@ -507,7 +525,7 @@ export function App() {
                 <BusinessOperations />
               </div>
             </>
-          ) : (
+          ) : view === 'cloud' ? (
             <>
               <section className="orbit-business-heading">
                 <div className="orbit-eyebrow">
@@ -519,6 +537,22 @@ export function App() {
                 <p>Manage private team spaces through authenticated ORBIT cloud services.</p>
               </section>
               <CloudWorkspace />
+            </>
+          ) : (
+            <>
+              <section className="orbit-business-heading">
+                <div className="orbit-eyebrow">
+                  <span /> DATA PROTECTION & TRANSPARENCY
+                </div>
+                <h1>
+                  Privacy <em>& trust.</em>
+                </h1>
+                <p>
+                  Understand what ORBIT processes, where it is stored, and which controls are
+                  implemented.
+                </p>
+              </section>
+              <PrivacyCenter />
             </>
           )}
           <footer className="orbit-footer">
