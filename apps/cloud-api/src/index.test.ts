@@ -212,6 +212,27 @@ describe('ORBIT cloud API boundary', () => {
     expect(batch.mock.calls[0]?.[0]).toHaveLength(2);
   });
 
+  it('returns a server error when workspace persistence fails unexpectedly', async () => {
+    const statement = { bind: vi.fn().mockReturnThis() };
+    const prepare = vi.fn().mockReturnValue(statement);
+    const batch = vi.fn().mockRejectedValue(new Error('D1 unavailable'));
+    const token = await createToken();
+    const response = await worker.fetch(
+      new Request('https://orbit.test/v1/workspaces', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'Cf-Access-Jwt-Assertion': token,
+        },
+        body: JSON.stringify({ name: 'Research Lab' }),
+      }),
+      authenticatedEnv({ prepare, batch }),
+    );
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toMatchObject({ error: 'INTERNAL_ERROR' });
+  });
+
   it('refreshes Access signing keys when a rotated key id is first observed', async () => {
     const pair = (await crypto.subtle.generateKey(
       {
