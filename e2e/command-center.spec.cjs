@@ -295,7 +295,7 @@ test('mobile navigation traps focus, closes with Escape, and restores the trigge
   await expect(trigger).toHaveAttribute('aria-expanded', 'true');
   await expect(sidebar).toHaveCSS('visibility', 'visible');
   await expect(page.getByRole('dialog', { name: 'Workspace navigation' })).toBeVisible();
-  await expect(page.locator('.orbit-main')).toHaveAttribute('inert');
+  await expect(page.locator('.orbit-main')).toHaveAttribute('inert', '');
   await expect
     .poll(() => sidebar.evaluate((element) => element.contains(document.activeElement)))
     .toBe(true);
@@ -315,7 +315,7 @@ test('mobile navigation traps focus, closes with Escape, and restores the trigge
   await expect(trigger).toBeFocused();
   await expect(sidebar).toHaveCSS('visibility', 'hidden');
   await expect(sidebar).toHaveAttribute('aria-label', 'Main workspace navigation');
-  await expect(page.locator('.orbit-main')).not.toHaveAttribute('inert');
+  await expect(page.locator('.orbit-main')).not.toHaveAttribute('inert', '');
 
   await trigger.click();
   await sidebar.getByRole('button', { name: 'Close navigation' }).click();
