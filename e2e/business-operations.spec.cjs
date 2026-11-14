@@ -33,7 +33,7 @@ async function openBusiness(page) {
     }),
   );
   await page.goto('/');
-  await page.getByRole('button', { name: 'Business', exact: true }).click();
+  await page.getByRole('button', { name: 'Business Workspace', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Business operations workspace' })).toBeVisible();
 }
 
