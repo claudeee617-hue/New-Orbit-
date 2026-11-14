@@ -85,7 +85,11 @@ export async function onRequest({ request, env }: PagesContext): Promise<Respons
   const upstreamUrl = new URL('https://orbit-cloud-api.internal/v1/workspaces');
   upstreamUrl.search = incoming.search;
   const upstream = await env.ORBIT_CLOUD_API.fetch(
-    new Request(upstreamUrl, {\n      method: request.method,\n      headers,\n      ...(body === undefined ? {} : { body }),\n    }),
+    new Request(upstreamUrl, {
+      method: request.method,
+      headers,
+      ...(body === undefined ? {} : { body }),
+    }),
   );
   const responseHeaders = new Headers(upstream.headers);
   responseHeaders.set('cache-control', 'no-store');
