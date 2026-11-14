@@ -33,7 +33,10 @@ async function openBusiness(page) {
     }),
   );
   await page.goto('/');
-  await page.getByRole('button', { name: 'Business', exact: true }).click();
+  await page
+    .locator('#orbit-mobile-navigation')
+    .getByRole('button', { name: /^Business Workspace/ })
+    .click();
   await expect(page.getByRole('heading', { name: 'Business operations workspace' })).toBeVisible();
 }
 
@@ -60,7 +63,10 @@ test('creates validated opportunities, persists them, and rejects whitespace-onl
   expect(saved.opportunities.map((item) => item.account)).toEqual(['Acme Engineering']);
 
   await page.reload();
-  await page.getByRole('button', { name: 'Business', exact: true }).click();
+  await page
+    .locator('#orbit-mobile-navigation')
+    .getByRole('button', { name: /^Business Workspace/ })
+    .click();
   await expect(page.getByText('1 locally recorded opportunities')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Acme Engineering' })).toBeVisible();
 });
@@ -212,6 +218,14 @@ test('edits decimal estimates from imported backups and deletes persisted record
     .getByLabel('Evidence / discovery note')
     .fill('Updated without changing the imported estimate.');
   await page.getByRole('button', { name: 'Save changes' }).click();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        (key) => JSON.parse(localStorage.getItem(key)).opportunities[0].evidence,
+        storageKey,
+      ),
+    )
+    .toBe('Updated without changing the imported estimate.');
 
   let saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)), storageKey);
   expect(saved.opportunities[0].estimatedMonthlyValue).toBe(1.234);

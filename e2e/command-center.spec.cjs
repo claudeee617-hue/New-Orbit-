@@ -278,5 +278,66 @@ test('shows a useful API failure and an honest empty-workspace state', async ({ 
   await page.reload();
   await mockApi(page, { empty: true });
   await connect(page);
-  await expect(page.getByRole('status')).toContainText('No repository is registered yet');
+  await expect(
+    page.locator('[role="status"]').filter({ hasText: 'No repository is registered yet' }),
+  ).toContainText('No repository is registered yet');
+});
+
+test('mobile navigation traps focus, closes with Escape, and restores the trigger', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockApi(page);
+  await page.goto('/');
+  await connect(page);
+
+  const trigger = page.locator('.orbit-mobile-menu');
+  const sidebar = page.locator('#orbit-mobile-navigation');
+  await expect(trigger).toHaveAccessibleName('Open navigation');
+  await trigger.click();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  await expect(sidebar).toHaveCSS('visibility', 'visible');
+  await expect(page.getByRole('dialog', { name: 'Workspace navigation' })).toBeVisible();
+  await expect(page.locator('.orbit-main')).toHaveAttribute('inert', '');
+  await expect(sidebar.locator(':focus')).toHaveCount(1);
+
+  const firstFocusable = sidebar.locator('a[href]:visible, button:visible').first();
+  const lastFocusable = sidebar.locator('a[href]:visible, button:visible').last();
+  const closeControl = sidebar.getByRole('button', { name: 'Close navigation' });
+
+  await expect(firstFocusable).toBeFocused();
+  await expect(closeControl).toBeVisible();
+  await page.keyboard.press('Shift+Tab');
+  await expect(lastFocusable).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(firstFocusable).toBeFocused();
+
+  await page.keyboard.press('Escape');
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await expect(trigger).toBeFocused();
+  await expect(sidebar).toHaveCSS('visibility', 'hidden');
+  await expect(sidebar).toHaveAttribute('aria-label', 'Main workspace navigation');
+  await expect(page.locator('.orbit-main')).not.toHaveAttribute('inert', '');
+
+  await trigger.click();
+  await sidebar.getByRole('button', { name: 'Close navigation' }).click();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await expect(trigger).toBeFocused();
+
+  await page.setViewportSize({ width: 390, height: 360 });
+  await trigger.click();
+  await expect(sidebar).toHaveCSS('overflow-y', 'auto');
+  await expect
+    .poll(() => sidebar.evaluate((element) => element.scrollHeight > element.clientHeight))
+    .toBe(true);
+  const scrollTop = await sidebar.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+    return element.scrollTop;
+  });
+  expect(scrollTop).toBeGreaterThan(0);
+
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await expect(sidebar).toBeVisible();
+  await expect(page.locator('.orbit-main')).not.toHaveAttribute('inert', '');
 });

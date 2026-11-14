@@ -194,6 +194,8 @@ See [the threat model](docs/THREAT_MODEL.md), [technical design](docs/architectu
 - [PRD](docs/PRD.md), [architecture](docs/ARCHITECTURE.md), [technical design](docs/architecture/TECHNICAL_DESIGN.md), [data model](docs/DATA_MODEL.md)
 - [Technical roadmap](docs/ROADMAP.md), [competitive analysis](docs/COMPETITIVE_ANALYSIS.md), [test strategy](docs/TEST_STRATEGY.md), [UX specification](docs/UX_SPECIFICATION.md)
 - [Business model & monetization architecture](docs/BUSINESS_MODEL.md), [commercial product roadmap](docs/COMMERCIAL_ROADMAP.md), [App Business Module](docs/APP_BUSINESS_MODULE.md), [Prompt 11 API and CLI guide](docs/PROMPT_11_API_CLI.md)
+- [Astryx integration assessment](docs/ASTRYX_INTEGRATION.md), [consumer quickstart](docs/ASTRYX_ORBIT_QUICKSTART.md), and [ADR-0018](docs/DECISIONS/0018-adopt-astryx-incrementally.md)
+- [Open-source dashboard UI integrations](docs/UI_UPSTREAM_INTEGRATIONS.md)
 - [Architecture decision records](docs/DECISIONS/)
 
 ## Contributing
