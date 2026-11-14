@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { EngineWorkbenches } from './EngineWorkbenches.js';
+import { Graph3D } from './Graph3D.js';
 import {
   createOrbitApiClient,
   OrbitApiError,
@@ -124,6 +125,7 @@ export function CommandCenter() {
   const [selectedEvidenceId, setSelectedEvidenceId] = useState('');
   const [selectedGraphNodeId, setSelectedGraphNodeId] = useState('');
   const [graphTypeFilter, setGraphTypeFilter] = useState('all');
+  const [graphViewMode, setGraphViewMode] = useState<'2d' | '3d'>('2d');
   const [evidenceVerification, setEvidenceVerification] = useState<{
     fileName: string;
     actualHash: string;
@@ -223,6 +225,12 @@ export function CommandCenter() {
       };
     });
   }, [graphVisibleNodes]);
+  const graph3DNodes = useMemo(() => graphPlotNodes.map((node, index) => {
+    const angle = (index / Math.max(1, graphPlotNodes.length)) * Math.PI * 2;
+    const radius = graphPlotNodes.length > 1 ? 0.8 : 0;
+    return { id: node.id, label: node.label, x: Math.cos(angle) * radius, y: ((index % 5) - 2) * 0.11, z: Math.sin(angle) * radius };
+  }), [graphPlotNodes]);
+  const graph3DEdges = useMemo(() => graphPlotEdges.map((edge) => ({ id: edge.id, fromId: edge.from.id, toId: edge.to.id })), [graphPlotEdges]);
   const graphPlotPositions = useMemo(
     () => new Map(graphPlotNodes.map((item) => [item.id, item])),
     [graphPlotNodes],
@@ -748,6 +756,11 @@ export function CommandCenter() {
                 Radial overview of loaded nodes and their stored relationships.
               </p>
             </div>
+            <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex rounded-md border border-edge p-1" aria-label="Graph rendering mode">
+              <button type="button" aria-pressed={graphViewMode === '2d'} onClick={() => setGraphViewMode('2d')} className={'rounded px-3 py-2 text-xs ' + (graphViewMode === '2d' ? 'bg-cyan/10 text-cyan' : 'text-mute')}>2D</button>
+              <button type="button" aria-pressed={graphViewMode === '3d'} onClick={() => setGraphViewMode('3d')} className={'rounded px-3 py-2 text-xs ' + (graphViewMode === '3d' ? 'bg-cyan/10 text-cyan' : 'text-mute')}>3D</button>
+            </div>
             <label className="flex items-center gap-2 text-xs text-mute">
               Filter node type
               <select
@@ -763,9 +776,13 @@ export function CommandCenter() {
                 ))}
               </select>
             </label>
+            </div>
           </div>
           {graphPlotNodes.length ? (
             <div className="border-b border-edge bg-void/40 p-3">
+              {graphViewMode === '3d' ? (
+                <Graph3D nodes={graph3DNodes} edges={graph3DEdges} selectedId={selectedGraphNodeId} onSelect={setSelectedGraphNodeId} />
+              ) : (
               <svg
                 viewBox="0 0 720 410"
                 role="img"
@@ -822,6 +839,7 @@ export function CommandCenter() {
                   ))}
                 </g>
               </svg>
+              )}
               <p className="px-2 text-[10px] text-mute">
                 {graphVisibleNodes.length > graphPlotNodes.length
                   ? `Showing ${graphPlotNodes.length} of ${graphVisibleNodes.length} matching loaded nodes; select a node here or in the table.`
