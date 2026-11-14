@@ -282,9 +282,9 @@ test('shows a useful API failure and an honest empty-workspace state', async ({ 
 });
 
 
-test('mobile navigation traps focus, closes with Escape, and restores the trigger', async ({
-  page,
-}) => {
+test(
+  'mobile navigation traps focus, closes with Escape, and restores the trigger',
+  async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await mockApi(page);
   await page.goto('/');
@@ -312,4 +312,5 @@ test('mobile navigation traps focus, closes with Escape, and restores the trigge
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
   await expect(trigger).toBeFocused();
   await expect(sidebar).toHaveCSS('visibility', 'hidden');
-});
+  },
+);
