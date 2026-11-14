@@ -325,5 +325,5 @@ test('mobile navigation traps focus, closes with Escape, and restores the trigge
   await page.setViewportSize({ width: 1440, height: 1000 });
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
   await expect(sidebar).toBeVisible();
-  await expect(page.locator('.orbit-main')).not.toHaveAttribute('inert');
+  await expect(page.locator('.orbit-main')).not.toHaveAttribute('inert', '');
 });
