@@ -285,32 +285,32 @@ test('shows a useful API failure and an honest empty-workspace state', async ({ 
 test(
   'mobile navigation traps focus, closes with Escape, and restores the trigger',
   async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await mockApi(page);
-  await page.goto('/');
-  await connect(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await mockApi(page);
+    await page.goto('/');
+    await connect(page);
 
-  const trigger = page.getByRole('button', { name: 'Open navigation' });
-  const sidebar = page.getByRole('complementary', { name: 'Main workspace navigation' });
-  await trigger.click();
-  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
-  await expect(sidebar).toHaveCSS('visibility', 'visible');
-  await expect
-    .poll(() => sidebar.evaluate((element) => element.contains(document.activeElement)))
-    .toBe(true);
+    const trigger = page.getByRole('button', { name: 'Open navigation' });
+    const sidebar = page.getByRole('complementary', { name: 'Main workspace navigation' });
+    await trigger.click();
+    await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    await expect(sidebar).toHaveCSS('visibility', 'visible');
+    await expect
+      .poll(() => sidebar.evaluate((element) => element.contains(document.activeElement)))
+      .toBe(true);
 
-  const firstFocusable = sidebar.locator('button:visible').first();
-  const lastFocusable = sidebar.locator('button:visible').last();
+    const firstFocusable = sidebar.locator('button:visible').first();
+    const lastFocusable = sidebar.locator('button:visible').last();
 
-  await expect(firstFocusable).toBeFocused();
-  await page.keyboard.press('Shift+Tab');
-  await expect(lastFocusable).toBeFocused();
-  await page.keyboard.press('Tab');
-  await expect(firstFocusable).toBeFocused();
+    await expect(firstFocusable).toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+    await expect(lastFocusable).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(firstFocusable).toBeFocused();
 
-  await page.keyboard.press('Escape');
-  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
-  await expect(trigger).toBeFocused();
-  await expect(sidebar).toHaveCSS('visibility', 'hidden');
-  },
+    await page.keyboard.press('Escape');
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    await expect(trigger).toBeFocused();
+    await expect(sidebar).toHaveCSS('visibility', 'hidden');
+    },
 );
