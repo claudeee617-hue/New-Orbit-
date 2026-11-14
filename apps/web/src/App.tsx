@@ -347,7 +347,9 @@ export function App() {
             <span className="orbit-topbar-environment">
               <i /> LOCAL ENVIRONMENT
             </span>
-            <StatusBadge state={state} />
+            <span role="status" aria-live="polite">
+              <StatusBadge state={state} />
+            </span>
             <button
               className="orbit-refresh"
               type="button"
