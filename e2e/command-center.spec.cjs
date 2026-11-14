@@ -279,8 +279,8 @@ test('shows a useful API failure and an honest empty-workspace state', async ({ 
   await mockApi(page, { empty: true });
   await connect(page);
   await expect(
-    page.getByText('No repository is registered yet. Scan a local repository with the ORBIT CLI or API.'),
-  ).toBeVisible();
+    page.locator('[role="status"]').filter({ hasText: 'No repository is registered yet' }),
+  ).toContainText('No repository is registered yet');
 });
 
 test('mobile navigation traps focus, closes with Escape, and restores the trigger', async ({
