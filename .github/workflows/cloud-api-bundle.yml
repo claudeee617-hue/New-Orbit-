@@ -26,7 +26,7 @@ jobs:
           node-version: 22
       - run: pnpm install --frozen-lockfile
       - name: Bundle without deploying
-        run: pnpm dlx wrangler@4.136.0 versions upload apps/cloud-api/src/index.ts --dry-run --outdir ./cloud-api-bundle --config apps/cloud-api/wrangler.jsonc --metafile
+        run: pnpm dlx wrangler@4.136.0 versions upload apps/cloud-api/src/index.ts --dry-run --outdir ./cloud-api-bundle --config apps/cloud-api/wrangler.jsonc
       - name: Inspect Wrangler output
         run: |
           find cloud-api-bundle .wrangler apps/cloud-api/.wrangler -type f -printf '%p %s bytes\\n' 2>/dev/null || true
