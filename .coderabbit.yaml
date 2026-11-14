@@ -42,7 +42,7 @@ reviews:
         For tests, check meaningful assertions, edge cases, regression coverage, isolation, determinism and cleanup. Do not treat a passing test suite as proof of untested behavior.
         For GitHub Actions and CI, check least-privilege permissions, pinned third-party actions, untrusted event data in shell commands, token exposure, artifact provenance and platform-matrix consistency.
         Avoid style-only comments when ESLint, Prettier or TypeScript already enforce the rule. Do not invent findings; cite the exact changed lines and explain a realistic failure scenario.
-    
+
     - path: '.github/workflows/**'
       instructions: |
         Treat workflow edits as security-sensitive. Check least-privilege permissions, action pinning, pull_request_target misuse, untrusted context interpolation, secrets exposure, cache poisoning, artifact trust and fork-PR behavior.
