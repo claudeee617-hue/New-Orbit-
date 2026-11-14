@@ -41,7 +41,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: pnpm audit --audit-level=moderate
 
-      # format:check, lint, typecheck, test, build
+      # format:check, lint, typecheck, workspace tests, Pages Function tests, build
       - name: Check
         run: pnpm run check
 
