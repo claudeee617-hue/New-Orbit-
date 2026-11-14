@@ -37,9 +37,10 @@ Replace the single `@import 'tailwindcss';` in `apps/web/src/styles.css` with th
 @import '@astryxdesign/core/reset.css';
 @import '@astryxdesign/core/astryx.css';
 @import '@astryxdesign/theme-neutral/theme.css';
-@import '@astryxdesign/core/tailwind-theme.css';
 @import 'tailwindcss/utilities.css' layer(utilities);
 ```
+
+Do not import `@astryxdesign/core/tailwind-theme.css` for this consumer spike. Its global Tailwind token bridge can change ORBIT utility defaults (including `text-xs`) across existing screens. Keep ORBIT's typography scale intact and add only narrowly scoped, ORBIT-owned token mappings when a component probe requires them.
 
 The layer order is important: Astryx component styles must remain below ORBIT's Tailwind utilities. Do not import Astryx CSS from a component file; import it once from the global stylesheet.
 
