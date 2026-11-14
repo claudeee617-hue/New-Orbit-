@@ -1194,3 +1194,18 @@ body {
     transition: none !important;
   }
 }
+
+
+/* Lightweight interactive 3D graph */
+.orbit-graph3d { min-width: 0; }
+.orbit-graph3d-canvas {
+  display: block; width: 100%; height: clamp(280px, 48vw, 500px);
+  border: 1px solid #26394a; border-radius: 10px;
+  background: radial-gradient(ellipse at center, #102432 0%, #09111b 60%, #080d15 100%);
+  touch-action: pan-y; cursor: grab;
+}
+.orbit-graph3d-canvas:active { cursor: grabbing; }
+.orbit-graph3d-node-list { display: flex; flex-wrap: wrap; gap: 6px; max-height: 112px; overflow: auto; padding: 10px 2px 2px; }
+.orbit-graph3d-node-list button { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 1px solid #26394a; border-radius: 6px; padding: 5px 8px; color: #91a6b9; font: 10px var(--font-mono); }
+.orbit-graph3d-node-list button.is-selected { border-color: #4de3f5; color: #b9f7ff; background: #143345; }
+@media (max-width: 560px) { .orbit-graph3d-canvas { height: 310px; } }
