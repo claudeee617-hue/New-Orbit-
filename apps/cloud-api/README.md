@@ -13,8 +13,8 @@ This is a separate, edge-native cloud control plane. It does **not** replace the
 
 ## Provisioning
 
-1. Create a Cloudflare D1 database named `orbit-cloud`.
-2. Replace the placeholder `database_id` in `wrangler.jsonc`. Keep `workers_dev` disabled and attach the Worker only to the hostname protected by Cloudflare Access.
+1. The dedicated `orbit-cloud` D1 database is provisioned in APAC with read replication disabled.
+2. The database ID is configured in `wrangler.jsonc`. Keep `workers_dev` disabled and attach the Worker only to the hostname protected by Cloudflare Access.
 3. Configure a Cloudflare Access self-hosted application for the eventual API hostname. Set its team issuer and application audience in Worker vars.
 4. Apply migrations with `wrangler d1 migrations apply orbit-cloud --remote`.
 5. Deploy from this directory with `wrangler deploy`.
