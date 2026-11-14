@@ -199,7 +199,8 @@ describe('ORBIT cloud API boundary', () => {
       role: 'owner',
       createdAt: '2026-11-13T00:00:00.000Z',
     }));
-    const all = vi.fn()
+    const all = vi
+      .fn()
       .mockResolvedValueOnce({ results: firstPage, success: true })
       .mockResolvedValueOnce({ results: secondPage, success: true });
     const bind = vi.fn().mockReturnValue({ all });
@@ -213,17 +214,24 @@ describe('ORBIT cloud API boundary', () => {
       }),
       env,
     );
-    const first = await firstResponse.json() as { workspaces: unknown[]; nextCursor: string };
+    const first = (await firstResponse.json()) as {
+      workspaces: unknown[];
+      nextCursor: string;
+    };
     expect(first.workspaces).toHaveLength(50);
     expect(first.nextCursor).toEqual(expect.any(String));
 
     const secondResponse = await worker.fetch(
-      new Request(`https://orbit.test/v1/workspaces?limit=100&cursor=${encodeURIComponent(first.nextCursor)}`, {
-        headers: { 'Cf-Access-Jwt-Assertion': token },
-      }),
+      new Request(
+        `https://orbit.test/v1/workspaces?limit=100&cursor=${encodeURIComponent(first.nextCursor)}`,
+        { headers: { 'Cf-Access-Jwt-Assertion': token } },
+      ),
       env,
     );
-    const second = await secondResponse.json() as { workspaces: unknown[]; nextCursor: string | null };
+    const second = (await secondResponse.json()) as {
+      workspaces: unknown[];
+      nextCursor: string | null;
+    };
     expect(second.workspaces).toHaveLength(51);
     expect(second.nextCursor).toBeNull();
     expect(first.workspaces.length + second.workspaces.length).toBe(101);
@@ -306,7 +314,9 @@ describe('ORBIT cloud API boundary', () => {
     );
     const originalToken = await createToken();
     const emptyRows = vi.fn().mockResolvedValue({ results: [], success: true });
-    const originalPrepare = vi.fn().mockReturnValue({ bind: vi.fn().mockReturnValue({ all: emptyRows }) });
+    const originalPrepare = vi.fn().mockReturnValue({
+      bind: vi.fn().mockReturnValue({ all: emptyRows }),
+    });
     const env = authenticatedEnv({ prepare: originalPrepare, batch: vi.fn() });
     const originalResponse = await freshWorker.fetch(
       new Request('https://orbit.test/v1/workspaces', {
@@ -344,7 +354,9 @@ describe('ORBIT cloud API boundary', () => {
       signingKey: pair.privateKey,
     });
     const rows = vi.fn().mockResolvedValue({ results: [], success: true });
-    const prepare = vi.fn().mockReturnValue({ bind: vi.fn().mockReturnValue({ all: rows }) });
+    const prepare = vi.fn().mockReturnValue({
+      bind: vi.fn().mockReturnValue({ all: rows }),
+    });
 
     const response = await freshWorker.fetch(
       new Request('https://orbit.test/v1/workspaces', {
