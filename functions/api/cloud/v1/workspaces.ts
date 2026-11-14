@@ -47,7 +47,10 @@ export async function onRequest({ request, env }: PagesContext): Promise<Respons
   }
   if (!env.ORBIT_CLOUD_API?.fetch) {
     return Response.json(
-      { error: 'CLOUD_SERVICE_UNAVAILABLE', message: 'Cloud workspaces are not enabled in this deployment.' },
+      {
+        error: 'CLOUD_SERVICE_UNAVAILABLE',
+        message: 'Cloud workspaces are not enabled in this deployment.',
+      },
       { status: 503, headers: { 'cache-control': 'no-store' } },
     );
   }
