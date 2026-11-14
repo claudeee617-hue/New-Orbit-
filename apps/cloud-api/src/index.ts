@@ -18,6 +18,7 @@ interface D1Statement {
 
 interface D1Database {
   prepare(query: string): D1Statement;
+  batch<T = unknown>(statements: D1Statement[]): Promise<T[]>;
 }
 
 interface AccessClaims {
@@ -169,7 +170,9 @@ async function handle(request: Request, env: Env): Promise<Response> {
     if (contentLength > 4096) return json({ error: "PAYLOAD_TOO_LARGE" }, 413);
     let payload: unknown;
     try {
-      payload = await request.json();
+      const body = await request.text();
+      if (encoder.encode(body).byteLength > 4096) return json({ error: "PAYLOAD_TOO_LARGE" }, 413);
+      payload = JSON.parse(body);
     } catch {
       return json({ error: "INVALID_JSON" }, 400);
     }
@@ -186,12 +189,14 @@ async function handle(request: Request, env: Env): Promise<Response> {
 
     const id = crypto.randomUUID();
     try {
-      await env.DB.prepare(
-        "INSERT INTO workspaces (id, name, workspace_key, created_by) VALUES (?, ?, ?, ?)",
-      ).bind(id, cleanName, key, identity.sub).run();
-      await env.DB.prepare(
-        "INSERT INTO workspace_members (workspace_id, identity_sub, email, role) VALUES (?, ?, ?, 'owner')",
-      ).bind(id, identity.sub, identity.email ?? null).run();
+      await env.DB.batch([
+        env.DB.prepare(
+          "INSERT INTO workspaces (id, name, workspace_key, created_by) VALUES (?, ?, ?, ?)",
+        ).bind(id, cleanName, key, identity.sub),
+        env.DB.prepare(
+          "INSERT INTO workspace_members (workspace_id, identity_sub, email, role) VALUES (?, ?, ?, 'owner')",
+        ).bind(id, identity.sub, identity.email ?? null),
+      ]);
     } catch {
       return json({ error: "WORKSPACE_CONFLICT", message: "A workspace with this key already exists, or the workspace could not be created." }, 409);
     }
