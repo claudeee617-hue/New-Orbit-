@@ -198,16 +198,62 @@ async function handle(request: Request, env: Env): Promise<Response> {
   }
 
   if (url.pathname === '/v1/workspaces' && request.method === 'GET') {
-    const rows = await env.DB.prepare(
-      `SELECT w.id, w.name, w.workspace_key AS workspaceKey, m.role, w.created_at AS createdAt
-       FROM workspaces w
-       INNER JOIN workspace_members m ON m.workspace_id = w.id
-       WHERE m.identity_sub = ?
-       ORDER BY w.created_at DESC LIMIT 100`,
-    )
-      .bind(identity.sub)
-      .all();
-    return json({ workspaces: rows.results });
+    const rawLimit = url.searchParams.get('limit');
+    const requestedLimit = rawLimit === null ? 50 : Number(rawLimit);
+    if (!Number.isInteger(requestedLimit) || requestedLimit < 1 || requestedLimit > 100) {
+      return json({ error: 'INVALID_PAGE_SIZE', message: 'Limit must be an integer from 1 to 100.' }, 400);
+    }
+
+    const rawCursor = url.searchParams.get('cursor');
+    let cursor: { createdAt: string; id: string } | null = null;
+    if (rawCursor) {
+      try {
+        cursor = decodeJsonPart<{ createdAt: string; id: string }>(rawCursor);
+      } catch {
+        return json({ error: 'INVALID_CURSOR' }, 400);
+      }
+      if (
+        !cursor ||
+        typeof cursor.createdAt !== 'string' ||
+        cursor.createdAt.length > 64 ||
+        typeof cursor.id !== 'string' ||
+        cursor.id.length === 0 ||
+        cursor.id.length > 128
+      ) {
+        return json({ error: 'INVALID_CURSOR' }, 400);
+      }
+    }
+
+    const statement = env.DB.prepare(
+      cursor
+        ? `SELECT w.id, w.name, w.workspace_key AS workspaceKey, m.role, w.created_at AS createdAt
+           FROM workspaces w
+           INNER JOIN workspace_members m ON m.workspace_id = w.id
+           WHERE m.identity_sub = ?
+             AND (w.created_at < ? OR (w.created_at = ? AND w.id < ?))
+           ORDER BY w.created_at DESC, w.id DESC LIMIT ?`
+        : `SELECT w.id, w.name, w.workspace_key AS workspaceKey, m.role, w.created_at AS createdAt
+           FROM workspaces w
+           INNER JOIN workspace_members m ON m.workspace_id = w.id
+           WHERE m.identity_sub = ?
+           ORDER BY w.created_at DESC, w.id DESC LIMIT ?`,
+    );
+    const rows = cursor
+      ? await statement.bind(identity.sub, cursor.createdAt, cursor.createdAt, cursor.id, requestedLimit + 1).all()
+      : await statement.bind(identity.sub, requestedLimit + 1).all();
+    const hasMore = rows.results.length > requestedLimit;
+    const workspaces = hasMore ? rows.results.slice(0, requestedLimit) : rows.results;
+    const last = workspaces[workspaces.length - 1] as
+      | { createdAt?: unknown; id?: unknown }
+      | undefined;
+    const nextCursor =
+      hasMore && typeof last?.createdAt === 'string' && typeof last.id === 'string'
+        ? btoa(JSON.stringify({ createdAt: last.createdAt, id: last.id }))
+            .replace(/\\+/g, '-')
+            .replace(/\\//g, '_')
+            .replace(/=+$/g, '')
+        : null;
+    return json({ workspaces, nextCursor });
   }
 
   if (url.pathname === '/v1/workspaces' && request.method === 'POST') {
