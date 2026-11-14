@@ -265,7 +265,7 @@ describe('ORBIT cloud API boundary', () => {
 
     expect(response.status).toBe(201);
     expect(await response.json()).toMatchObject({
-      workspace: { name: 'Research Lab', workspaceKey: 'research-lab', role: 'owner' },
+      workspace: { name: 'Research Lab', workspaceKey: 'research-lab', role: 'owner', createdAt: expect.any(String) },
     });
     expect(prepare).toHaveBeenCalledTimes(2);
     expect(batch).toHaveBeenCalledTimes(1);
@@ -277,6 +277,7 @@ describe('ORBIT cloud API boundary', () => {
       'Research Lab',
       'research-lab',
       'orbit-test-user',
+      expect.any(String),
     );
     expect(membershipStatement.bind).toHaveBeenCalledWith(
       workspaceId,
