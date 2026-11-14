@@ -192,7 +192,7 @@ describe('ORBIT cloud API boundary', () => {
       role: 'owner',
       createdAt: '2026-11-14T00:00:00.000Z',
     }));
-    const secondPage = Array.from({ length: 50 }, (_, index) => ({
+    const secondPage = Array.from({ length: 51 }, (_, index) => ({
       id: `workspace-${String(index + 52).padStart(3, '0')}`,
       name: `Workspace ${index + 52}`,
       workspaceKey: `workspace-${index + 52}`,
@@ -224,9 +224,9 @@ describe('ORBIT cloud API boundary', () => {
       env,
     );
     const second = await secondResponse.json() as { workspaces: unknown[]; nextCursor: string | null };
-    expect(second.workspaces).toHaveLength(50);
+    expect(second.workspaces).toHaveLength(51);
     expect(second.nextCursor).toBeNull();
-    expect(first.workspaces.length + second.workspaces.length).toBe(100);
+    expect(first.workspaces.length + second.workspaces.length).toBe(101);
     expect(bind).toHaveBeenCalledTimes(2);
   });
 
