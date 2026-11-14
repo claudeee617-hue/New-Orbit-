@@ -90,10 +90,17 @@ Run from the repository root:
 
 ```powershell
 pnpm install --frozen-lockfile
-pnpm --filter @orbit/web typecheck
-pnpm --filter @orbit/web test
-pnpm --filter @orbit/web build
+pnpm run check
 ```
+
+The root check runs Prettier formatting validation, lint, workspace typecheck, unit tests, and production builds. For a focused web-only typecheck, build the shared workspace dependency first:
+
+```powershell
+pnpm --filter @orbit/shared build
+pnpm --filter @orbit/web typecheck
+```
+
+Before release or merge, also require the repository GitHub Actions gates to pass: the Ubuntu, Windows and macOS check matrix, Chromium browser E2E, MCP stdio/SQLite read-only acceptance, and security/CodeQL checks. The browser E2E job covers the mobile drawer's keyboard cycle, modal/inert semantics, short-viewport scrolling, Escape/close-button operation and desktop-resize dismissal.
 
 Then verify at desktop, tablet, and mobile widths:
 - no missing Astryx CSS or runtime StyleX errors;
@@ -102,7 +109,7 @@ Then verify at desktop, tablet, and mobile widths:
 - dark mode and ORBIT token contrast remain acceptable;
 - existing Overview, API health, Business module, and Business Operations workflows are unchanged.
 
-Only after these checks pass should Astryx components be adopted in production screens.
+Only after the full local check and required GitHub Actions gates pass should Astryx components be adopted in production screens.
 
 ## Important
 
