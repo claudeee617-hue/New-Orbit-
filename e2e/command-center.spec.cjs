@@ -289,8 +289,9 @@ test('mobile navigation traps focus, closes with Escape, and restores the trigge
   await page.goto('/');
   await connect(page);
 
-  const trigger = page.getByRole('button', { name: 'Open navigation' });
+  const trigger = page.locator('.orbit-mobile-menu');
   const sidebar = page.locator('#orbit-mobile-navigation');
+  await expect(trigger).toHaveAccessibleName('Open navigation');
   await trigger.click();
   await expect(trigger).toHaveAttribute('aria-expanded', 'true');
   await expect(sidebar).toHaveCSS('visibility', 'visible');
