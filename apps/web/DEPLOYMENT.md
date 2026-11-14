@@ -1,6 +1,6 @@
 # ORBIT Command Center deployment
 
-The public-facing dashboard is published through Cloudflare Pages. Cloud routes are protected by a shared Cloudflare Access application and use a Pages service binding to reach the cloud Worker without browser CORS or client-held credentials.
+The public-facing dashboard is published through Cloudflare Pages. Only the cloud workspace API paths are protected by Cloudflare Access; the main dashboard remains publicly viewable. Pages Functions use a service binding to reach the cloud Worker without browser CORS or client-held credentials.
 
 ## Production endpoints
 
@@ -11,15 +11,17 @@ The public-facing dashboard is published through Cloudflare Pages. Cloud routes 
 
 ## Cloud workspace request path
 
-1. A user opens the Pages dashboard and authenticates through Cloudflare Access.
-2. Cloudflare Access injects the signed `Cf-Access-Jwt-Assertion` header into the Pages Function request.
-3. `functions/api/cloud/v1/workspaces.ts` validates that assertion is present and forwards it over the `ORBIT_CLOUD_API` service binding.
-4. The Worker independently verifies the RS256 signature, issuer, audience, expiry and not-before claims.
-5. D1 reads and writes are scoped to the authenticated Access subject and workspace membership.
+1. A visitor can open the dashboard without signing in.
+2. The Cloud Workspace section calls the same-origin `/api/cloud/v1/workspaces` route.
+3. Cloudflare Access protects `/api/cloud/*` and prompts approved Cloudflare account members to sign in. The `/api/cloud/login` route returns the user to the dashboard after authentication.
+4. Cloudflare Access injects the signed `Cf-Access-Jwt-Assertion` header into the Pages Function request.
+5. `functions/api/cloud/v1/workspaces.ts` bounds request sizes and forwards the assertion over the private `ORBIT_CLOUD_API` service binding.
+6. The Worker independently verifies the RS256 signature, issuer, audience, expiry and not-before claims.
+7. D1 reads and writes are scoped to the authenticated Access subject and workspace membership.
 
-The browser calls only the same-origin `/api/cloud/v1/workspaces` endpoint. It never receives a service token, API secret or cross-origin Access assertion. The Pages service binding is configured on the production environment. The Pages project watches `functions/**` for deployments.
+The Worker hostname is protected at `/v1/*`; the Pages dashboard root remains public. The browser calls only the same-origin Pages route and never receives a service token, API secret or cross-origin Access assertion.
 
-The Access application currently permits Cloudflare account members only. This is a private deployment, not public self-service signup. Do not change its policy to Everyone or open email signup without an explicit product decision, abuse controls and a tested account onboarding flow.
+The Access policy currently permits Cloudflare account members only. This is a private cloud-workspace beta, not public self-service signup. Do not change its policy to Everyone or open email signup without an explicit product decision, abuse controls and a tested account onboarding flow.
 
 ## Local-first engineering runtime
 
