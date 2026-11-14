@@ -296,9 +296,7 @@ test('mobile navigation traps focus, closes with Escape, and restores the trigge
   await expect(sidebar).toHaveCSS('visibility', 'visible');
   await expect(page.getByRole('dialog', { name: 'Workspace navigation' })).toBeVisible();
   await expect(page.locator('.orbit-main')).toHaveAttribute('inert', '');
-  await expect
-    .poll(() => sidebar.evaluate((element) => element.contains(document.activeElement)))
-    .toBe(true);
+  await expect(sidebar.locator(':focus')).toHaveCount(1);
 
   const firstFocusable = sidebar.locator('button:visible').first();
   const lastFocusable = sidebar.locator('button:visible').last();
