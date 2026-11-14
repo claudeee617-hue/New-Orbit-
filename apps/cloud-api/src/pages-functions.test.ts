@@ -19,9 +19,7 @@ describe('Pages cloud workspace bridge', () => {
   });
 
   it('forwards the Access assertion and bounded query through the service binding', async () => {
-    const fetch = vi
-      .fn()
-      .mockResolvedValue(Response.json({ workspaces: [], nextCursor: null }));
+    const fetch = vi.fn().mockResolvedValue(Response.json({ workspaces: [], nextCursor: null }));
     const response = await workspaceRequest({
       request: pageRequest('/api/cloud/v1/workspaces?limit=50', {
         headers: { 'Cf-Access-Jwt-Assertion': 'signed-access-assertion' },
