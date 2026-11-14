@@ -218,6 +218,14 @@ test('edits decimal estimates from imported backups and deletes persisted record
     .getByLabel('Evidence / discovery note')
     .fill('Updated without changing the imported estimate.');
   await page.getByRole('button', { name: 'Save changes' }).click();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        (key) => JSON.parse(localStorage.getItem(key)).opportunities[0].evidence,
+        storageKey,
+      ),
+    )
+    .toBe('Updated without changing the imported estimate.');
 
   let saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)), storageKey);
   expect(saved.opportunities[0].estimatedMonthlyValue).toBe(1.234);
