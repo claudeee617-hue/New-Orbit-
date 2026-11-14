@@ -26,7 +26,7 @@ The first runtime adoption must be limited to one low-risk component behind an O
 
 ### Negative / costs
 
-- StyleX integration adds build configuration and maintenance surface.
+- Astryx CSS and theme integration adds cascade and token-mapping maintenance surface.
 - Token mapping and CSS ordering require explicit testing.
 - Upstream updates need compatibility review and bundle-size monitoring.
 
