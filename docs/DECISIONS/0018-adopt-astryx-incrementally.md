@@ -8,7 +8,7 @@
 
 ORBIT's web application uses React 19, Vite 8 and Tailwind CSS 4 with a dark engineering-console theme. Meta's Astryx is an MIT-licensed React design system whose Core package uses StyleX-authored styles and is built as part of a larger pnpm workspace.
 
-React-level compatibility does not guarantee styling/build compatibility. Importing StyleX components without the supported transform and CSS pipeline risks components rendering without their intended styles or introducing regressions.
+React compatibility is promising. Astryx ships prebuilt ESM and CSS for consumers; the primary integration risks are CSS layer order, theme token mapping, and runtime verification.
 
 ## Decision
 
