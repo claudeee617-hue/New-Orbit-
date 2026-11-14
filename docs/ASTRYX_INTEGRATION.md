@@ -28,7 +28,7 @@ These are compatible at the React level. Astryx's documented prebuilt consumer p
 
 1. Keep ORBIT's data fetching, API contracts, domain logic, accessibility semantics, and evidence claims unchanged.
 2. Do not copy Astryx source files into ORBIT. Prefer the published `@astryxdesign/core` package and preserve its license notices.
-3. Do not import StyleX-authored components until the StyleX transform is configured in the Vite build and verified in production output.
+3. Use the published prebuilt package and CSS exports for the consumer spike; only configure a StyleX transform if ORBIT later authors StyleX or modifies Astryx source.
 4. Keep Tailwind CSS 4 as the existing utility layer unless a tested migration decision explicitly replaces it.
 5. Preserve ORBIT's dark visual identity, reduced-motion support, keyboard focus visibility, and responsive layout.
 6. Avoid adding Astryx's full monorepo, Storybook, CLI, charts, rich-text, native, or lab workspaces to ORBIT.
