@@ -290,10 +290,12 @@ test('mobile navigation traps focus, closes with Escape, and restores the trigge
   await connect(page);
 
   const trigger = page.getByRole('button', { name: 'Open navigation' });
-  const sidebar = page.getByRole('complementary', { name: 'Main workspace navigation' });
+  const sidebar = page.locator('#orbit-mobile-navigation');
   await trigger.click();
   await expect(trigger).toHaveAttribute('aria-expanded', 'true');
   await expect(sidebar).toHaveCSS('visibility', 'visible');
+  await expect(page.getByRole('dialog', { name: 'Workspace navigation' })).toBeVisible();
+  await expect(page.locator('.orbit-main')).toHaveAttribute('inert');
   await expect
     .poll(() => sidebar.evaluate((element) => element.contains(document.activeElement)))
     .toBe(true);
@@ -302,6 +304,7 @@ test('mobile navigation traps focus, closes with Escape, and restores the trigge
   const lastFocusable = sidebar.locator('button:visible').last();
 
   await expect(firstFocusable).toBeFocused();
+  await expect(firstFocusable).toHaveAccessibleName('Close navigation');
   await page.keyboard.press('Shift+Tab');
   await expect(lastFocusable).toBeFocused();
   await page.keyboard.press('Tab');
@@ -311,4 +314,17 @@ test('mobile navigation traps focus, closes with Escape, and restores the trigge
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
   await expect(trigger).toBeFocused();
   await expect(sidebar).toHaveCSS('visibility', 'hidden');
+  await expect(sidebar).toHaveAttribute('aria-label', 'Main workspace navigation');
+  await expect(page.locator('.orbit-main')).not.toHaveAttribute('inert');
+
+  await trigger.click();
+  await sidebar.getByRole('button', { name: 'Close navigation' }).click();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await expect(trigger).toBeFocused();
+
+  await trigger.click();
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await expect(sidebar).toBeVisible();
+  await expect(page.locator('.orbit-main')).not.toHaveAttribute('inert');
 });
