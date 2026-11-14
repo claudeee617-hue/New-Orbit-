@@ -354,11 +354,6 @@ describe('ORBIT cloud API boundary', () => {
       kid: 'orbit-rotated-key',
       signingKey: pair.privateKey,
     });
-    const rows = vi.fn().mockResolvedValue({ results: [], success: true });
-    const prepare = vi.fn().mockReturnValue({
-      bind: vi.fn().mockReturnValue({ all: rows }),
-    });
-
     const response = await freshWorker.fetch(
       new Request('https://orbit.test/v1/workspaces', {
         headers: { 'Cf-Access-Jwt-Assertion': token },
