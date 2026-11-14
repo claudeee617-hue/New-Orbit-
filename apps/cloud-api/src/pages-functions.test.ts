@@ -7,6 +7,15 @@ function pageRequest(path: string, init: RequestInit = {}): Request {
 }
 
 describe('Pages cloud workspace bridge', () => {
+  it('fails closed when the cloud service binding is unavailable', async () => {
+    const response = await workspaceRequest({
+      request: pageRequest('/api/cloud/v1/workspaces'),
+      env: {},
+    });
+
+    expect(response.status).toBe(503);
+  });
+
   it('requires the Access assertion before calling the cloud service', async () => {
     const fetch = vi.fn();
     const response = await workspaceRequest({
