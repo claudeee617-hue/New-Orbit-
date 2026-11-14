@@ -110,6 +110,7 @@ export function App() {
 
   useEffect(() => {
     if (!mobileNavOpen) return;
+    const mobileLayout = window.matchMedia('(max-width: 820px)');
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
@@ -154,11 +155,17 @@ export function App() {
       }
     };
 
+    const closeWhenDesktop = (event: MediaQueryListEvent) => {
+      if (!event.matches) setMobileNavOpen(false);
+    };
+
     window.addEventListener('keydown', handleDrawerKeyDown);
+    mobileLayout.addEventListener('change', closeWhenDesktop);
     return () => {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', handleDrawerKeyDown);
-      mobileNavTriggerRef.current?.focus();
+      mobileLayout.removeEventListener('change', closeWhenDesktop);
+      if (mobileLayout.matches) mobileNavTriggerRef.current?.focus();
     };
   }, [mobileNavOpen]);
 
@@ -173,7 +180,8 @@ export function App() {
         <button
           className="orbit-mobile-scrim"
           type="button"
-          aria-label="Close navigation"
+          aria-hidden="true"
+          tabIndex={-1}
           onClick={() => setMobileNavOpen(false)}
         />
       )}
@@ -181,7 +189,9 @@ export function App() {
         id="orbit-mobile-navigation"
         ref={mobileNavSidebarRef}
         className={`orbit-sidebar ${mobileNavOpen ? 'is-open' : ''}`}
-        aria-label="Main workspace navigation"
+        role={mobileNavOpen ? 'dialog' : undefined}
+        aria-modal={mobileNavOpen ? true : undefined}
+        aria-label={mobileNavOpen ? 'Workspace navigation' : 'Main workspace navigation'}
       >
         <div className="orbit-brand-row">
           <div className="orbit-brand-mark" aria-hidden="true">
@@ -194,11 +204,29 @@ export function App() {
           <button
             className="orbit-collapse"
             type="button"
-            onClick={() => setSidebarCollapsed((value) => !value)}
-            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            onClick={() => {
+              if (mobileNavOpen) {
+                setMobileNavOpen(false);
+              } else {
+                setSidebarCollapsed((value) => !value);
+              }
+            }}
+            aria-label={
+              mobileNavOpen
+                ? 'Close navigation'
+                : sidebarCollapsed
+                  ? 'Expand sidebar'
+                  : 'Collapse sidebar'
+            }
+            title={
+              mobileNavOpen
+                ? 'Close navigation'
+                : sidebarCollapsed
+                  ? 'Expand sidebar'
+                  : 'Collapse sidebar'
+            }
           >
-            <span>{sidebarCollapsed ? '›' : '‹'}</span>
+            <span>{mobileNavOpen ? '×' : sidebarCollapsed ? '›' : '‹'}</span>
           </button>
         </div>
 
@@ -288,7 +316,7 @@ export function App() {
         </div>
       </aside>
 
-      <div className="orbit-main">
+      <div className="orbit-main" inert={mobileNavOpen}>
         <header className="orbit-topbar">
           <div className="orbit-topbar-left">
             <button
