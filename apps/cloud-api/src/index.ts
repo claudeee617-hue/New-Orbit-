@@ -254,9 +254,9 @@ async function handle(request: Request, env: Env): Promise<Response> {
     const nextCursor =
       hasMore && typeof last?.createdAt === 'string' && typeof last.id === 'string'
         ? btoa(JSON.stringify({ createdAt: last.createdAt, id: last.id }))
-            .replace(/\\+/g, '-')
-            .replace(/\\//g, '_')
-            .replace(/=+$/g, '')
+            .replaceAll('+', '-')
+            .replaceAll('/', '_')
+            .replaceAll('=', '')
         : null;
     return json({ workspaces, nextCursor });
   }
