@@ -33,7 +33,10 @@ async function openBusiness(page) {
     }),
   );
   await page.goto('/');
-  await page.getByRole('navigation', { name: 'Main workspace navigation' }).getByRole('button', { name: /^Business Workspace\\b/ }).click();
+  await page
+    .locator('#orbit-mobile-navigation')
+    .getByRole('button', { name: /^Business Workspace/ })
+    .click();
   await expect(page.getByRole('heading', { name: 'Business operations workspace' })).toBeVisible();
 }
 
@@ -60,7 +63,10 @@ test('creates validated opportunities, persists them, and rejects whitespace-onl
   expect(saved.opportunities.map((item) => item.account)).toEqual(['Acme Engineering']);
 
   await page.reload();
-  await page.getByRole('navigation', { name: 'Main workspace navigation' }).getByRole('button', { name: /^Business Workspace\\b/ }).click();
+  await page
+    .locator('#orbit-mobile-navigation')
+    .getByRole('button', { name: /^Business Workspace/ })
+    .click();
   await expect(page.getByText('1 locally recorded opportunities')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Acme Engineering' })).toBeVisible();
 });
