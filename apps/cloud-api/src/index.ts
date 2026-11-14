@@ -296,6 +296,7 @@ export default {
     try {
       return await handle(request, env);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error(
         JSON.stringify({
           message: 'ORBIT cloud API request failed',
