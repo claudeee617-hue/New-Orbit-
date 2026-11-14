@@ -184,9 +184,58 @@ describe('ORBIT cloud API boundary', () => {
     expect(prepare).not.toHaveBeenCalled();
   });
 
+  it('paginates all 101 workspaces with a stable cursor', async () => {
+    const firstPage = Array.from({ length: 51 }, (_, index) => ({
+      id: `workspace-${String(index + 1).padStart(3, '0')}`,
+      name: `Workspace ${index + 1}`,
+      workspaceKey: `workspace-${index + 1}`,
+      role: 'owner',
+      createdAt: '2026-11-14T00:00:00.000Z',
+    }));
+    const secondPage = Array.from({ length: 50 }, (_, index) => ({
+      id: `workspace-${String(index + 52).padStart(3, '0')}`,
+      name: `Workspace ${index + 52}`,
+      workspaceKey: `workspace-${index + 52}`,
+      role: 'owner',
+      createdAt: '2026-11-13T00:00:00.000Z',
+    }));
+    const all = vi.fn()
+      .mockResolvedValueOnce({ results: firstPage, success: true })
+      .mockResolvedValueOnce({ results: secondPage, success: true });
+    const bind = vi.fn().mockReturnValue({ all });
+    const prepare = vi.fn().mockReturnValue({ bind });
+    const env = authenticatedEnv({ prepare, batch: vi.fn() });
+    const token = await createToken();
+
+    const firstResponse = await worker.fetch(
+      new Request('https://orbit.test/v1/workspaces?limit=50', {
+        headers: { 'Cf-Access-Jwt-Assertion': token },
+      }),
+      env,
+    );
+    const first = await firstResponse.json() as { workspaces: unknown[]; nextCursor: string };
+    expect(first.workspaces).toHaveLength(50);
+    expect(first.nextCursor).toEqual(expect.any(String));
+
+    const secondResponse = await worker.fetch(
+      new Request(`https://orbit.test/v1/workspaces?limit=100&cursor=${encodeURIComponent(first.nextCursor)}`, {
+        headers: { 'Cf-Access-Jwt-Assertion': token },
+      }),
+      env,
+    );
+    const second = await secondResponse.json() as { workspaces: unknown[]; nextCursor: string | null };
+    expect(second.workspaces).toHaveLength(50);
+    expect(second.nextCursor).toBeNull();
+    expect(first.workspaces.length + second.workspaces.length).toBe(100);
+    expect(bind).toHaveBeenCalledTimes(2);
+  });
+
   it('creates a workspace and owner membership in one D1 batch', async () => {
-    const statement = { bind: vi.fn().mockReturnThis() };
-    const prepare = vi.fn().mockReturnValue(statement);
+    const workspaceStatement = { bind: vi.fn().mockReturnThis() };
+    const membershipStatement = { bind: vi.fn().mockReturnThis() };
+    const prepare = vi.fn()
+      .mockReturnValueOnce(workspaceStatement)
+      .mockReturnValueOnce(membershipStatement);
     const batch = vi.fn().mockResolvedValue([]);
     const env = authenticatedEnv({ prepare, batch });
     const token = await createToken();
@@ -209,7 +258,20 @@ describe('ORBIT cloud API boundary', () => {
     });
     expect(prepare).toHaveBeenCalledTimes(2);
     expect(batch).toHaveBeenCalledTimes(1);
-    expect(batch.mock.calls[0]?.[0]).toHaveLength(2);
+    expect(batch.mock.calls[0]?.[0]).toEqual([workspaceStatement, membershipStatement]);
+    const workspaceId = workspaceStatement.bind.mock.calls[0]?.[0];
+    expect(workspaceId).toEqual(expect.any(String));
+    expect(workspaceStatement.bind).toHaveBeenCalledWith(
+      workspaceId,
+      'Research Lab',
+      'research-lab',
+      'orbit-test-user',
+    );
+    expect(membershipStatement.bind).toHaveBeenCalledWith(
+      workspaceId,
+      'orbit-test-user',
+      'test@example.invalid',
+    );
   });
 
   it('returns a server error when workspace persistence fails unexpectedly', async () => {
@@ -234,6 +296,27 @@ describe('ORBIT cloud API boundary', () => {
   });
 
   it('refreshes Access signing keys when a rotated key id is first observed', async () => {
+    vi.resetModules();
+    const { default: freshWorker } = await import('./index.js');
+    const originalFetch = vi.mocked(globalThis.fetch);
+    originalFetch.mockResolvedValue(
+      new Response(JSON.stringify({ keys: [publicJwk] }), {
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    const originalToken = await createToken();
+    const emptyRows = vi.fn().mockResolvedValue({ results: [], success: true });
+    const originalPrepare = vi.fn().mockReturnValue({ bind: vi.fn().mockReturnValue({ all: emptyRows }) });
+    const env = authenticatedEnv({ prepare: originalPrepare, batch: vi.fn() });
+    const originalResponse = await freshWorker.fetch(
+      new Request('https://orbit.test/v1/workspaces', {
+        headers: { 'Cf-Access-Jwt-Assertion': originalToken },
+      }),
+      env,
+    );
+    expect(originalResponse.status).toBe(200);
+    originalFetch.mockClear();
+
     const pair = (await crypto.subtle.generateKey(
       {
         name: 'RSASSA-PKCS1-v1_5',
@@ -262,9 +345,8 @@ describe('ORBIT cloud API boundary', () => {
     });
     const rows = vi.fn().mockResolvedValue({ results: [], success: true });
     const prepare = vi.fn().mockReturnValue({ bind: vi.fn().mockReturnValue({ all: rows }) });
-    const env = authenticatedEnv({ prepare, batch: vi.fn() });
 
-    const response = await worker.fetch(
+    const response = await freshWorker.fetch(
       new Request('https://orbit.test/v1/workspaces', {
         headers: { 'Cf-Access-Jwt-Assertion': token },
       }),
