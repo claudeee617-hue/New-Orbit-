@@ -3,7 +3,7 @@
   "name": "orbit-cloud-api",
   "main": "src/index.ts",
   "compatibility_date": "2026-11-14",
-  "workers_dev": true,
+  "workers_dev": false,
   "observability": {
     "enabled": true,
     "logs": {
