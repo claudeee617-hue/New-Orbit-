@@ -49,9 +49,16 @@ function ApiDetails({ state }: { state: HealthState }) {
     return (
       <div className="orbit-api-copy">
         <p>{state.reason}</p>
-        <p>{typeof window !== 'undefined' && !['localhost', '127.0.0.1'].includes(window.location.hostname) ? 'This is the hosted dashboard. Its local engineering API runs only on your own computer and is not exposed to the public internet.' : ''}</p>
         <p>
-          For engineering features, run the local stack from the repository root with <code>pnpm dev</code> and open the local dashboard. Hosted cloud workspaces are a separate feature.
+          {typeof window !== 'undefined' &&
+          !['localhost', '127.0.0.1'].includes(window.location.hostname)
+            ? 'This is the hosted dashboard. Its local engineering API runs only on your own computer and is not exposed to the public internet.'
+            : ''}
+        </p>
+        <p>
+          For engineering features, run the local stack from the repository root with{' '}
+          <code>pnpm dev</code> and open the local dashboard. Hosted cloud workspaces are a separate
+          feature.
         </p>
       </div>
     );
@@ -362,7 +369,9 @@ export function App() {
                   ? 'Command Center'
                   : view === 'business'
                     ? 'Business Workspace'
-                    : view === 'cloud' ? 'Cloud Workspace' : 'Privacy & Trust'}
+                    : view === 'cloud'
+                      ? 'Cloud Workspace'
+                      : 'Privacy & Trust'}
               </strong>
             </div>
           </div>
@@ -532,9 +541,16 @@ export function App() {
           ) : (
             <>
               <section className="orbit-business-heading">
-                <div className="orbit-eyebrow"><span /> DATA PROTECTION & TRANSPARENCY</div>
-                <h1>Privacy <em>& trust.</em></h1>
-                <p>Understand what ORBIT processes, where it is stored, and which controls are implemented.</p>
+                <div className="orbit-eyebrow">
+                  <span /> DATA PROTECTION & TRANSPARENCY
+                </div>
+                <h1>
+                  Privacy <em>& trust.</em>
+                </h1>
+                <p>
+                  Understand what ORBIT processes, where it is stored, and which controls are
+                  implemented.
+                </p>
               </section>
               <PrivacyCenter />
             </>

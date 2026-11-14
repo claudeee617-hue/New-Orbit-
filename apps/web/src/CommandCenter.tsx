@@ -225,12 +225,25 @@ export function CommandCenter() {
       };
     });
   }, [graphVisibleNodes]);
-  const graph3DNodes = useMemo(() => graphPlotNodes.map((node, index) => {
-    const angle = (index / Math.max(1, graphPlotNodes.length)) * Math.PI * 2;
-    const radius = graphPlotNodes.length > 1 ? 0.8 : 0;
-    return { id: node.id, label: node.label, x: Math.cos(angle) * radius, y: ((index % 5) - 2) * 0.11, z: Math.sin(angle) * radius };
-  }), [graphPlotNodes]);
-  const graph3DEdges = useMemo(() => graphPlotEdges.map((edge) => ({ id: edge.id, fromId: edge.from.id, toId: edge.to.id })), [graphPlotEdges]);
+  const graph3DNodes = useMemo(
+    () =>
+      graphPlotNodes.map((node, index) => {
+        const angle = (index / Math.max(1, graphPlotNodes.length)) * Math.PI * 2;
+        const radius = graphPlotNodes.length > 1 ? 0.8 : 0;
+        return {
+          id: node.id,
+          label: node.label,
+          x: Math.cos(angle) * radius,
+          y: ((index % 5) - 2) * 0.11,
+          z: Math.sin(angle) * radius,
+        };
+      }),
+    [graphPlotNodes],
+  );
+  const graph3DEdges = useMemo(
+    () => graphPlotEdges.map((edge) => ({ id: edge.id, fromId: edge.from.id, toId: edge.to.id })),
+    [graphPlotEdges],
+  );
   const graphPlotPositions = useMemo(
     () => new Map(graphPlotNodes.map((item) => [item.id, item])),
     [graphPlotNodes],
@@ -757,88 +770,116 @@ export function CommandCenter() {
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex rounded-md border border-edge p-1" aria-label="Graph rendering mode">
-              <button type="button" aria-pressed={graphViewMode === '2d'} onClick={() => setGraphViewMode('2d')} className={'rounded px-3 py-2 text-xs ' + (graphViewMode === '2d' ? 'bg-cyan/10 text-cyan' : 'text-mute')}>2D</button>
-              <button type="button" aria-pressed={graphViewMode === '3d'} onClick={() => setGraphViewMode('3d')} className={'rounded px-3 py-2 text-xs ' + (graphViewMode === '3d' ? 'bg-cyan/10 text-cyan' : 'text-mute')}>3D</button>
-            </div>
-            <label className="flex items-center gap-2 text-xs text-mute">
-              Filter node type
-              <select
-                value={graphTypeFilter}
-                onChange={(event) => setGraphTypeFilter(event.target.value)}
-                className="rounded-md border border-edge bg-void px-2 py-2 text-xs text-ink"
+              <div
+                className="inline-flex rounded-md border border-edge p-1"
+                aria-label="Graph rendering mode"
               >
-                <option value="all">All types</option>
-                {graphNodeTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
-            </label>
+                <button
+                  type="button"
+                  aria-pressed={graphViewMode === '2d'}
+                  onClick={() => setGraphViewMode('2d')}
+                  className={
+                    'rounded px-3 py-2 text-xs ' +
+                    (graphViewMode === '2d' ? 'bg-cyan/10 text-cyan' : 'text-mute')
+                  }
+                >
+                  2D
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={graphViewMode === '3d'}
+                  onClick={() => setGraphViewMode('3d')}
+                  className={
+                    'rounded px-3 py-2 text-xs ' +
+                    (graphViewMode === '3d' ? 'bg-cyan/10 text-cyan' : 'text-mute')
+                  }
+                >
+                  3D
+                </button>
+              </div>
+              <label className="flex items-center gap-2 text-xs text-mute">
+                Filter node type
+                <select
+                  value={graphTypeFilter}
+                  onChange={(event) => setGraphTypeFilter(event.target.value)}
+                  className="rounded-md border border-edge bg-void px-2 py-2 text-xs text-ink"
+                >
+                  <option value="all">All types</option>
+                  {graphNodeTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
           </div>
           {graphPlotNodes.length ? (
             <div className="border-b border-edge bg-void/40 p-3">
               {graphViewMode === '3d' ? (
-                <Graph3D nodes={graph3DNodes} edges={graph3DEdges} selectedId={selectedGraphNodeId} onSelect={setSelectedGraphNodeId} />
+                <Graph3D
+                  nodes={graph3DNodes}
+                  edges={graph3DEdges}
+                  selectedId={selectedGraphNodeId}
+                  onSelect={setSelectedGraphNodeId}
+                />
               ) : (
-              <svg
-                viewBox="0 0 720 410"
-                role="img"
-                aria-label={`Engineering graph showing ${graphPlotNodes.length} ${graphTypeFilter === 'all' ? '' : graphTypeFilter + ' '}nodes and ${graphPlotEdges.length} visible relationships`}
-                className="h-auto max-h-[420px] w-full"
-              >
-                <g stroke="currentColor" strokeOpacity="0.35" strokeWidth="1.5">
-                  {graphPlotEdges.map((edge) => (
-                    <line
-                      key={edge.id}
-                      x1={edge.from.x}
-                      y1={edge.from.y}
-                      x2={edge.to.x}
-                      y2={edge.to.y}
-                    />
-                  ))}
-                </g>
-                <g>
-                  {graphPlotNodes.map((node) => (
-                    <g
-                      key={node.id}
-                      role="button"
-                      tabIndex={0}
-                      aria-label={`Inspect graph node ${node.label}`}
-                      aria-pressed={selectedGraphNodeId === node.id}
-                      onClick={() => setSelectedGraphNodeId(node.id)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault();
-                          setSelectedGraphNodeId(node.id);
-                        }
-                      }}
-                      className="cursor-pointer outline-none focus-visible:opacity-70"
-                    >
-                      <circle
-                        cx={node.x}
-                        cy={node.y}
-                        r="8"
-                        fill="currentColor"
-                        fillOpacity={selectedGraphNodeId === node.id ? 1 : 0.72}
-                        stroke="currentColor"
-                        strokeWidth="2"
+                <svg
+                  viewBox="0 0 720 410"
+                  role="img"
+                  aria-label={`Engineering graph showing ${graphPlotNodes.length} ${graphTypeFilter === 'all' ? '' : graphTypeFilter + ' '}nodes and ${graphPlotEdges.length} visible relationships`}
+                  className="h-auto max-h-[420px] w-full"
+                >
+                  <g stroke="currentColor" strokeOpacity="0.35" strokeWidth="1.5">
+                    {graphPlotEdges.map((edge) => (
+                      <line
+                        key={edge.id}
+                        x1={edge.from.x}
+                        y1={edge.from.y}
+                        x2={edge.to.x}
+                        y2={edge.to.y}
                       />
-                      <text
-                        x={node.x}
-                        y={node.y - 14}
-                        textAnchor="middle"
-                        fontSize="10"
-                        fill="currentColor"
+                    ))}
+                  </g>
+                  <g>
+                    {graphPlotNodes.map((node) => (
+                      <g
+                        key={node.id}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Inspect graph node ${node.label}`}
+                        aria-pressed={selectedGraphNodeId === node.id}
+                        onClick={() => setSelectedGraphNodeId(node.id)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            setSelectedGraphNodeId(node.id);
+                          }
+                        }}
+                        className="cursor-pointer outline-none focus-visible:opacity-70"
                       >
-                        {node.label}
-                      </text>
-                    </g>
-                  ))}
-                </g>
-              </svg>
+                        <circle
+                          cx={node.x}
+                          cy={node.y}
+                          r="8"
+                          fill="currentColor"
+                          fillOpacity={selectedGraphNodeId === node.id ? 1 : 0.72}
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        />
+                        <text
+                          x={node.x}
+                          y={node.y - 14}
+                          textAnchor="middle"
+                          fontSize="10"
+                          fill="currentColor"
+                        >
+                          {node.label}
+                        </text>
+                      </g>
+                    ))}
+                  </g>
+                </svg>
               )}
               <p className="px-2 text-[10px] text-mute">
                 {graphVisibleNodes.length > graphPlotNodes.length
