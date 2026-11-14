@@ -136,9 +136,9 @@ describe('ORBIT cloud API boundary', () => {
     );
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ workspaces: rows });
+    expect(await response.json()).toEqual({ workspaces: rows, nextCursor: null });
     expect(prepare).toHaveBeenCalledTimes(1);
-    expect(statement.bind).toHaveBeenCalledWith('orbit-test-user');
+    expect(statement.bind).toHaveBeenCalledWith('orbit-test-user', 51);
   });
 
   it('rejects a tampered Access signature', async () => {
