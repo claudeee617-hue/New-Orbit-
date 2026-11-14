@@ -185,20 +185,18 @@ describe('ORBIT cloud API boundary', () => {
   });
 
   it('paginates all 101 workspaces with a stable cursor', async () => {
-    const firstPage = Array.from({ length: 51 }, (_, index) => ({
-      id: `workspace-${String(index + 1).padStart(3, '0')}`,
-      name: `Workspace ${index + 1}`,
-      workspaceKey: `workspace-${index + 1}`,
-      role: 'owner',
-      createdAt: '2026-11-14T00:00:00.000Z',
-    }));
-    const secondPage = Array.from({ length: 51 }, (_, index) => ({
-      id: `workspace-${String(index + 52).padStart(3, '0')}`,
-      name: `Workspace ${index + 52}`,
-      workspaceKey: `workspace-${index + 52}`,
-      role: 'owner',
-      createdAt: '2026-11-13T00:00:00.000Z',
-    }));
+    const allWorkspaces = Array.from({ length: 101 }, (_, index) => {
+      const number = 101 - index;
+      return {
+        id: `workspace-${String(number).padStart(3, '0')}`,
+        name: `Workspace ${number}`,
+        workspaceKey: `workspace-${number}`,
+        role: 'owner',
+        createdAt: '2026-11-14T00:00:00.000Z',
+      };
+    });
+    const firstPage = allWorkspaces.slice(0, 51);
+    const secondPage = allWorkspaces.slice(50);
     const all = vi
       .fn()
       .mockResolvedValueOnce({ results: firstPage, success: true })
@@ -234,7 +232,11 @@ describe('ORBIT cloud API boundary', () => {
     };
     expect(second.workspaces).toHaveLength(51);
     expect(second.nextCursor).toBeNull();
-    expect(first.workspaces.length + second.workspaces.length).toBe(101);
+    const returnedIds = [
+      ...first.workspaces.map((workspace) => (workspace as { id: string }).id),
+      ...second.workspaces.map((workspace) => (workspace as { id: string }).id),
+    ];
+    expect(returnedIds).toEqual(allWorkspaces.map((workspace) => workspace.id));
     expect(bind).toHaveBeenCalledTimes(2);
   });
 
