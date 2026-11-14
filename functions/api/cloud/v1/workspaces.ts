@@ -3,7 +3,7 @@ interface ServiceBinding {
 }
 
 interface Env {
-  ORBIT_CLOUD_API: ServiceBinding;
+  ORBIT_CLOUD_API?: ServiceBinding;
 }
 
 interface PagesContext {
@@ -44,6 +44,12 @@ export async function onRequest({ request, env }: PagesContext): Promise<Respons
   }
   if (request.method !== 'GET' && request.method !== 'POST') {
     return new Response(null, { status: 405, headers: { allow: 'GET, POST' } });
+  }
+  if (!env.ORBIT_CLOUD_API?.fetch) {
+    return Response.json(
+      { error: 'CLOUD_SERVICE_UNAVAILABLE', message: 'Cloud workspaces are not enabled in this deployment.' },
+      { status: 503, headers: { 'cache-control': 'no-store' } },
+    );
   }
   if (incoming.search.length > 1024) {
     return Response.json({ error: 'QUERY_TOO_LARGE' }, { status: 414 });
