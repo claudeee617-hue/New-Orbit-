@@ -142,10 +142,7 @@ export function App() {
       }
 
       const active = document.activeElement;
-      if (
-        event.shiftKey &&
-        (active === first || !mobileNavSidebarRef.current?.contains(active))
-      ) {
+      if (event.shiftKey && (active === first || !mobileNavSidebarRef.current?.contains(active))) {
         event.preventDefault();
         last.focus();
       } else if (
