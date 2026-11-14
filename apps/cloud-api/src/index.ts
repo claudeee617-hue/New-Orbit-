@@ -181,8 +181,7 @@ function workspaceKey(value: string): string {
 
   for (const character of value.trim().toLowerCase()) {
     const isAsciiAlphaNumeric =
-      (character >= 'a' && character <= 'z') ||
-      (character >= '0' && character <= '9');
+      (character >= 'a' && character <= 'z') || (character >= '0' && character <= '9');
 
     if (isAsciiAlphaNumeric) {
       if (separatorPending && key.length > 0 && key.length < 48) key += '-';
