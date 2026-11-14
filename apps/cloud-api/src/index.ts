@@ -253,14 +253,17 @@ async function handle(request: Request, env: Env): Promise<Response> {
           'INSERT INTO workspaces (id, name, workspace_key, created_by) VALUES (?, ?, ?, ?)',
         ).bind(id, cleanName, key, identity.sub),
         env.DB.prepare(
-          "INSERT INTO workspace_members (workspace_id, identity_sub, email, role) VALUES (?, ?, ?, 'owner')",
+          `INSERT INTO workspace_members (
+            workspace_id, identity_sub, email, role
+          ) VALUES (?, ?, ?, 'owner')`,
         ).bind(id, identity.sub, identity.email ?? null),
       ]);
     } catch {
       return json(
         {
           error: 'WORKSPACE_CONFLICT',
-          message: 'A workspace with this key already exists, or the workspace could not be created.',
+          message:
+            'A workspace with this key already exists, or the workspace could not be created.',
         },
         409,
       );
