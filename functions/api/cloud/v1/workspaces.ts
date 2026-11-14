@@ -1,5 +1,9 @@
+interface ServiceBinding {
+  fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
+}
+
 interface Env {
-  ORBIT_CLOUD_API: Fetcher;
+  ORBIT_CLOUD_API: ServiceBinding;
 }
 
 interface PagesContext {
