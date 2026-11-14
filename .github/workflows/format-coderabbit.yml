@@ -1,0 +1,57 @@
+name: Format CodeRabbit configuration
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches: [main]
+    paths:
+      - '.coderabbit.yaml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: format-coderabbit-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  format:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out the pull request branch
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Format CodeRabbit configuration
+        run: pnpm exec prettier --write .coderabbit.yaml
+
+      - name: Commit formatting when needed
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- .coderabbit.yaml; then
+            echo "CodeRabbit configuration is already formatted."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .coderabbit.yaml
+          git commit -m "style: format CodeRabbit configuration"
+          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
