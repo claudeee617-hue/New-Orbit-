@@ -142,10 +142,16 @@ export function App() {
       }
 
       const active = document.activeElement;
-      if (event.shiftKey && (active === first || !mobileNavSidebarRef.current?.contains(active))) {
+      if (
+        event.shiftKey &&
+        (active === first || !mobileNavSidebarRef.current?.contains(active))
+      ) {
         event.preventDefault();
         last.focus();
-      } else if (!event.shiftKey && (active === last || !mobileNavSidebarRef.current?.contains(active))) {
+      } else if (
+        !event.shiftKey &&
+        (active === last || !mobileNavSidebarRef.current?.contains(active))
+      ) {
         event.preventDefault();
         first.focus();
       }
