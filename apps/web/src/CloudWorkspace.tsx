@@ -67,7 +67,7 @@ export function CloudWorkspace() {
         setNextCursor(result.nextCursor);
       }
     } catch (cause) {
-      if (!signal?.aborted) {
+      if (!signal?.aborted && generation === requestGeneration.current) {
         setError(cause instanceof Error ? cause.message : 'Cloud workspace could not be loaded.');
       }
     } finally {
