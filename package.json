@@ -12,7 +12,7 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "test": "turbo run test",
-    "test:pages": "vitest run functions/api/cloud/v1/workspaces.test.ts",
+    "test:pages": "vitest run \"functions/api/cloud/**/*.test.ts\"",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
