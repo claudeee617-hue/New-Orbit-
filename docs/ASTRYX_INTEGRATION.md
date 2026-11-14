@@ -11,7 +11,7 @@ Adopt Astryx incrementally behind an ORBIT-owned UI boundary. Do not replace the
 
 ORBIT's web app is a React 19 + Vite 8 + Tailwind CSS 4 application. Its current visual language is a dark engineering console defined in `apps/web/src/styles.css` and used by `App.tsx`, `CommandCenter.tsx`, and the business views. Astryx Core is a separate MIT-licensed React component package with StyleX-authored component styles, a dedicated build pipeline, theme packages, and CSS exports. The upstream repository uses pnpm 11.10.0 and a large multi-package workspace.
 
-These are compatible at the React level, but **not automatically compatible at the styling/build level**. A package dependency alone does not prove that StyleX transforms, CSS layers, tokens, overlays, focus handling, and SSR/client boundaries are correctly configured in ORBIT's Vite app.
+These are compatible at the React level. Astryx's documented prebuilt consumer path does not require a StyleX compiler in ORBIT: import its precompiled CSS and use the published React components. The main integration risk is CSS cascade ordering, token mapping, and verifying runtime behavior in ORBIT's Vite app.
 
 ## Findings
 
@@ -42,12 +42,13 @@ These are compatible at the React level, but **not automatically compatible at t
 - Establish a dedicated feature branch and reviewable PR.
 - Keep the existing application behavior untouched.
 
-### Phase B — minimal build spike
+### Phase B — minimal consumer spike
 
-- Pin a compatible `@astryxdesign/core` release and required StyleX tooling only after checking its published manifest and peer dependencies.
-- Configure the official StyleX Babel/Vite transform using upstream-supported configuration.
-- Import one low-risk component (initial candidate: Button or Badge) on an isolated UI showcase route.
-- Verify Vite dev server, production build, CSS extraction, dark theme, keyboard/focus behavior, reduced motion, and browser console.
+- Pin `@astryxdesign/core@0.7.17`, `@astryxdesign/theme-neutral@0.7.17`, and the documented `@stylexjs/stylex` peer dependency after confirming published manifests.
+- Use Astryx's prebuilt CSS path; do not add a StyleX compiler plugin for this consumer-only integration.
+- Configure the documented Tailwind v4 CSS layer order so ORBIT utilities remain above Astryx component styles.
+- Import one low-risk component (initial candidate: Badge) on an isolated UI showcase route.
+- Verify Vite dev server, production build, dark theme, keyboard/focus behavior, reduced motion, and browser console.
 
 ### Phase C — ORBIT adapter
 
@@ -82,6 +83,7 @@ These are compatible at the React level, but **not automatically compatible at t
 
 ## Upstream references
 
+- [ORBIT Astryx consumer quickstart](ASTRYX_ORBIT_QUICKSTART.md)
 - [Astryx repository](https://github.com/meta/astryx)
 - [Astryx Core package manifest](https://github.com/meta/astryx/blob/main/packages/core/package.json)
 - [Astryx Core public exports](https://github.com/meta/astryx/blob/main/packages/core/src/index.ts)
