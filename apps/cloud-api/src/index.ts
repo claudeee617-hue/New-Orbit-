@@ -295,7 +295,15 @@ export default {
     }
     try {
       return await handle(request, env);
-    } catch {
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          message: 'ORBIT cloud API request failed',
+          method: request.method,
+          path: new URL(request.url).pathname,
+          errorName: error instanceof Error ? error.name : 'UnknownError',
+        }),
+      );
       return json(
         {
           error: 'INTERNAL_ERROR',
