@@ -73,7 +73,7 @@ These are compatible at the React level. Astryx's documented prebuilt consumer p
 ## Acceptance checklist
 
 - [ ] Astryx package version and peer dependencies are pinned and documented.
-- [ ] StyleX transform is enabled only for the web app and has a production-build test.
+- [ ] Published prebuilt components and CSS work in dev and production without missing styles or runtime errors.
 - [ ] A single component works in dev and production without missing styles or hydration/runtime errors.
 - [ ] ORBIT dark theme, focus rings, reduced motion, and responsive layouts remain intact.
 - [ ] Existing API and Business workflows behave identically.
