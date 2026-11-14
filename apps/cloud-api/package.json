@@ -9,6 +9,7 @@
     "test": "vitest run",
     "deploy": "pnpm dlx wrangler@4.136.0 deploy",
     "types:check": "pnpm dlx wrangler@4.136.0 types worker-configuration.d.ts --config wrangler.jsonc --env-interface Env --check",
-    "build": "pnpm dlx wrangler@4.136.0 deploy --dry-run"
+    "build": "pnpm dlx wrangler@4.136.0 deploy --dry-run",
+    "types:generate": "pnpm dlx wrangler@4.136.0 types worker-configuration.d.ts --config wrangler.jsonc --env-interface Env --include-runtime=false"
   }
 }
