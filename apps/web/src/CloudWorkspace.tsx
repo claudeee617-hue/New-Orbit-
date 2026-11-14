@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { Cloud, Plus, RefreshCw, ShieldCheck, Users } from 'lucide-react';
 
 interface CloudWorkspaceRecord {
@@ -35,8 +35,10 @@ export function CloudWorkspace() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const requestGeneration = useRef(0);
 
   const load = useCallback(async (signal?: AbortSignal, cursor?: string, append = false) => {
+    const generation = ++requestGeneration.current;
     if (append) setLoadingMore(true);
     else setLoading(true);
     setError('');
@@ -58,7 +60,7 @@ export function CloudWorkspace() {
       if (!Array.isArray(result.workspaces)) {
         throw new Error('Cloud API returned an unexpected workspace response.');
       }
-      if (!signal?.aborted) {
+      if (!signal?.aborted && generation === requestGeneration.current) {
         setWorkspaces((current) =>
           append ? [...current, ...result.workspaces] : result.workspaces,
         );
@@ -69,7 +71,7 @@ export function CloudWorkspace() {
         setError(cause instanceof Error ? cause.message : 'Cloud workspace could not be loaded.');
       }
     } finally {
-      if (!signal?.aborted) {
+      if (!signal?.aborted && generation === requestGeneration.current) {
         setLoading(false);
         setLoadingMore(false);
       }
@@ -108,6 +110,9 @@ export function CloudWorkspace() {
       if (!response.ok) throw new Error(readableError(response.status, payload));
 
       const created = (payload as { workspace: CloudWorkspaceRecord }).workspace;
+      requestGeneration.current += 1;
+      setLoading(false);
+      setLoadingMore(false);
       setWorkspaces((current) => [created, ...current.filter((item) => item.id !== created.id)]);
       setName('');
       setNotice('“' + created.name + '” is ready in your private cloud workspace.');
