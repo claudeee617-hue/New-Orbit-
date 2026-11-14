@@ -71,6 +71,7 @@ export function CloudWorkspace() {
         throw new Error('Cloud API returned an unexpected workspace response.');
       }
       if (!signal?.aborted && generation === requestGeneration.current) {
+        setNeedsAuthentication(false);
         setWorkspaces((current) =>
           append ? [...current, ...result.workspaces] : result.workspaces,
         );
