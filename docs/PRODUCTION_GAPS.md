@@ -52,3 +52,8 @@ The correct remedy is **not** to publish the local Fastify API, SQLite file, rep
 - Evaluate a secure cloud-engineering architecture separately; do not proxy the local API.
 - Add end-to-end browser tests for a disconnected hosted local runtime, Access cloud workspace login, 3D graph interaction, privacy navigation, responsive layout and reduced motion.
 - Keep public-launch and privacy-contact/legal sign-off as separate release gates.
+
+
+## Validation note
+
+The temporary formatting repair workflow used during this PR was removed after it completed successfully. No temporary formatter workflow remains in the repository.
