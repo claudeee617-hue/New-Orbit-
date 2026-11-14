@@ -322,7 +322,10 @@ async function handle(request: Request, env: Env): Promise<Response> {
       }
       throw error;
     }
-    return json({ workspace: { id, name: cleanName, workspaceKey: key, role: 'owner', createdAt } }, 201);
+    return json(
+      { workspace: { id, name: cleanName, workspaceKey: key, role: 'owner', createdAt } },
+      201,
+    );
   }
 
   return json({ error: 'NOT_FOUND' }, 404);
