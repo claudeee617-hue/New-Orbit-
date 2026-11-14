@@ -14,7 +14,7 @@ This is a separate, edge-native cloud control plane. It does **not** replace the
 ## Provisioning
 
 1. Create a Cloudflare D1 database named `orbit-cloud`.
-2. Replace the placeholder `database_id` in `wrangler.jsonc`.
+2. Replace the placeholder `database_id` in `wrangler.jsonc`. Keep `workers_dev` disabled and attach the Worker only to the hostname protected by Cloudflare Access.
 3. Configure a Cloudflare Access self-hosted application for the eventual API hostname. Set its team issuer and application audience in Worker vars.
 4. Apply migrations with `wrangler d1 migrations apply orbit-cloud --remote`.
 5. Deploy from this directory with `wrangler deploy`.
@@ -32,7 +32,7 @@ All SQL uses bound parameters. Every workspace read is scoped by the authenticat
 
 ## Security and product boundary
 
-Cloudflare Access is the authentication provider for this foundation. It is not a custom password system and does not create user accounts or handle billing. The Access application must enforce the desired login policy. Do not add a route that accepts an email, user ID, workspace ID or role as proof of identity.
+Cloudflare Access is the authentication provider for this foundation. This first version accepts human identity tokens with a non-empty `sub`; service-token identities are intentionally rejected. It is not a custom password system and does not create user accounts or handle billing. The Access application must enforce the desired login policy. Do not add a route that accepts an email, user ID, workspace ID or role as proof of identity.
 
 The cloud API is intentionally a separate package: existing local endpoints rely on Node filesystem access, native SQLite and loopback/DNS-rebinding protections. Porting those routes requires explicit storage and capability adapters; forwarding arbitrary cloud requests to the local API is not supported.
 
