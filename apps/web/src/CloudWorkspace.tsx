@@ -260,13 +260,8 @@ export function CloudWorkspace() {
           </div>
 
           {needsAuthentication && (
-            <div
-              role="alert"
-              className="mt-5 rounded-md border border-warn/30 bg-warn/5 p-4"
-            >
-              <p className="text-sm font-medium text-ink">
-                Sign in to your ORBIT cloud workspace
-              </p>
+            <div role="alert" className="mt-5 rounded-md border border-warn/30 bg-warn/5 p-4">
+              <p className="text-sm font-medium text-ink">Sign in to your ORBIT cloud workspace</p>
               <p className="mt-1 text-xs leading-5 text-mute">
                 Cloud workspaces are limited to approved Cloudflare account members.
               </p>
