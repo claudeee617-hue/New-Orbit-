@@ -1,4 +1,4 @@
-name: Temporary ORBIT formatting export
+name: Temporary ORBIT formatting helper
 
 on:
   pull_request:
@@ -8,10 +8,16 @@ permissions:
   contents: read
 
 jobs:
-  format-export:
+  format-dashboard:
+    if: github.event.pull_request.head.ref == 'feat/world-class-command-center' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
@@ -21,11 +27,17 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Format dashboard files
         run: pnpm exec prettier --write apps/web/src/App.tsx apps/web/src/styles.css
-      - name: Export formatted files
-        uses: actions/upload-artifact@v4
-        with:
-          name: orbit-formatted-dashboard
-          path: |
-            apps/web/src/App.tsx
-            apps/web/src/styles.css
-          retention-days: 1
+      - name: Commit formatting on the feature branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH_NAME: ${{ github.event.pull_request.head.ref }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain -- apps/web/src/App.tsx apps/web/src/styles.css)" ]; then
+            git add apps/web/src/App.tsx apps/web/src/styles.css
+            git commit -m "style(web): apply Prettier formatting"
+            git push origin "HEAD:refs/heads/$BRANCH_NAME"
+          else
+            echo "Dashboard files are already formatted."
+          fi
