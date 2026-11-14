@@ -989,6 +989,9 @@ body {
     top: 0;
     width: 280px;
     height: 100dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
     visibility: hidden;
     transform: translateX(-105%);
     transition:
