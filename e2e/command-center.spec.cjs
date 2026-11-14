@@ -334,7 +334,6 @@ test('mobile navigation traps focus, closes with Escape, and restores the trigge
   });
   expect(scrollTop).toBeGreaterThan(0);
 
-  await trigger.click();
   await page.setViewportSize({ width: 1440, height: 1000 });
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
   await expect(sidebar).toBeVisible();
