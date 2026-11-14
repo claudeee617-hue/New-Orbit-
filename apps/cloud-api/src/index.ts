@@ -297,11 +297,13 @@ async function handle(request: Request, env: Env): Promise<Response> {
     }
 
     const id = crypto.randomUUID();
+    const createdAt = new Date().toISOString();
     try {
       await env.DB.batch([
         env.DB.prepare(
-          'INSERT INTO workspaces (id, name, workspace_key, created_by) VALUES (?, ?, ?, ?)',
-        ).bind(id, cleanName, key, identity.sub),
+          `INSERT INTO workspaces (id, name, workspace_key, created_by, created_at)
+           VALUES (?, ?, ?, ?, ?)`,
+        ).bind(id, cleanName, key, identity.sub, createdAt),
         env.DB.prepare(
           `INSERT INTO workspace_members (
             workspace_id, identity_sub, email, role
@@ -320,7 +322,10 @@ async function handle(request: Request, env: Env): Promise<Response> {
       }
       throw error;
     }
-    return json({ workspace: { id, name: cleanName, workspaceKey: key, role: 'owner' } }, 201);
+    return json(
+      { workspace: { id, name: cleanName, workspaceKey: key, role: 'owner', createdAt } },
+      201,
+    );
   }
 
   return json({ error: 'NOT_FOUND' }, 404);

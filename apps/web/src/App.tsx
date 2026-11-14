@@ -1,17 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Building2, Command, FileCheck2, GitBranch, ShieldCheck } from 'lucide-react';
+import { Building2, Cloud, Command, FileCheck2, GitBranch, ShieldCheck } from 'lucide-react';
 import { ORBIT_TAGLINE } from '@orbit/shared/health';
 import { BusinessModule } from './BusinessModule.js';
 import { BusinessOperations } from './BusinessOperations.js';
+import { CloudWorkspace } from './CloudWorkspace.js';
 import { CommandCenter } from './CommandCenter.js';
 import { loadHealth, type HealthState } from './health.js';
 
-type WorkspaceView = 'overview' | 'business';
-type IconName = 'overview' | 'business' | 'scan' | 'evidence' | 'passport';
+type WorkspaceView = 'overview' | 'business' | 'cloud';
+type IconName = 'overview' | 'business' | 'cloud' | 'scan' | 'evidence' | 'passport';
 
 const glyphs: Record<IconName, typeof Command> = {
   overview: Command,
   business: Building2,
+  cloud: Cloud,
   scan: GitBranch,
   evidence: FileCheck2,
   passport: ShieldCheck,
@@ -86,6 +88,12 @@ const navigation: { id: WorkspaceView; label: string; description: string; icon:
     label: 'Business Workspace',
     description: 'Plan and operate',
     icon: 'business',
+  },
+  {
+    id: 'cloud',
+    label: 'Cloud Workspace',
+    description: 'Secure team spaces',
+    icon: 'cloud',
   },
 ];
 
@@ -340,12 +348,18 @@ export function App() {
             <div className="orbit-breadcrumb">
               <span>Workspace</span>
               <b>/</b>
-              <strong>{view === 'overview' ? 'Command Center' : 'Business Workspace'}</strong>
+              <strong>
+                {view === 'overview'
+                  ? 'Command Center'
+                  : view === 'business'
+                    ? 'Business Workspace'
+                    : 'Cloud Workspace'}
+              </strong>
             </div>
           </div>
           <div className="orbit-topbar-actions">
             <span className="orbit-topbar-environment">
-              <i /> LOCAL ENVIRONMENT
+              <i /> LOCAL-FIRST + CLOUD
             </span>
             <span role="status" aria-live="polite">
               <StatusBadge state={state} />
@@ -474,7 +488,7 @@ export function App() {
                 <CommandCenter />
               </section>
             </>
-          ) : (
+          ) : view === 'business' ? (
             <>
               <section className="orbit-business-heading">
                 <div className="orbit-eyebrow">
@@ -492,6 +506,19 @@ export function App() {
               <div className="orbit-business-operations">
                 <BusinessOperations />
               </div>
+            </>
+          ) : (
+            <>
+              <section className="orbit-business-heading">
+                <div className="orbit-eyebrow">
+                  <span /> SECURE CLOUD WORKSPACES
+                </div>
+                <h1>
+                  Cloud <em>workspace.</em>
+                </h1>
+                <p>Manage private team spaces through authenticated ORBIT cloud services.</p>
+              </section>
+              <CloudWorkspace />
             </>
           )}
           <footer className="orbit-footer">
