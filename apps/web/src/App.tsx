@@ -348,7 +348,13 @@ export function App() {
             <div className="orbit-breadcrumb">
               <span>Workspace</span>
               <b>/</b>
-              <strong>{view === 'overview' ? 'Command Center' : view === 'business' ? 'Business Workspace' : 'Cloud Workspace'}</strong>
+              <strong>
+                {view === 'overview'
+                  ? 'Command Center'
+                  : view === 'business'
+                    ? 'Business Workspace'
+                    : 'Cloud Workspace'}
+              </strong>
             </div>
           </div>
           <div className="orbit-topbar-actions">
