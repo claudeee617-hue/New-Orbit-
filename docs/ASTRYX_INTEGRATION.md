@@ -44,7 +44,7 @@ These are compatible at the React level. Astryx's documented prebuilt consumer p
 
 ### Phase B — minimal consumer spike
 
-- Pin `@astryxdesign/core@0.7.17`, `@astryxdesign/theme-neutral@0.7.17`, and the documented `@stylexjs/stylex` peer dependency after confirming published manifests.
+- Pin `@astryxdesign/core@0.7.16`, `@astryxdesign/theme-neutral@0.7.16`, and the documented `@stylexjs/stylex` peer dependency after confirming published manifests.
 - Use Astryx's prebuilt CSS path; do not add a StyleX compiler plugin for this consumer-only integration.
 - Configure the documented Tailwind v4 CSS layer order so ORBIT utilities remain above Astryx component styles.
 - Import one low-risk component (initial candidate: Badge) on an isolated UI showcase route.
