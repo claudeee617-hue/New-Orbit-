@@ -33,6 +33,8 @@ export function CloudWorkspace() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const load = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
@@ -48,7 +50,7 @@ export function CloudWorkspace() {
       if (!response.ok) throw new Error(readableError(response.status, payload));
       const result = payload as WorkspaceResponse;
       if (!Array.isArray(result.workspaces)) throw new Error('Cloud API returned an unexpected workspace response.');
-      if (!signal?.aborted) setWorkspaces(result.workspaces);
+      if (!signal?.aborted) {\n        setWorkspaces((current) => append ? [...current, ...result.workspaces] : result.workspaces);\n        setNextCursor(result.nextCursor);\n      }
     } catch (cause) {
       if (!signal?.aborted) {
         setError(cause instanceof Error ? cause.message : 'Cloud workspace could not be loaded.');
@@ -208,6 +210,16 @@ export function CloudWorkspace() {
                 </li>
               ))}
             </ul>
+          )}
+          {nextCursor && !loading && (
+            <button
+              type="button"
+              onClick={() => void load(undefined, nextCursor, true)}
+              disabled={loadingMore}
+              className="mt-4 w-full rounded-md border border-edge px-4 py-3 text-xs font-medium text-ink transition hover:border-cyan disabled:opacity-50"
+            >
+              {loadingMore ? 'Loading more…' : 'Load more workspaces'}
+            </button>
           )}
           <p className="mt-5 border-t border-edge pt-4 text-[11px] leading-5 text-mute">
             Cloud workspace identity and membership are available now. Repository scanning, graph, evidence, ATLAS and FLARE still run through the local ORBIT runtime.
