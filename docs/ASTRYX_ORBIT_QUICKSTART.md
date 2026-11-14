@@ -43,7 +43,30 @@ Replace the single `@import 'tailwindcss';` in `apps/web/src/styles.css` with th
 
 The layer order is important: Astryx component styles must remain below ORBIT's Tailwind utilities. Do not import Astryx CSS from a component file; import it once from the global stylesheet.
 
-## 3. Add a small isolated component showcase
+## 3. Add the theme provider
+
+Astryx's published Neutral theme uses the `/built` entry for prebuilt consumers. Wrap the existing app in `Theme` from the web entry point. Keep ORBIT's own application components and styles unchanged.
+
+In `apps/web/src/main.tsx`, add:
+
+```tsx
+import { Theme } from '@astryxdesign/core/theme';
+import { neutralTheme } from '@astryxdesign/theme-neutral/built';
+```
+
+Then wrap `<App />`:
+
+```tsx
+<StrictMode>
+  <Theme theme={neutralTheme} mode="dark">
+    <App />
+  </Theme>
+</StrictMode>
+```
+
+Neutral references Figtree but does not bundle it. ORBIT may keep its existing system font stack initially; load Figtree only if the design review explicitly chooses that typography.
+
+## 4. Add a small isolated component showcase
 
 Start with one non-critical component (Badge) rather than replacing the Command Center. Example:
 
@@ -57,11 +80,11 @@ export function AstryxIntegrationProbe() {
 
 Mount it only in a temporary showcase area on the Overview screen. Remove the probe after visual verification or retain it as a dedicated design-system preview route.
 
-## 4. Keep ORBIT's visual identity
+## 5. Keep ORBIT's visual identity
 
 Use the Neutral theme as the initial base, then override semantic tokens in ORBIT's own CSS. Do not target generated StyleX atomic class names. Keep ORBIT's existing semantic classes (`bg-panel`, `text-cyan`, `border-edge`) and use stable Astryx component classes only when a deliberate component-level override is required.
 
-## 5. Required verification
+## 6. Required verification
 
 Run from the repository root:
 
