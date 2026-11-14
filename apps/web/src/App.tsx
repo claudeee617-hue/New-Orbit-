@@ -89,6 +89,11 @@ const navigation: { id: WorkspaceView; label: string; description: string; icon:
   },
 ];
 
+function openCommandCenter() {
+  const behavior = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth';
+  document.getElementById('orbit-command-center')?.scrollIntoView({ behavior, block: 'start' });
+}
+
 export function App() {
   const [state, setState] = useState<HealthState>({ kind: 'loading' });
   const [view, setView] = useState<WorkspaceView>('overview');
@@ -377,15 +382,7 @@ export function App() {
                     <button
                       type="button"
                       className="orbit-primary-action"
-                      onClick={() => {
-                        const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-                          ? 'instant'
-                          : 'smooth';
-                        document.getElementById('orbit-command-center')?.scrollIntoView({
-                          behavior,
-                          block: 'start',
-                        });
-                      }}
+                      onClick={openCommandCenter}
                     >
                       Open command center <span>↘</span>
                     </button>
