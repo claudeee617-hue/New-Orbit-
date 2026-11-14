@@ -1006,6 +1006,11 @@ body {
   .orbit-collapse {
     display: none;
   }
+  .orbit-sidebar.is-open .orbit-collapse {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
   .orbit-app.is-collapsed .orbit-brand-copy,
   .orbit-app.is-collapsed .orbit-workspace-name,
   .orbit-app.is-collapsed .orbit-nav-text,
