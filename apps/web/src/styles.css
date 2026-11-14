@@ -989,12 +989,19 @@ body {
     top: 0;
     width: 280px;
     height: 100dvh;
+    visibility: hidden;
     transform: translateX(-105%);
-    transition: transform 0.22s ease;
+    transition:
+      transform 0.22s ease,
+      visibility 0s linear 0.22s;
     padding: 20px 16px;
   }
   .orbit-sidebar.is-open {
+    visibility: visible;
     transform: translateX(0);
+    transition:
+      transform 0.22s ease,
+      visibility 0s;
   }
   .orbit-collapse {
     display: none;
