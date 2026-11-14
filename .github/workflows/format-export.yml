@@ -1,0 +1,31 @@
+name: Temporary ORBIT formatting export
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  format-export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+      - name: Format dashboard files
+        run: pnpm exec prettier --write apps/web/src/App.tsx apps/web/src/styles.css
+      - name: Export formatted files
+        uses: actions/upload-artifact@v4
+        with:
+          name: orbit-formatted-dashboard
+          path: |
+            apps/web/src/App.tsx
+            apps/web/src/styles.css
+          retention-days: 1
