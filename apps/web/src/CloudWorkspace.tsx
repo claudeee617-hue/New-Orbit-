@@ -63,6 +63,7 @@ export function CloudWorkspace() {
         ...(signal ? { signal } : {}),
       });
       const payload: unknown = await readApiJson(response);
+      if (response.status === 401) throw new Error('CLOUDFLARE_ACCESS_REQUIRED');
       if (!response.ok) throw new Error(readableError(response.status, payload));
 
       const result = payload as WorkspaceResponse;
@@ -116,6 +117,7 @@ export function CloudWorkspace() {
         body: JSON.stringify({ name: cleanName }),
       });
       const payload: unknown = await readApiJson(response);
+      if (response.status === 401) throw new Error('CLOUDFLARE_ACCESS_REQUIRED');
       if (!response.ok) throw new Error(readableError(response.status, payload));
 
       const created = (payload as { workspace: CloudWorkspaceRecord }).workspace;
