@@ -4,7 +4,9 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-11-14",
   "workers_dev": true,
-  "observability": { "enabled": true },
+  "observability": {
+    "enabled": true
+  },
   "d1_databases": [
     {
       "binding": "DB",
