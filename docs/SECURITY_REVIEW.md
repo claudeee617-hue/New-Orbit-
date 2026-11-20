@@ -50,3 +50,16 @@ DNS rebinding (hostile hostnames, suffix/prefix tricks, userinfo, ports, missing
 ## 6. Process finding
 
 Two squash merges on 2026-11-11 silently reverted already-merged fixes (evidence ordering from #36, API hardening from #32) because stacked PR branches predated them. CI stayed green because the reverted tests were removed with the code. Mitigation: after merging stacked PRs, diff the merge result against the previous main for dropped hunks. The scan used to find SEC-F1 is described in `ORBIT_BUILD_STATE.md`.
+
+
+## 7. Token-file hardening follow-up (2026-11-20)
+
+The upgrade branch hardens the local API token file reader:
+- Opens the token through a file descriptor and validates the opened object with `fstat`.
+- Uses `O_NOFOLLOW` where the operating system exposes it, preventing a POSIX symlink swap between path inspection and open.
+- Applies POSIX mode 0600 to the opened descriptor and bounds reads to 257 bytes before validating the 40–128 character URL-safe token.
+- Regression tests cover token creation/reuse, malformed contents, symlink paths and oversized files.
+
+**Residual Windows limitation:** Node's portable filesystem API does not expose an equivalent no-follow open flag or a portable way to set a restrictive Windows DACL. The Windows path performs an explicit `lstat` check, but a path-swap race cannot be ruled out by this code alone. The token file inherits the parent directory ACL. Keep the database/token under the user's private profile and verify the effective ACL on the target Windows host before treating this as hardened for multi-user machines.
+
+**XSS review status:** A repository code search found no direct `innerHTML` or React `dangerouslySetInnerHTML` sinks in the Command Center. React text interpolation remains the expected rendering path. This limited static observation is not a browser-based XSS assessment; the in-memory bearer token remains exposed to any successful script execution in the trusted dashboard origin. Independent review is still required.
