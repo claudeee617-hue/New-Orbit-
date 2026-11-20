@@ -8,7 +8,7 @@ import {
   lstatSync,
   mkdirSync,
   openSync,
-  readFileSync,
+  readSync,
   writeFileSync,
 } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -95,7 +95,13 @@ export function readTokenFile(filePath: string): string {
         throw new OrbitError('CONFIG_INVALID', 'The local API token path is not a valid regular file');
       }
     }
-    const token = readFileSync(descriptor, 'utf8').trim();
+    // Read one byte beyond the maximum so concurrent growth cannot cause an unbounded read.
+    const buffer = Buffer.alloc(257);
+    const bytesRead = readSync(descriptor, buffer, 0, buffer.byteLength, 0);
+    if (bytesRead > 256) {
+      throw new OrbitError('CONFIG_INVALID', 'The local API token path is not a valid regular file');
+    }
+    const token = buffer.toString('utf8', 0, bytesRead).trim();
     if (!TOKEN_PATTERN.test(token)) {
       throw new OrbitError(
         'CONFIG_INVALID',
