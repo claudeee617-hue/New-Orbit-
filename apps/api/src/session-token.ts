@@ -87,7 +87,10 @@ export function readTokenFile(filePath: string): string {
   try {
     const stat = fstatSync(descriptor);
     if (!stat.isFile() || stat.size > 256) {
-      throw new OrbitError('CONFIG_INVALID', 'The local API token path is not a valid regular file');
+      throw new OrbitError(
+        'CONFIG_INVALID',
+        'The local API token path is not a valid regular file',
+      );
     }
     if (process.platform !== 'win32') fchmodSync(descriptor, 0o600);
     // Windows has no O_NOFOLLOW equivalent in Node's portable fs API; retain an explicit
@@ -95,14 +98,20 @@ export function readTokenFile(filePath: string): string {
     if (process.platform === 'win32') {
       const pathStat = lstatSync(filePath);
       if (!pathStat.isFile() || pathStat.isSymbolicLink()) {
-        throw new OrbitError('CONFIG_INVALID', 'The local API token path is not a valid regular file');
+        throw new OrbitError(
+        'CONFIG_INVALID',
+        'The local API token path is not a valid regular file',
+      );
       }
     }
     // Read one byte beyond the maximum so concurrent growth cannot cause an unbounded read.
     const buffer = Buffer.alloc(257);
     const bytesRead = readSync(descriptor, buffer, 0, buffer.byteLength, 0);
     if (bytesRead > 256) {
-      throw new OrbitError('CONFIG_INVALID', 'The local API token path is not a valid regular file');
+      throw new OrbitError(
+        'CONFIG_INVALID',
+        'The local API token path is not a valid regular file',
+      );
     }
     const token = buffer.toString('utf8', 0, bytesRead).trim();
     if (!TOKEN_PATTERN.test(token)) {
