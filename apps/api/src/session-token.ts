@@ -99,9 +99,9 @@ export function readTokenFile(filePath: string): string {
       const pathStat = lstatSync(filePath);
       if (!pathStat.isFile() || pathStat.isSymbolicLink()) {
         throw new OrbitError(
-        'CONFIG_INVALID',
-        'The local API token path is not a valid regular file',
-      );
+          'CONFIG_INVALID',
+          'The local API token path is not a valid regular file',
+        );
       }
     }
     // Read one byte beyond the maximum so concurrent growth cannot cause an unbounded read.
