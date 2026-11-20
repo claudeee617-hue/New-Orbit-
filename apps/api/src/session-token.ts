@@ -87,8 +87,8 @@ export function readTokenFile(filePath: string): string {
       throw new OrbitError('CONFIG_INVALID', 'The local API token path is not a valid regular file');
     }
     if (process.platform !== 'win32') fchmodSync(descriptor, 0o600);
-    // Windows has no O_NOFOLLOW equivalent in Node's portable fs API; retain the explicit
-    // lstat check there and document that the containing directory ACL is the security boundary.
+    // Windows has no O_NOFOLLOW equivalent in Node's portable fs API; retain an explicit
+    // lstat check there rather than claiming POSIX mode bits provide Windows ACL protection.
     if (process.platform === 'win32') {
       const pathStat = lstatSync(filePath);
       if (!pathStat.isFile() || pathStat.isSymbolicLink()) {
