@@ -45,9 +45,9 @@ describe('Command Center graph and evidence helpers', () => {
 
   it('does not inject untrusted evidence or repository metadata as HTML', async () => {
     const source = await readFile(new URL('./CommandCenter.tsx', import.meta.url), 'utf8');
-    expect(source).not.toMatch(
-      /dangerouslySetInnerHTML|\\binnerHTML\\b|\\bdocument\\.write\\s*\\(/,
-    );
-    expect(source).not.toMatch(/\\beval\\s*\\(/);
+    expect(source).not.toContain('dangerouslySetInnerHTML');
+    expect(source).not.toContain('innerHTML');
+    expect(source).not.toContain('document.write(');
+    expect(source).not.toContain('eval(');
   });
 });
