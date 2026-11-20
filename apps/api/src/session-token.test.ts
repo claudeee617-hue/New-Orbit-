@@ -65,4 +65,10 @@ describe('API session token', () => {
     writeFileSync(file, 'not-a-token');
     expect(() => readTokenFile(file)).toThrow(/invalid/);
   });
+  it('rejects token files larger than the bounded read budget', () => {
+    const directory = tempDir();
+    const file = join(directory, 'api.token');
+    writeFileSync(file, 'x'.repeat(257));
+    expect(() => readTokenFile(file)).toThrow(/regular file/);
+  });
 });
