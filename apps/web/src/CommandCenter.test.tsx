@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
 import { filterGraphNodesByType, sortEvidenceTimeline } from './CommandCenter.js';
 
@@ -40,5 +41,11 @@ describe('Command Center graph and evidence helpers', () => {
       first,
       second,
     ]);
+  });
+
+  it('does not inject untrusted evidence or repository metadata as HTML', async () => {
+    const source = await readFile(new URL('./CommandCenter.tsx', import.meta.url), 'utf8');
+    expect(source).not.toMatch(/dangerouslySetInnerHTML|\\binnerHTML\\b|\\bdocument\\.write\\s*\\(/);
+    expect(source).not.toMatch(/\\beval\\s*\\(/);
   });
 });
