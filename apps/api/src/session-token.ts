@@ -1,5 +1,16 @@
 import { randomBytes } from 'node:crypto';
-import { chmodSync, lstatSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  closeSync,
+  constants,
+  fchmodSync,
+  fstatSync,
+  lstatSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { OrbitError } from '@orbit/shared';
 
@@ -57,17 +68,42 @@ export function getOrCreateApiToken(
 }
 
 export function readTokenFile(filePath: string): string {
-  const stat = lstatSync(filePath);
-  if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 256) {
-    throw new OrbitError('CONFIG_INVALID', 'The local API token path is not a valid regular file');
+  // O_NOFOLLOW closes the lstat/open race on platforms that support it. The descriptor is
+  // checked and permission-hardened after opening, so subsequent path swaps cannot redirect reads.
+  const flags =
+    constants.O_RDONLY | (process.platform !== 'win32' ? (constants.O_NOFOLLOW ?? 0) : 0);
+  let descriptor: number;
+  try {
+    descriptor = openSync(filePath, flags);
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ELOOP') {
+      throw new OrbitError('CONFIG_INVALID', 'The local API token path is not a valid regular file');
+    }
+    throw error;
   }
-  if (process.platform !== 'win32') chmodSync(filePath, 0o600);
-  const token = readFileSync(filePath, 'utf8').trim();
-  if (!TOKEN_PATTERN.test(token)) {
-    throw new OrbitError(
-      'CONFIG_INVALID',
-      'The local API token file is invalid; remove it and restart ORBIT',
-    );
+  try {
+    const stat = fstatSync(descriptor);
+    if (!stat.isFile() || stat.size > 256) {
+      throw new OrbitError('CONFIG_INVALID', 'The local API token path is not a valid regular file');
+    }
+    if (process.platform !== 'win32') fchmodSync(descriptor, 0o600);
+    // Windows has no O_NOFOLLOW equivalent in Node's portable fs API; retain the explicit
+    // lstat check there and document that the containing directory ACL is the security boundary.
+    if (process.platform === 'win32') {
+      const pathStat = lstatSync(filePath);
+      if (!pathStat.isFile() || pathStat.isSymbolicLink()) {
+        throw new OrbitError('CONFIG_INVALID', 'The local API token path is not a valid regular file');
+      }
+    }
+    const token = readFileSync(descriptor, 'utf8').trim();
+    if (!TOKEN_PATTERN.test(token)) {
+      throw new OrbitError(
+        'CONFIG_INVALID',
+        'The local API token file is invalid; remove it and restart ORBIT',
+      );
+    }
+    return token;
+  } finally {
+    closeSync(descriptor);
   }
-  return token;
 }
