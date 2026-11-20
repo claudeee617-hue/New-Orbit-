@@ -77,7 +77,10 @@ export function readTokenFile(filePath: string): string {
     descriptor = openSync(filePath, flags);
   } catch (error) {
     if (error instanceof Error && 'code' in error && error.code === 'ELOOP') {
-      throw new OrbitError('CONFIG_INVALID', 'The local API token path is not a valid regular file');
+      throw new OrbitError(
+        'CONFIG_INVALID',
+        'The local API token path is not a valid regular file',
+      );
     }
     throw error;
   }
